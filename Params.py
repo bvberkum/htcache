@@ -29,7 +29,7 @@ options:
   -c --cache TYPE    use module for caching, default %(CACHE)s. Also:
                      caches.FileTreeQ and FileTreeQH.
   -s --drop FILE    read regex patterns from file, default %(DROP)s.
-  -v --verbose       show http headers and other info
+  -v --verbose       increase output, use twice to show http headers
   -t --timeout SEC   break connection after so many seconds of inactivity, default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
      --flat          flat mode; cache all files in root directory (dangerous!)

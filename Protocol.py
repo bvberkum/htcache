@@ -1,10 +1,14 @@
 import Params, Response, Cache, time, socket, os, sys, calendar, re
 from Params import log
 import anydbm
-#try:
-#    import cjson as json
-#except:
-import json as json
+try:
+    import cjson as json
+    json_read = json.decode
+    json_write = json.encode
+except:
+    import json as json
+    json_read = json.read
+    json_write = json.write
 
 if not os.path.exists(Params.RESOURCE_DB):
     anydbm.open(Params.RESOURCE_DB, 'n')
@@ -68,7 +72,8 @@ class BlindProtocol:
 # Compile drop rules from file upon startup
 DROP = []
 if os.path.isfile(Params.DROP):
-  DROP.extend([re.compile(p.strip()) for p in open(Params.DROP).readlines()])
+  DROP.extend([(p.strip(),re.compile(p.strip())) for p in
+      open(Params.DROP).readlines() if not p.startswith('#')])
 
 #Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
 
@@ -102,10 +107,10 @@ class CachedProtocol(object):
       assert not srcrefs or (
               (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
               and isinstance(srcrefs[0], str)), srcrefs
-      resources[self.path] = json.write((srcrefs, mediatype, charset, languages, features))
+      resources[self.path] = json_write((srcrefs, mediatype, charset, languages, features))
 
   def get_descriptor(self):
-      return json.read(resources[self.path])
+      return tuple(json_read(resources[self.path]))
 
   def get_size(self):
     return self.cache.size;
@@ -156,10 +161,10 @@ class HttpProtocol(CachedProtocol):
       hostinfo = host
     self.requri = "http://%s/%s" %  (hostinfo, path)
 
-    for pattern in DROP:
-      if pattern.match("%s/%s" % (host, path)):
+    for pattern, compiled in DROP:
+      if compiled.match("%s/%s" % (host, path)):
         self.Response = Response.DirectResponse
-        Params.log('Dropping connection.')
+        Params.log('Dropping connection, matching pattern: %r.' % pattern)
 
     super(HttpProtocol, self).__init__(request)
 
@@ -211,7 +216,7 @@ class HttpProtocol(CachedProtocol):
     line = chunk[ :eol ]
     Params.log('Server responds '+ line.rstrip())
     fields = line.split()
-    assert len( fields ) >= 3 and fields[ 0 ].startswith( 'HTTP/' ) and fields[ 1 ].isdigit(), 'invalid header line: %r' % line
+    assert (2 <= len( fields )) and fields[ 0 ].startswith( 'HTTP/' ) and fields[ 1 ].isdigit(), 'invalid header line: %r' % line
     self.__status = int( fields[ 1 ] )
     self.__message = ' '.join( fields[ 2: ] )
     self.__args = {}

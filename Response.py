@@ -49,6 +49,19 @@ class DataResponse:
     except:
       args = {}
 
+    if protocol.has_descriptor():
+      descr = protocol.get_descriptor()
+      #Params.log(descr)
+      # Abuse feature dict to store headers
+      # TODO: parse mediatype, charset, language..
+      #if descr[-1]:
+      #  for k, v in descr[-1].items():
+      #    #if 'encoding' in k.lower(): continue
+      #    args[k] = v
+    #else:
+    #  Params.log("No descriptor for %s" % protocol.path)
+    #srcrefs, mediatype, charset, languages, features = protocol.get_descriptor()
+
     via = "%s:%i" % (socket.gethostname(), Params.PORT)
     if args.setdefault('Via', via) != via:
       args['Via'] += ', '+ via
@@ -103,7 +116,14 @@ class DataResponse:
       if 0 <= self.__end < self.__pos + bytes:
         bytes = self.__end - self.__pos
       chunk = self.__protocol.read( self.__pos, bytes )
-      self.__pos += sock.send( chunk )
+      try:
+        self.__pos += sock.send( chunk )
+      except:
+        Params.log("Error writing to client, aborted!")  
+        self.Done = True
+        if not self.__protocol.cache.full():
+          self.__protocol.cache.remove_partial()
+        return
     self.Done = not self.__sendbuf and ( self.__pos >= self.__protocol.size >= 0 or self.__pos >= self.__end >= 0 )
 
   def needwait( self ):

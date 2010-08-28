@@ -25,6 +25,7 @@ start_replicator()
     if test ! -e $LOCK
     then
         echo "Starting http-replicator"
+        # TODO: check http-replicator status before redirecting output to lock
         http-replicator -v -r $CACHE --log $LOG $FLAGS > $LOCK
     else
         echo "Found "$LOCK", http-replicator already running?"

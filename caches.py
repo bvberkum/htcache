@@ -75,6 +75,7 @@ class RefHash(Cache.File):
     def remove_partial(self):
         self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
         os.remove( self.path )
+        Params.log("Dropped partial file.")
 
     def partial( self ):
         self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
