@@ -1,0 +1,2 @@
+Added:
+ - Ignore host/path based on RegEx patterns read from file
