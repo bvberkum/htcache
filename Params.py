@@ -18,7 +18,8 @@ MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 PARTIAL = '.incomplete'
 DROP = '/etc/http-replicator/patterns.drop'
-RESOURCE_DB = '/etc/http-replicator/resource.db'
+RESOURCE_DB = '/var/lib/http-replicator/resource.db'
+HTML_PLACEHOLDER = '/var/lib/http-replicator/filtered-placeholder.html'
 CACHE = 'Cache.File'
 USAGE = '''usage: %(PROG)s [options]
 

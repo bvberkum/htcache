@@ -1,13 +1,14 @@
-:project: htt:bp://freshmeat.net/projects/http-replicator
+:project: http://freshmeat.net/projects/http-replicator
 :bzr-branch: http://launchpad.net/~mpe/+junk/http-replicator.mpe
 
 Based on the http-replicator_4.0alpha2 branch found on the web.
 
-Current 4.0alpha3.
+Current 4.0alpha3. See Todo 4.
 
 Changes in functionality:
  - Ignore host/path based on RegEx patterns read from file. Each line is a
-   complete pattern, matched against request URI.
+   complete pattern, matched against request URI. Offending pattern is logged, 
+   and response switched to static placeholder.
  - Created Sys-V init sh script, init.sh.
    cp/rename it to /etc/init.d/ and make appropiate symlinks. Edit it to reflect
    systems locations. Also see http://www.debian-administration.org/articles/28
@@ -16,16 +17,36 @@ Changes in functionality:
  - Keeping of descriptors for each cached file in 'flat' DB.
  - Alternative cache directory layouts.
 
-TODO:
-- Writing to client fails randomly, probably malformed headers?
-- Some date headers fail to parse.
-- There is a version with other cl-options, it uses stdlib asyncore
-  check: 
-
-   * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
-   * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
+Todo
+ 1. Writing to client fails randomly, probably malformed headers?
+ 2. Some date headers fail to parse.
+ 3. There is a version with other cl-options, it uses stdlib asyncore
+    check: 
  
-- Make release? add this to RELNOTES/CHANGELOG, update and reorganize manual..
+     * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
+     * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
+  
+ 4. Make release? add this to RELNOTES/CHANGELOG, update and reorganize manual..
+ 5. init.sh script is too fragile.
+
+Issues
+ 1. HTML placeholder served for all connections (e.g. also for flash, images)
+   This safes roundtrip.
+
+Installation
+------------
+Start as any Python script, or:
+
+- cp/link into ``/usr/bin`` and ``init.sh`` into ``/dev/init.d/`` 
+  (and add line ``/etc/init.d/http-replicator start`` to ``/etc/local`` for 
+  on-startup initialization).
+
+`http-replicator.mpe` requires access to the following paths:
+
+- ``/etc/http-replicator/``
+- ``/var/cache/www/``
+- ``/var/lib/http-replicator/``
+- ``/var/log/http-replicator.log``
 
 Other cache backends
 ~~~~~~~~~~~~~~~~~~~~
@@ -43,12 +64,4 @@ Additional backends are provided and an option to change them (``--cache TYPE``)
   directory, the name prefixed with '#'.
 - caches.HTContentStore - TODO: a content-hash index in dba2 api compat
 
-
-
-  0.14     File "/home/berend/project/http-replicator/http-replicator.mpe/fiber.py", line 53, in step
-  0.14       state = self.__generator.next()
-  0.15     File "/usr/bin/http-replicator", line 51, in Replicator
-  0.15       response.send( client )
-  0.15     File "/home/berend/project/http-replicator/http-replicator.mpe/Response.py", line 119, in send
-  0.15       self.__pos += sock.send( chunk )
 

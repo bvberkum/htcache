@@ -4,7 +4,8 @@
 # System-V like init script for http-replicator.
 # Note path definitions here and in Params.py:
 #
-# FIXME: log will get truncated every restart!
+# FIXME: this is inadequate and fragile, also http-replicator may want to handle
+# daemonization and running detection internally.
 
 # Edit these to suit needs:
 LOG=/var/log/http-replicator.log 

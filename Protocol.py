@@ -163,10 +163,15 @@ class HttpProtocol(CachedProtocol):
 
     for pattern, compiled in DROP:
       if compiled.match("%s/%s" % (host, path)):
-        self.Response = Response.DirectResponse
+        # Respond by writing message as plain text, e.g echo/debug it:
+        #self.Response = Response.DirectResponse
+        # Respond by writing filter warning:
+        self.Response = Response.FilteredResponse
         Params.log('Dropping connection, matching pattern: %r.' % pattern)
-
-    super(HttpProtocol, self).__init__(request)
+        #self.cache = Cache.File('/var/http')
+    else:        
+        self.cache = Cache.load_backend(Params.CACHE)( '%s:%i/%s' % request.url() )
+    #super(HttpProtocol, self).__init__(request)
 
     if Params.STATIC and self.cache.full():
       Params.log('Static mode; serving file directly from cache')

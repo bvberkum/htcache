@@ -176,6 +176,33 @@ class ChunkedDataResponse( DataResponse ):
       self.__protocol.write( tail[ :chunksize ] )
       self.__recvbuf = tail[ chunksize+2: ]
 
+class FilteredResponse:
+
+  Done = False
+
+  def __init__(self, status, request):
+    self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
+            open(Params.HTML_PLACEHOLDER).read() % { 
+                    'host': socket.gethostname(), 
+                    'port': Params.PORT,
+                    'location': '%s:%i/%s' % request.url(),
+                    'software': 'http-replicator/4.0alpha3' }
+
+  def hasdata( self ):
+    return bool( self.__sendbuf )
+
+  def send( self, sock ):
+    assert not self.Done
+    bytes = sock.send( self.__sendbuf )
+    self.__sendbuf = self.__sendbuf[ bytes: ]
+    if not self.__sendbuf:
+      self.Done = True
+
+  def needwait( self ):
+    return False
+
+  def recv( self ):
+    raise AssertionError
 
 class DirectResponse:
 
