@@ -183,7 +183,7 @@ class BlockedContentResponse:
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
                         'location': '%s:%i/%s' % request.url(),
-                        'software': 'http-replicator/4.0alpha3' }
+                        'software': 'htcache/4.0alpha3' }
 
     def hasdata( self ):
         return bool( self.__sendbuf )

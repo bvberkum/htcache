@@ -2,7 +2,7 @@
 Params.CACHE can be set to Cache.File or a backend in this module ('caches.*')
 For better support of some weird URLs the latter is preferable.
 
-See README.mpe for description.
+See README for description.
 """
 import time, os
 try:

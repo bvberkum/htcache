@@ -15,11 +15,11 @@ ONLINE = True # XXX:bvb: useless..
 LIMIT = False
 LOG = False
 DEBUG = False
-DROP = '/etc/http-replicator/patterns.drop'
-NOCACHE = '/etc/http-replicator/patterns.nocache'
-SORT = '/etc/http-replicator/patterns.sort'
-HTML_PLACEHOLDER = '/var/lib/http-replicator/filtered-placeholder.html'
-IMG_PLACEHOLDER = '/var/lib/http-replicator/forbidden-sign.png'
+DROP = '/etc/htcache/patterns.drop'
+NOCACHE = '/etc/htcache/patterns.nocache'
+SORT = '/etc/htcache/patterns.sort'
+HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
+IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
 CACHE = 'Cache.File'
 ARCHIVE = ''
 ENCODE_PATHSEP = ''
@@ -30,7 +30,7 @@ MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
-RESOURCES = '/var/lib/http-replicator/resource.db'
+RESOURCES = '/var/lib/htcache/resource.db'
 
 # query params
 PRINT_RECORD = []

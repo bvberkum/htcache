@@ -1,4 +1,17 @@
-2008-31-01 version 4.0alpha2
+2010-08-28 htcache version 0.1
+  * rename to htcache
+  * added support for alternative cache directory layouts using modular 
+    cache backends  
+  * added descriptor cache for resource metadata  
+  * allow simple queries on for cached data  
+  * added support to block request based on URL matching
+  * added fancy html and image placeholder for blocked requests  
+  * added support to bypass cache based on URL matching
+  * created Sys-V init sh script
+  * including HTTP Via header
+  * various more detailed changes from the past two years, see revision log
+
+2008-31-01 http-replicator version 4.0alpha2
   * added GPL licence file
   * generalized fiber.py by using generator name instead of hardcoded string
   * removing partial file in cache after 403 forbidden
@@ -6,7 +19,7 @@
   * fix: no longer setting mtime to -1 if server does not send Last-Modified
   * fix: handling empty command lines correctly
 
-2008-01-01 version 4.0alpha1
+2008-01-01 http-replicator version 4.0alpha1
   * rewrite from scratch
   * replaced restrictive asyncore scheduler with new 'fiber' system
   * new feature: server-side download resuming
@@ -18,7 +31,7 @@
   * fixed race condition that prevented joining of simultaneously started downloads
   * currently missing feature: cache browsing
 
-2004-11-27 version 3.0
+2004-11-27 http-replicator version 3.0
   * new feature: cache brower on proxy address
   * new feature: client-side support for partial content
   * added alias option for caching mirrors on same location
@@ -28,7 +41,7 @@
   * fixed timestamp bug; files are now properly closed before changing mtime
   * suppressed size warning for chunked data
 
-2004-08-15 version 2.1
+2004-08-15 http-replicator version 2.1
   * integrated daemon code in http-replicator
   * changed init.d and cron script to bash
   * moved settings from configuration file to /etc/default/http-replicator
@@ -37,7 +50,7 @@
   * added support for an external proxy server
   * added support for an external proxy requiring authentication
 
-2004-05-01 version 2.0
+2004-05-01 http-replicator version 2.0
   * added support for HTTP/1.1
   * replicator is now suitable for maintaining a gentoo package cache
   * fixed problem with absolute urls
@@ -50,5 +63,6 @@
   * fixed problems with select
   * fixed size calculation in cron script
 
-2004-02-06 version 1.0
+2004-02-06 http-replicator version 1.0
   * initial release.
+

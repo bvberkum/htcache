@@ -74,7 +74,7 @@ class ProxyProtocol(object):
     requri = None
     "requested resource ID, set by subclass"
     Response = None
-    "the http-replicator response class"
+    "the htcache response class"
 
     def __init__(self, request):
         super(ProxyProtocol, self).__init__()

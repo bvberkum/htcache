@@ -1,15 +1,15 @@
 #!/bin/sh
-# /etc/init.d/http-replicator
+# /etc/init.d/htcache
 #
-# System-V like init script for http-replicator.
+# System-V like init script for htcache.
 # Note path definitions here and in Params.py:
 #
-# FIXME: this is inadequate and fragile, also http-replicator may want to handle
+# FIXME: this is inadequate and fragile, also htcache may want to handle
 # daemonization and running detection internally.
 
 # Edit these to suit needs:
-LOG=/var/log/http-replicator.log 
-LOCK=/var/run/http-replicator.pid
+LOG=/var/log/htcache.log 
+LOCK=/var/run/htcache.pid
 #CACHE=/var/cache/http/
 CACHE=/var/cache/www/
 FLAGS="--cache caches.FileTreeQ -a %Y/%m/%d/%H:%m- --nodir , "
@@ -25,11 +25,11 @@ start_replicator()
 {
     if test ! -e $LOCK
     then
-        echo "Starting http-replicator"
-        # TODO: check http-replicator status before redirecting output to lock
-        http-replicator -v -r $CACHE --log $LOG $FLAGS > $LOCK
+        echo "Starting htcache"
+        # TODO: check htcache status before redirecting output to lock
+        htcache -v -r $CACHE --log $LOG $FLAGS > $LOCK
     else
-        echo "Found "$LOCK", http-replicator already running?"
+        echo "Found "$LOCK", htcache already running?"
     fi
 }
 
@@ -42,7 +42,7 @@ stop_replicator()
         PID=`head -n 1 $LOCK`
         if test -n "`ps -p $PID | grep $PID`"
         then
-            echo "Stopping http-replicator"
+            echo "Stopping htcache"
             kill $PID
             rm $LOCK
         else
@@ -64,7 +64,7 @@ case "$1" in
     start_replicator
     ;;
   *)
-    echo "Usage: /etc/init.d/http-replicator {start|stop|restart}"
+    echo "Usage: /etc/init.d/htcache {start|stop|restart}"
     exit 1
     ;;
 esac

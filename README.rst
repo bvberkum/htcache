@@ -1,47 +1,39 @@
-:project: http://freshmeat.net/projects/http-replicator
-:bzr-branch: http://launchpad.net/~mpe/+junk/http-replicator.mpe
+:parent project: http://freshmeat.net/projects/http-replicator
+:homepage: 
 
-Based on the http-replicator_4.0alpha2 branch found on the web.
-Rename fork and start at 0.1, see todo 4.
-
-Changes in functionality to http-replicator:
- - Ignore host/path based on RegEx patterns read from file. Each line is a
-   complete pattern, matched against request URI. Offending pattern is logged, 
-   and response switched to static placeholder.
- - Created Sys-V init sh script, init.sh.
-   cp/rename it to /etc/init.d/ and make appropiate symlinks. Edit it to reflect
-   systems locations. Also see http://www.debian-administration.org/articles/28
-   for Debian specifics.
- - Including HTTP Via header in requests to origin server.
- - Keeping of descriptors for each cached file in 'flat' DB.
- - Alternative cache directory layouts.
+**htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy.
+It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 Todo
- 1. Writing to client fails randomly, probably malformed headers?
+ 1. init.sh script is too fragile, and script can daemonize itself. rewrite.
+ 2. test FTP use   
+
+Issues
+ 1. Writing to client fails randomly, maybe malformed headers, probably dropped
+    connection (eg. cancelled mouseovers?)
  2. Some date headers fail to parse.
- 3. There is a version with other cl-options, it uses stdlib asyncore
+ 3. HTML placeholder served for all connections (e.g. also for flash, images)
+ 4. There is a version with other cl-options, it uses stdlib asyncore
     check: 
  
      * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
      * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
   
- 4. Make release? add this to RELNOTES/CHANGELOG, update and reorganize manual..
- 5. init.sh script is too fragile, script should daemonize itself.
-
-Issues
- 1. HTML placeholder served for all connections (e.g. also for flash, images)
+ 5. Reinstate use of unit-test?   
 
 Installation
 ------------
 Start as any Python script, or:
 
-- cp/link http-replicator into ``/usr/bin`` 
-- cp/link ``init.sh`` into ``/dev/init.d/``, modify http-replicator flags as needed.
+- cp/link htcache into ``/usr/bin`` 
+- cp/link ``init.sh`` into ``/dev/init.d/``, modify htcache flags as needed.
   Make sure paths in init.sh and Params.py are accessible.
-- add line ``/etc/init.d/http-replicator start`` to ``/etc/local`` for 
+- add line ``/etc/init.d/htcache start`` to ``/etc/local`` for 
   on-startup initialization.
 
-Also create files in /etc/http-replicator:
+See http://www.debian-administration.org/articles/28 for Debian specifics.
+
+Also create files in /etc/htcache:
 
 * rules.drop
 * rules.nocache 
@@ -52,7 +44,7 @@ Also create files in /etc/http-replicator:
 
 Overview
 --------
-http-replicator client/server flow::
+htcache client/server flow::
 
    .                         htcache 
                              _______
