@@ -1,14 +1,17 @@
 #!/bin/sh
 # /etc/init.d/http-replicator
 #
-# System-V like init script for http-replicator
+# System-V like init script for http-replicator.
+# Note path definitions here and in Params.py:
+#
 # FIXME: log will get truncated every restart!
 
 # Edit these to suit needs:
 LOG=/var/log/http-replicator.log 
 LOCK=/var/run/http-replicator.pid
-CACHE=/var/cache/http/
-FLAGS=
+#CACHE=/var/cache/http/
+CACHE=/var/cache/www/
+FLAGS="-c caches.FileTreeQH"
 #--static --offline
 
 # Assert cache dir
@@ -22,7 +25,7 @@ start_replicator()
     if test ! -e $LOCK
     then
         echo "Starting http-replicator"
-        http-replicator -v -r $CACHE --daemon $LOG $FLAGS > $LOCK
+        http-replicator -v -r $CACHE --log $LOG $FLAGS > $LOCK
     else
         echo "Found "$LOCK", http-replicator already running?"
     fi

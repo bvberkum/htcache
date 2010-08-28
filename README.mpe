@@ -1,6 +1,36 @@
-Added:
- - Ignore host/path based on RegEx patterns read from file.
+:project: http://freshmeat.net/projects/http-replicator
+
+Based on the http-replicator_4.0alpha2 branch found on the web.
+
+TODO:
+ There is a version with other cl-options, it uses stdlib asyncore
+ check: 
+   http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
+   http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
+
+
+Changes:
+ - Ignore host/path based on RegEx patterns read from file. Each line is a
+   complete pattern, matched against request URI.
  - Created Sys-V init sh script, init.sh.
    cp/rename it to /etc/init.d/ and make appropiate symlinks. Edit it to reflect
    your systems locations. See http://www.debian-administration.org/articles/28
    for Debian specifics. Make sure http-replicator is in PATH.
+
+Other cache backends
+~~~~~~~~~~~~~~~~~~~~
+HR uses a file-based Cache which produces a file-tree similar to that of ``wget
+-r``. This creates some problems with long filenames and the characters that
+appear in HTTP query parts.
+
+Additional backends are provided:
+
+- caches.FileTreeQ - wget and HR fail on long filenames, usually caused by long
+  query parts. FileTreeQ encodes each query argument into a separate directory,
+  the first argument being prefixed with '?'.
+- caches.FileTreeQH - Converts query into a hashsum. This one makes a bit more
+  sense because queries are not hierarchical. The hashsum is encoded to a
+  directory, the name prefixed with '#'.
+- caches.HTContentStore - TODO: a content-hash index in dba2 api compat
+
+ 
