@@ -32,6 +32,7 @@ class File:
       print 'Cache position:', path
 
     self.__path = Params.ROOT + path
+    print self.__path	
     self.__file = None
 
   def partial( self ):

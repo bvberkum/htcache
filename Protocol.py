@@ -55,7 +55,9 @@ class BlindProtocol:
     pass
 
 
-SCRAP = [re.compile(p.strip()) for p in open('SCRAP').readlines()]
+SCRAP = []
+if os.path.isfile(Params.SCRAP):
+  [re.compile(p.strip()) for p in open(Params.SCRAP).readlines()]
 
 class HttpProtocol( Cache.File ):
 

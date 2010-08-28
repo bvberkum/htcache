@@ -1,2 +1,6 @@
 Added:
- - Ignore host/path based on RegEx patterns read from file
+ - Ignore host/path based on RegEx patterns read from file.
+ - Created Sys-V init sh script, init.sh.
+   cp/rename it to /etc/init.d/ and make appropiate symlinks. Edit it to reflect
+   your systems locations. See http://www.debian-administration.org/articles/28
+   for Debian specifics. Make sure http-replicator is in PATH.

@@ -17,6 +17,7 @@ DEBUG = False
 MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 SUFFIX = '.incomplete'
+SCRAP = '/etc/http-replicator/scrap.patterns'
 USAGE = '''usage: %(PROG)s [options]
 
 options:
