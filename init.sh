@@ -12,7 +12,7 @@ LOG=/var/log/http-replicator.log
 LOCK=/var/run/http-replicator.pid
 #CACHE=/var/cache/http/
 CACHE=/var/cache/www/
-FLAGS="-c caches.FileTreeQH"
+FLAGS="--cache caches.FileTreeQ -a %Y/%m/%d/%H:%m- --nodir , "
 #--static --offline
 
 # Assert cache dir

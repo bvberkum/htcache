@@ -1,219 +1,124 @@
-import Params, Response, Cache, time, socket, os, sys, calendar, re
+import time, socket, os, sys, calendar, re
+import Params, Response, Resource, Cache
 from Params import log
-import anydbm
-try:
-    import cjson as json
-    json_read = json.decode
-    json_write = json.encode
-except:
-    import json as json
-    json_read = json.read
-    json_write = json.write
 
-if not os.path.exists(Params.RESOURCE_DB):
-    anydbm.open(Params.RESOURCE_DB, 'n')
 
-resources = anydbm.open(Params.RESOURCE_DB, 'rw')
-
-def print_info(*paths):
-    import sys
-    recordcnt = 0
-    for path in paths:
-        if path not in resources:
-            print >>sys.stderr, "Unknown cache location: %s" % path
-        else:	
-            print path, json_read(resources[path])
-            recordcnt += 1
-    if recordcnt > 1:
-        print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
-    elif recordcnt == 1:    	
-        print >>sys.stderr, "Found one record"
-    else:        
-        print >>sys.stderr, "No record found"
-    resources.close()                
-    sys.exit(1) 
-
-def find_info(props):    
-    import sys
-    for path in resources:
-        res = json_read(resources[path])
-        for k in props:
-            if k in ('0','srcref'):
-                if props[k] in res[0]:
-                    print path
-            elif k in ('1','mediatype'):
-                if props[k] == res[1]:
-                    print path
-            elif k in ('2','charset'):
-                if props[k] == res[2]:
-                    print path
-            elif k in ('3','language'):
-                if props[k] in res[3]:
-                    print path
-            elif k in ('4','feature'):
-                for k2 in props[k]:
-                    if res[4][k2] == props[k][k2]:
-                        print path
-    resources.close()                
-    sys.exit(1) 
-
-if Params.PRINT_ALLRECORDS:
-    print_info(*resources.keys())
-elif Params.PRINT_RECORD:
-    print_info(*Params.PRINT_RECORD)
-elif Params.FIND_RECORDS:
-    find_info(Params.FIND_RECORDS)
-    
 DNSCache = {}
 
 def connect( addr ):
-
-  assert Params.ONLINE, 'operating in off-line mode'
-  if addr not in DNSCache:
-    Params.log('Requesting address info for %s:%i' % addr)
-    DNSCache[ addr ] = socket.getaddrinfo( addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
-
-  family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
-
-  Params.log('Connecting to %s:%i' % sockaddr)
-  sock = socket.socket( family, socktype, proto )
-  sock.setblocking( 0 )
-  sock.connect_ex( sockaddr )
-
-  return sock
+    assert Params.ONLINE, 'operating in off-line mode'
+    if addr not in DNSCache:
+        Params.log('Requesting address info for %s:%i' % addr)
+        DNSCache[ addr ] = socket.getaddrinfo( 
+            addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
+    family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
+    Params.log('Connecting to %s:%i' % sockaddr)
+    sock = socket.socket( family, socktype, proto )
+    sock.setblocking( 0 )
+    sock.connect_ex( sockaddr )
+    return sock
 
 
 class BlindProtocol:
 
-  Response = None
+    Response = None
 
-  def __init__( self, request ):
+    def __init__( self, request ):
+        self.__socket = connect( request.url()[ :2 ] )
+        self.__sendbuf = request.recvbuf()
 
-    self.__socket = connect( request.url()[ :2 ] )
-    self.__sendbuf = request.recvbuf()
+    def socket( self ):
+        return self.__socket
 
-  def socket( self ):
+    def recvbuf( self ):
+        return ''
 
-    return self.__socket
+    def hasdata( self ):
+        return True
 
-  def recvbuf( self ):
+    def send( self, sock ):
+        bytes = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytes: ]
+        if not self.__sendbuf:
+          self.Response = Response.BlindResponse
 
-    return ''
-
-  def hasdata( self ):
-
-    return True
-
-  def send( self, sock ):
-
-    bytes = sock.send( self.__sendbuf )
-    self.__sendbuf = self.__sendbuf[ bytes: ]
-    if not self.__sendbuf:
-      self.Response = Response.BlindResponse
-
-  def done( self ):
-
-    pass
+    def done( self ):
+        pass
 
 
 # Compile drop rules from file upon startup
 DROP = []
 if os.path.isfile(Params.DROP):
-  DROP.extend([(p.strip(),re.compile(p.strip())) for p in
-      open(Params.DROP).readlines() if not p.startswith('#')])
+    DROP.extend([(p.strip(),re.compile(p.strip())) for p in
+        open(Params.DROP).readlines() if not p.startswith('#')])
+
+NOCACHE = []
+if os.path.isfile(Params.NOCACHE):
+    NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
+        open(Params.NOCACHE).readlines() if not p.startswith('#')])
+
 
 #Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
 
-class CachedProtocol(object):
+class ProxyProtocol(object):
+    """
+    Open cache and descriptor index for requested resources.
+    Filter requests using DROP, NOCACHE and .. rules.
+    """
 
-  def __init__(self, request):
-    super(CachedProtocol, self).__init__()
-    path = '%s:%i/%s' % request.url() 
-    self.cache = Cache.load_backend(Params.CACHE)( path )
-    Params.log('Cache position: %s' % path)
+    cache = None
+    "resource entity storage"
+    descriptors = None
+    "resource descriptor storage"
 
-  def has_descriptor(self):
-      return self.cache.path in resources
+    requri = None
+    "requested resource ID, set by subclass"
+    Response = None
+    "the http-replicator response class"
 
-  def update_descriptor(self, srcrefs=(), mediatype=None, charset=None,
-          languages=(), features={}):
-      assert not srcrefs or (isinstance(srcrefs, tuple) \
-              and isinstance(srcrefs[0], str)), srcrefs
-      _descr = self.get_descriptor()
-      if srcrefs:
-            _descr[0] += srcrefs
-      # TODO: srcrefs, mediatype, charset
-      if features:
-            _descr[4].update(features)
-      self.set_descriptor(*_descr)
+    def __init__(self, request):
+        super(ProxyProtocol, self).__init__()
+        cache_location = '%s:%i/%s' % request.url() 
+        self.cache = Cache.load_backend(Params.CACHE)(cache_location)
+        Params.log('Cache position: %s' % self.cache.path)
+        self.descriptors = Resource.get_backend()   
 
-  def set_descriptor(self, srcrefs, mediatype, charset, languages, features={}):
-      assert self.cache.path, (self,srcrefs,)
-      if srcrefs and not (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)):
-        assert isinstance(srcrefs, str)
-        srcrefs = (srcrefs,)
-      assert not srcrefs or (
-              (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
-              and isinstance(srcrefs[0], str)), srcrefs
-      resources[self.cache.path] = json_write((srcrefs, mediatype, charset, languages, features))
-      resources.sync()
+    def filter_response(self, request):
+        host, port, path = request.url()
+        args = request.args()
+        return host, port, path, args
 
-  def get_descriptor(self):
-      return tuple(json_read(resources[self.cache.path]))
-
-  def get_size(self):
-    return self.cache.size;
-  def set_size(self, size):
-    self.cache.size = size
-  size = property(get_size, set_size)
-
-  def get_mtime(self):
-    return self.cache.mtime;
-  def set_mtime(self, mtime):
-    self.cache.mtime = mtime
-  mtime = property(get_mtime, set_mtime)
-
-  def read(self, pos, size):
-      return self.cache.read(pos, size)
-
-  def write(self, chunk):
-      return self.cache.write(chunk)
-
-  def tell(self):
-      return self.cache.tell()
-
-  def close(self):
-      return self.cache.close()
-
-  def __del__(self):
-      del self.cache
-
-
-class HTTP:
-    OK = 200
-    PARTIAL_CONTENT = 206
-    NOT_MODIFIED = 304
-    FORBIDDEN = 403
-    GONE = 410
-    REQUEST_RANGE_NOT_STATISFIABLE = 416
-
-
-class HttpProtocol(CachedProtocol):
-
-  Response = None
-
-  def __init__( self, request ):
-    super(HttpProtocol, self).__init__(request)
-    host, port, path = request.url()
-    if port != 80:
-      hostinfo = "%s:%s" % (host, port)
-    else:
-      hostinfo = host
-    self.requri = "http://%s/%s" %  (hostinfo, path)
-    for pattern, compiled in DROP:
-      if compiled.match("%s/%s" % (host, path)):
+    def prepare_direct_response(self, request):
         # Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.DirectResponse
+        # Filter request by regex from patterns.drop
+        host, port, path = request.url()
+        filtered_path = "%s/%s" % (host, path)
+        for pattern, compiled in DROP:
+            if compiled.match(filtered_path):
+                self.set_blocked_response(path)
+                Params.log('Dropping connection, request matches pattern: %r.' % 
+                    pattern)
+                self.__socket = None
+                return True
+        if Params.STATIC and self.cache.full():
+            Params.log('Static mode; serving file directly from cache')
+            self.__socket = None
+            self.cache.open_full()
+            self.Response = Response.DataResponse
+            return True
+
+    def prepare_filtered_response(self):
+        "After parsing resheaders, return True "
+      # XXX: match on path only
+        for pattern, compiled in NOCACHE:
+            if compiled.match(self.requri):
+                self.Response = Response.BlindResponse            	  
+                Params.log('Not caching request, matches pattern: %r.' % 
+                    pattern)
+                return True
+
+    def set_blocked_response(self, path):
         # Respond by writing filter warning:
         if '?' in path or '#' in path:
             pf = path.find('#')
@@ -228,308 +133,339 @@ class HttpProtocol(CachedProtocol):
             self.Response = Response.BlockedImageContentResponse
         else:
             self.Response = Response.BlockedContentResponse
-        Params.log('Dropping connection, matching pattern: %r.' % pattern)
-        #self.cache = Cache.File('/var/http')
-        #self.cache = None
-    #else:        
-        #self.cache = Cache.load_backend(Params.CACHE)( '%s:%i/%s' % request.url() )
-
-    if Params.STATIC and self.cache.full():
-      Params.log('Static mode; serving file directly from cache')
-      self.__socket = None
-      self.cache.open_full()
-      self.Response = Response.DataResponse
-      return
-
-    head = 'GET /%s HTTP/1.1' % request.url()[ 2 ]
-    args = request.args()
-    args.pop( 'Accept-Encoding', None )
-    args.pop( 'Range', None )
-    stat = self.cache.partial() or self.cache.full()
-    if stat:
-      size = stat.st_size
-      mtime = time.strftime( Params.TIMEFMT, time.gmtime( stat.st_mtime ) )
-      if self.cache.partial():
-        Params.log('Requesting resume of partial file in cache: %i bytes, %s' % ( size, mtime ), 1)
-        args[ 'Range' ] = 'bytes=%i-' % size
-        args[ 'If-Range' ] = mtime
-      else:
-        Params.log('Checking complete file in cache: %i bytes, %s' % ( size, mtime ), 1)
-        args[ 'If-Modified-Since' ] = mtime
-
-    self.__socket = connect( request.url()[ :2 ] )
-    self.__sendbuf = '\r\n'.join( [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
-    self.__recvbuf = ''
-    self.__parse = HttpProtocol.__parse_head
-
-  def hasdata( self ):
-
-    return bool( self.__sendbuf )
-
-  def send( self, sock ):
-
-    assert self.hasdata()
-
-    bytes = sock.send( self.__sendbuf )
-    self.__sendbuf = self.__sendbuf[ bytes: ]
-
-  def __parse_head( self, chunk ):
-
-    eol = chunk.find( '\n' ) + 1
-    if eol == 0:
-      return 0
-
-    line = chunk[ :eol ]
-    Params.log('Server responds '+ line.rstrip())
-    fields = line.split()
-    assert (2 <= len( fields )) and fields[ 0 ].startswith( 'HTTP/' ) and fields[ 1 ].isdigit(), 'invalid header line: %r' % line
-    self.__status = int( fields[ 1 ] )
-    self.__message = ' '.join( fields[ 2: ] )
-    self.__args = {}
-    self.__parse = HttpProtocol.__parse_args
-
-    return eol
-
-  def __parse_args( self, chunk ):
-
-    eol = chunk.find( '\n' ) + 1
-    if eol == 0:
-      return 0
-
-    line = chunk[ :eol ]
-    if ':' in line:
-      Params.log('> '+ line.rstrip(), 1)
-      key, value = line.split( ':', 1 )
-      # XXX: title caps improper for acronyms
-      key = key.title()
-      if key in self.__args:
-        self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
-      else:
-        self.__args[ key ] = value.strip()
-    elif line in ( '\r\n', '\n' ):
-      self.__parse = None
-    else:
-      Params.log('Ignored header line: '+ line)
-
-    return eol
-
-  def recv( self, sock ):
-
-    assert not self.hasdata()
-
-    chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
-    assert chunk, 'server closed connection before sending a complete message header'
-    self.__recvbuf += chunk
-    while self.__parse:
-      bytes = self.__parse( self, self.__recvbuf )
-      if not bytes:
-        sock.recv( len( chunk ) )
-        return
-      self.__recvbuf = self.__recvbuf[ bytes: ]
-    sock.recv( len( chunk ) - len( self.__recvbuf ) )
-
-    if self.__status == HTTP.OK:
 
-      self.cache.open_new()
-      if 'Last-Modified' in self.__args:
-        try:
-          self.mtime = calendar.timegm( time.strptime( self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
-        except:
-          Params.log('Illegal time format in Last-Modified: %s.' % self.__args[ 'Last-Modified' ])
-          tmhdr = re.sub('\ [GMT0\+-]+$', '', self.__args[ 'Last-Modified' ])
-          self.mtime = calendar.timegm( time.strptime( tmhdr, Params.TIMEFMT[:-4] ) )
-      if 'Content-Length' in self.__args:
-        self.size = int( self.__args[ 'Content-Length' ] )
-      if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-        self.Response = Response.ChunkedDataResponse
-      else:
-        self.Response = Response.DataResponse
-
-    elif self.__status == HTTP.PARTIAL_CONTENT and self.cache.partial():
-
-      range = self.__args.pop( 'Content-Range', 'none specified' )
-      assert range.startswith( 'bytes ' ), 'invalid content-range: %s' % range
-      range, size = range[ 6: ].split( '/' )
-      beg, end = range.split( '-' )
-      self.size = int( size )
-      assert self.size == int( end ) + 1
-      self.cache.open_partial( int( beg ) )
-      if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-        self.Response = Response.ChunkedDataResponse
-      else:
-        self.Response = Response.DataResponse
-
-    elif self.__status == HTTP.NOT_MODIFIED and self.cache.full():
-
-      # TODO: self.__args['Content-Type'] = ct
-      self.cache.open_full()
-      self.Response = Response.DataResponse
-
-    elif self.__status in ( HTTP.FORBIDDEN, HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) and self.cache.partial():
-
-      self.cache.remove_partial()
-      self.Response = Response.BlindResponse
-
-    else:
-
-      self.Response = Response.BlindResponse
-
-    assert self.requri, self
-    if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
-      features = {}
-      for hd in ('Content-Type', 'Content-MD5', 'Content-Location',
-           'Content-Length', 'Content-Encoding', 'ETag', 'Last-Modified'):
-        if hd in self.__args:
-          features[hd] = self.__args[hd]
-      if not self.has_descriptor():
-        self.set_descriptor(self.requri, None, None, None, features)
-      else:
-        self.update_descriptor(features=features)
-    #    open(self._File__path +'.mediatype', 'w').write(ct)
-
-  def recvbuf( self ):
-
-    return '\r\n'.join( [ 'HTTP/1.1 %i %s' % ( self.__status, self.__message ) ] + map( ': '.join, self.__args.items() ) + [ '', '' ] )
-
-  def args( self ):
-
-    return self.__args.copy()
-
-  def socket( self ):
-
-    return self.__socket
-
-
-class FtpProtocol( CachedProtocol ):
-
-  Response = None
-
-  def __init__( self, request ):
-
-    super(FtpProtocol, self).__init__( request )
-
-    if Params.STATIC and self.cache.full():
-      self.__socket = None
-      self.cache.open_full()
-      self.Response = Response.DataResponse
-      return
-
-    host, port, path = request.url()
-    self.__socket = connect(( host, port ))
-    self.__path = path
-    self.__sendbuf = ''
-    self.__recvbuf = ''
-    self.__handle = FtpProtocol.__handle_serviceready
-
-  def socket( self ):
-
-    return self.__socket
-
-  def hasdata( self ):
-
-    return self.__sendbuf != ''
-
-  def send( self, sock ):
-
-    assert self.hasdata()
-
-    bytes = sock.send( self.__sendbuf )
-    self.__sendbuf = self.__sendbuf[ bytes: ]
-
-  def recv( self, sock ):
-
-    assert not self.hasdata()
-
-    chunk = sock.recv( Params.MAXCHUNK )
-    assert chunk, 'server closed connection prematurely'
-    self.__recvbuf += chunk
-    while '\n' in self.__recvbuf:
-      reply, self.__recvbuf = self.__recvbuf.split( '\n', 1 )
-      Params.log('S: %s' % reply.rstrip(), 2)
-      if reply[ :3 ].isdigit() and reply[ 3 ] != '-':
-        self.__handle( self, int( reply[ :3 ] ), reply[ 4: ] )
-        Params.log('C: %s' % self.__sendbuf.rstrip(), 2)
-
-  def __handle_serviceready( self, code, line ):
-
-    assert code == 220, 'server sends %i; expected 220 (service ready)' % code
-    self.__sendbuf = 'USER anonymous\r\n'
-    self.__handle = FtpProtocol.__handle_password
-
-  def __handle_password( self, code, line ):
-
-    assert code == 331, 'server sends %i; expected 331 (need password)' % code
-    self.__sendbuf = 'PASS anonymous@\r\n'
-    self.__handle = FtpProtocol.__handle_loggedin
-
-  def __handle_loggedin( self, code, line ):
-
-    assert code == 230, 'server sends %i; expected 230 (user logged in)' % code
-    self.__sendbuf = 'TYPE I\r\n'
-    self.__handle = FtpProtocol.__handle_binarymode
-
-  def __handle_binarymode( self, code, line ):
-
-    assert code == 200, 'server sends %i; expected 200 (binary mode ok)' % code
-    self.__sendbuf = 'PASV\r\n'
-    self.__handle = FtpProtocol.__handle_passivemode
-
-  def __handle_passivemode( self, code, line ):
-
-    assert code == 227, 'server sends %i; expected 227 (passive mode)' % code
-    channel = eval( line.split()[ -1 ] )
-    addr = '%i.%i.%i.%i' % channel[ :4 ], channel[ 4 ] * 256 + channel[ 5 ]
-    self.__socket = connect( addr )
-    self.__sendbuf = 'SIZE %s\r\n' % self.__path
-    self.__handle = FtpProtocol.__handle_size
-
-  def __handle_size( self, code, line ):
-
-    if code == 550:
-      self.Response = Response.NotFoundResponse
-      return
-
-    assert code == 213, 'server sends %i; expected 213 (file status)' % code
-    self.size = int( line )
-    Params.log('File size: %s' % self.size)
-    self.__sendbuf = 'MDTM %s\r\n' % self.__path
-    self.__handle = FtpProtocol.__handle_mtime
-
-  def __handle_mtime( self, code, line ):
-
-    if code == 550:
-      self.Response = Response.NotFoundResponse
-      return
-
-    assert code == 213, 'server sends %i; expected 213 (file status)' % code
-    self.mtime = calendar.timegm( time.strptime( line.rstrip(), '%Y%m%d%H%M%S' ) )
-    Params.log('Modification time: %s' % time.strftime( Params.TIMEFMT, time.gmtime( self.mtime ) ))
-    stat = self.cache.partial()
-    if stat and stat.st_mtime == self.mtime:
-      self.__sendbuf = 'REST %i\r\n' % stat.st_size
-      self.__handle = FtpProtocol.__handle_resume
-    else:
-      stat = self.cache.full()
-      if stat and stat.st_mtime == self.mtime:
-        self.cache.open_full()
-        self.Response = Response.DataResponse
-      else:
-        self.cache.open_new()
+    def get_size(self):
+        return self.cache.size;
+    def set_size(self, size):
+        self.cache.size = size
+    size = property(get_size, set_size)
+
+    def get_mtime(self):
+        return self.cache.mtime;
+    def set_mtime(self, mtime):
+        self.cache.mtime = mtime
+    mtime = property(get_mtime, set_mtime)
+
+    def read(self, pos, size):
+        return self.cache.read(pos, size)
+
+    def write(self, chunk):
+        return self.cache.write(chunk)
+
+    def tell(self):
+        return self.cache.tell()
+#
+#    def close(self):
+#        return self.cache.close()
+#
+#    def __del__(self):
+#        del self.cache
+
+
+class HTTP:
+    OK = 200
+    PARTIAL_CONTENT = 206
+    NOT_MODIFIED = 304
+    FORBIDDEN = 403
+    GONE = 410
+    REQUEST_RANGE_NOT_STATISFIABLE = 416
+
+
+class HttpProtocol(ProxyProtocol):
+
+    def __init__( self, request ):
+        super(HttpProtocol, self).__init__(request)
+        host, port, path, args = self.filter_response(request)
+        # Prepare requri to identify request
+        if port != 80:
+            hostinfo = "%s:%s" % (host, port)
+        else:
+            hostinfo = host
+        self.requri = "http://%s/%s" %  (hostinfo, path)
+        if self.prepare_direct_response(request):
+            return
+        # Prepare request for contact with origin server..
+        head = 'GET /%s HTTP/1.1' % path
+        args.pop( 'Accept-Encoding', None )
+        args.pop( 'Range', None )
+        stat = self.cache.partial() or self.cache.full()
+        if stat:
+            size = stat.st_size
+            mtime = time.strftime( 
+                Params.TIMEFMT, time.gmtime( stat.st_mtime ) )
+            if self.cache.partial():
+                Params.log('Requesting resume of partial file in cache: ' 
+                    '%i bytes, %s' % ( size, mtime ), 1)
+                args[ 'Range' ] = 'bytes=%i-' % size
+                args[ 'If-Range' ] = mtime
+            else:
+                Params.log('Checking complete file in cache: %i bytes, %s' % 
+                    ( size, mtime ), 1)
+                args[ 'If-Modified-Since' ] = mtime
+        self.__socket = connect( request.url()[ :2 ] )
+        self.__sendbuf = '\r\n'.join( 
+            [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
+        self.__recvbuf = ''
+        self.__parse = HttpProtocol.__parse_head
+
+    def hasdata( self ):
+        return bool( self.__sendbuf )
+
+    def send( self, sock ):
+        assert self.hasdata()
+
+        bytes = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytes: ]
+
+    def __parse_head( self, chunk ):
+        eol = chunk.find( '\n' ) + 1
+        if eol == 0:
+            return 0
+
+        line = chunk[ :eol ]
+        Params.log('Server responds '+ line.rstrip())
+        fields = line.split()
+        assert (2 <= len( fields )) \
+            and fields[ 0 ].startswith( 'HTTP/' ) \
+            and fields[ 1 ].isdigit(), 'invalid header line: %r' % line
+        self.__status = int( fields[ 1 ] )
+        self.__message = ' '.join( fields[ 2: ] )
+        self.__args = {}
+        self.__parse = HttpProtocol.__parse_args
+
+        return eol
+
+    def __parse_args( self, chunk ):
+        eol = chunk.find( '\n' ) + 1
+        if eol == 0:
+            return 0
+
+        line = chunk[ :eol ]
+        if ':' in line:
+            Params.log('> '+ line.rstrip(), 1)
+            key, value = line.split( ':', 1 )
+            # XXX: title caps improper for acronyms
+            key = key.title()
+            if key in self.__args:
+              self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
+            else:
+              self.__args[ key ] = value.strip()
+        elif line in ( '\r\n', '\n' ):
+            self.__parse = None
+        else:
+            Params.log('Ignored header line: '+ line)
+
+        return eol
+
+    def recv( self, sock ):
+        assert not self.hasdata()
+
+        chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
+        assert chunk, \
+            'server closed connection before sending a complete message header'
+        self.__recvbuf += chunk
+        while self.__parse:
+            bytes = self.__parse( self, self.__recvbuf )
+            if not bytes:
+                sock.recv( len( chunk ) )
+                return
+            self.__recvbuf = self.__recvbuf[ bytes: ]
+        sock.recv( len( chunk ) - len( self.__recvbuf ) )
+
+        if self.prepare_filtered_response():
+            return
+
+        if self.__status == HTTP.OK:
+            self.cache.open_new()
+            if 'Last-Modified' in self.__args:
+                try:
+                    self.mtime = calendar.timegm( time.strptime( 
+                        self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
+                except:
+                    Params.log('Illegal time format in Last-Modified: %s.' % 
+                        self.__args[ 'Last-Modified' ])
+                    # Try again:
+                    tmhdr = re.sub('\ [GMT0\+-]+$', '', 
+                        self.__args[ 'Last-Modified' ])
+                    self.mtime = calendar.timegm( time.strptime( 
+                        tmhdr, Params.TIMEFMT[:-4] ) )
+            if 'Content-Length' in self.__args:
+                self.size = int( self.__args[ 'Content-Length' ] )
+            if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
+                self.Response = Response.ChunkedDataResponse
+            else:
+                self.Response = Response.DataResponse
+
+        elif self.__status == HTTP.PARTIAL_CONTENT and self.cache.partial():
+            byterange = self.__args.pop( 'Content-Range', 'none specified' )
+            assert byterange.startswith( 'bytes ' ), \
+                'unhandled content-range type: %s' % byterange
+            byterange, size = byterange[ 6: ].split( '/' )
+            beg, end = byterange.split( '-' )
+            self.size = int( size )
+            assert self.size == int( end ) + 1
+            self.cache.open_partial( int( beg ) )
+            if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
+              self.Response = Response.ChunkedDataResponse
+            else:
+              self.Response = Response.DataResponse
+
+        elif self.__status == HTTP.NOT_MODIFIED and self.cache.full():
+            # FIXME: update last-modified? 
+            self.cache.open_full()
+            self.Response = Response.DataResponse
+
+        elif self.__status in ( HTTP.FORBIDDEN, \
+                HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) and self.cache.partial():
+
+            self.cache.remove_partial()
+            self.Response = Response.BlindResponse
+
+        else:
+            self.Response = Response.BlindResponse
+        
+        # Update descriptor      
+        if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
+            self.descriptors[self.cache.path] = [self.requri], self.__args
+
+    def recvbuf( self ):
+        return '\r\n'.join( 
+            [ 'HTTP/1.1 %i %s' % ( self.__status, self.__message ) ] +
+            map( ': '.join, self.__args.items() ) + [ '', '' ] )
+
+    def args( self ):
+        return self.__args.copy()
+
+    def socket( self ):
+        return self.__socket
+
+
+class FtpProtocol( ProxyProtocol ):
+
+    Response = None
+
+    def __init__( self, request ):
+        super(FtpProtocol, self).__init__( request )
+
+        if Params.STATIC and self.cache.full():
+          self.__socket = None
+          self.cache.open_full()
+          self.Response = Response.DataResponse
+          return
+
+        host, port, path = request.url()
+        self.__socket = connect(( host, port ))
+        self.__path = path
+        self.__sendbuf = ''
+        self.__recvbuf = ''
+        self.__handle = FtpProtocol.__handle_serviceready
+
+    def socket( self ):
+        return self.__socket
+
+    def hasdata( self ):
+        return self.__sendbuf != ''
+
+    def send( self, sock ):
+        assert self.hasdata()
+
+        bytes = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytes: ]
+
+    def recv( self, sock ):
+        assert not self.hasdata()
+
+        chunk = sock.recv( Params.MAXCHUNK )
+        assert chunk, 'server closed connection prematurely'
+        self.__recvbuf += chunk
+        while '\n' in self.__recvbuf:
+            reply, self.__recvbuf = self.__recvbuf.split( '\n', 1 )
+            Params.log('S: %s' % reply.rstrip(), 2)
+            if reply[ :3 ].isdigit() and reply[ 3 ] != '-':
+                self.__handle( self, int( reply[ :3 ] ), reply[ 4: ] )
+                Params.log('C: %s' % self.__sendbuf.rstrip(), 2)
+
+    def __handle_serviceready( self, code, line ):
+        assert code == 220, \
+            'server sends %i; expected 220 (service ready)' % code
+        self.__sendbuf = 'USER anonymous\r\n'
+        self.__handle = FtpProtocol.__handle_password
+
+    def __handle_password( self, code, line ):
+        assert code == 331, \
+            'server sends %i; expected 331 (need password)' % code
+        self.__sendbuf = 'PASS anonymous@\r\n'
+        self.__handle = FtpProtocol.__handle_loggedin
+
+    def __handle_loggedin( self, code, line ):
+        assert code == 230, \
+            'server sends %i; expected 230 (user logged in)' % code
+        self.__sendbuf = 'TYPE I\r\n'
+        self.__handle = FtpProtocol.__handle_binarymode
+
+    def __handle_binarymode( self, code, line ):
+        assert code == 200,\
+            'server sends %i; expected 200 (binary mode ok)' % code
+        self.__sendbuf = 'PASV\r\n'
+        self.__handle = FtpProtocol.__handle_passivemode
+
+    def __handle_passivemode( self, code, line ):
+        assert code == 227, \
+            'server sends %i; expected 227 (passive mode)' % code
+        channel = eval( line.split()[ -1 ] )
+        addr = '%i.%i.%i.%i' % channel[ :4 ], channel[ 4 ] * 256 + channel[ 5 ]
+        self.__socket = connect( addr )
+        self.__sendbuf = 'SIZE %s\r\n' % self.__path
+        self.__handle = FtpProtocol.__handle_size
+
+    def __handle_size( self, code, line ):
+        if code == 550:
+            self.Response = Response.NotFoundResponse
+            return
+        assert code == 213,\
+            'server sends %i; expected 213 (file status)' % code
+        self.size = int( line )
+        Params.log('File size: %s' % self.size)
+        self.__sendbuf = 'MDTM %s\r\n' % self.__path
+        self.__handle = FtpProtocol.__handle_mtime
+
+    def __handle_mtime( self, code, line ):
+        if code == 550:
+            self.Response = Response.NotFoundResponse
+            return
+        assert code == 213, \
+            'server sends %i; expected 213 (file status)' % code
+        self.mtime = calendar.timegm( time.strptime( 
+            line.rstrip(), '%Y%m%d%H%M%S' ) )
+        Params.log('Modification time: %s' % time.strftime( 
+            Params.TIMEFMT, time.gmtime( self.mtime ) ))
+        stat = self.cache.partial()
+        if stat and stat.st_mtime == self.mtime:
+            self.__sendbuf = 'REST %i\r\n' % stat.st_size
+            self.__handle = FtpProtocol.__handle_resume
+        else:
+            stat = self.cache.full()
+            if stat and stat.st_mtime == self.mtime:
+                self.cache.open_full()
+                self.Response = Response.DataResponse
+            else:
+                self.cache.open_new()
+                self.__sendbuf = 'RETR %s\r\n' % self.__path
+                self.__handle = FtpProtocol.__handle_data
+
+    def __handle_resume( self, code, line ):
+        assert code == 350, 'server sends %i; ' \
+            'expected 350 (pending further information)' % code
+        self.cache.open_partial()
         self.__sendbuf = 'RETR %s\r\n' % self.__path
         self.__handle = FtpProtocol.__handle_data
 
-  def __handle_resume( self, code, line ):
+    def __handle_data( self, code, line ):
+        if code == 550:
+            self.Response = Response.NotFoundResponse
+            return
+        assert code == 150, \
+            'server sends %i; expected 150 (file ok)' % code
+        self.Response = Response.DataResponse
 
-    assert code == 350, 'server sends %i; expected 350 (pending further information)' % code
-    self.cache.open_partial()
-    self.__sendbuf = 'RETR %s\r\n' % self.__path
-    self.__handle = FtpProtocol.__handle_data
 
-  def __handle_data( self, code, line ):
-
-    if code == 550:
-      self.Response = Response.NotFoundResponse
-      return
-
-    assert code == 150, 'server sends %i; expected 150 (file ok)' % code
-    self.Response = Response.DataResponse
