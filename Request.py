@@ -17,7 +17,7 @@ class HttpRequest:
       return 0
 
     line = chunk[ :eol ]
-    print 'Client sends', line.rstrip()
+    Params.log('Client sends '+ line.rstrip())
     fields = line.split()
     assert len( fields ) == 3, 'invalid header line: %r' % line
     self.__cmd, self.__url, dummy = fields
@@ -34,8 +34,7 @@ class HttpRequest:
 
     line = chunk[ :eol ]
     if ':' in line:
-      if Params.VERBOSE > 1:
-        print '>', line.rstrip()
+      Params.log('> '+ line.rstrip(), 1)
       key, value = line.split( ':', 1 )
       key = key.title()
       assert key not in self.__args, 'duplicate key: %s' % key
@@ -43,16 +42,15 @@ class HttpRequest:
     elif line in ( '\r\n', '\n' ):
       self.__size = int( self.__args.get( 'Content-Length', 0 ) )
       if self.__size:
-      	assert self.__cmd == 'POST', '%s request conflicts with message body' % self.__cmd
-        if Params.VERBOSE:
-          print 'Opening temporary file for POST upload'
+        assert self.__cmd == 'POST', '%s request conflicts with message body' % self.__cmd
+        Params.log('Opening temporary file for POST upload', 1)
         self.__body = os.tmpfile()
         self.__parse = self.__parse_body
       else:
         self.__body = None
         self.__parse = None
     else:
-      print 'Ignored header line: %r' % line
+      Params.log('Ignored header line: %r' % line)
 
     return eol
 
@@ -111,7 +109,7 @@ class HttpRequest:
     self.__args.pop( 'Proxy-Authorization', None )
 
     # add  proxy via header
-    via = "%s:%i" % (socket.gethostname(), Params.PORT)
+    via = "1.1 %s:%i (http-replicator/4.0alpha3)" % (socket.gethostname(), Params.PORT)
     if self.__args.setdefault('Via', via) != via:
       self.__args['Via'] += ', '+ via
 

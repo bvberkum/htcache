@@ -8,6 +8,8 @@
 LOG=/var/log/http-replicator.log 
 LOCK=/var/run/http-replicator.pid
 CACHE=/var/cache/http/
+FLAGS=
+#--static --offline
 
 # Assert cache dir
 if test ! -e $CACHE
@@ -20,7 +22,7 @@ start_replicator()
     if test ! -e $LOCK
     then
         echo "Starting http-replicator"
-        http-replicator -v -r $CACHE --daemon $LOG > $LOCK
+        http-replicator -v -r $CACHE --daemon $LOG $FLAGS > $LOCK
     else
         echo "Found "$LOCK", http-replicator already running?"
     fi
