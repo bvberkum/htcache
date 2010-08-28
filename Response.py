@@ -176,7 +176,7 @@ class ChunkedDataResponse( DataResponse ):
       self.__protocol.write( tail[ :chunksize ] )
       self.__recvbuf = tail[ chunksize+2: ]
 
-class FilteredResponse:
+class BlockedContentResponse:
 
   Done = False
 
@@ -187,6 +187,32 @@ class FilteredResponse:
                     'port': Params.PORT,
                     'location': '%s:%i/%s' % request.url(),
                     'software': 'http-replicator/4.0alpha3' }
+
+  def hasdata( self ):
+    return bool( self.__sendbuf )
+
+  def send( self, sock ):
+    assert not self.Done
+    bytes = sock.send( self.__sendbuf )
+    self.__sendbuf = self.__sendbuf[ bytes: ]
+    if not self.__sendbuf:
+      self.Done = True
+
+  def needwait( self ):
+    return False
+
+  def recv( self ):
+    raise AssertionError
+
+class BlockedImageContentResponse:
+
+  Done = False
+
+  def __init__(self, status, request):
+    data = open(Params.IMG_PLACEHOLDER).read()
+    self.__sendbuf = "HTTP/1.1 OK\r\nContent-Length: %i\r\n'\
+            'Content-Type: image/png\r\n\r\n%s" % (
+            len(data), data)
 
   def hasdata( self ):
     return bool( self.__sendbuf )

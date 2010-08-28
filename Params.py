@@ -20,6 +20,8 @@ PARTIAL = '.incomplete'
 DROP = '/etc/http-replicator/patterns.drop'
 RESOURCE_DB = '/var/lib/http-replicator/resource.db'
 HTML_PLACEHOLDER = '/var/lib/http-replicator/filtered-placeholder.html'
+IMG_PLACEHOLDER = '/var/lib/http-replicator/forbidden-sign.png'
+IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 CACHE = 'Cache.File'
 USAGE = '''usage: %(PROG)s [options]
 

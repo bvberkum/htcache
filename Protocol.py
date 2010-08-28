@@ -166,7 +166,19 @@ class HttpProtocol(CachedProtocol):
         # Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.DirectResponse
         # Respond by writing filter warning:
-        self.Response = Response.FilteredResponse
+        if '?' in path or '#' in path:
+            pf = path.find('#')
+            pq = path.find('?')
+            p = len(path)
+            if pf > 0: p = pf            	
+            if pq > 0: p = pq
+            nameext = os.path.splitext(path[:p])
+        else:            
+            nameext = os.path.splitext(path)
+        if len(nameext) == 2 and nameext[1][1:] in Params.IMG_TYPE_EXT:
+            self.Response = Response.BlockedImageContentResponse
+        else:
+            self.Response = Response.BlockedContentResponse
         Params.log('Dropping connection, matching pattern: %r.' % pattern)
         #self.cache = Cache.File('/var/http')
     else:        
