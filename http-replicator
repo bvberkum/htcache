@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import Params, Request, Response, fiber, weakref
+import Params, Protocol, Request, Response, fiber, weakref
 
 
 DOWNLOADS = weakref.WeakValueDictionary()
@@ -59,3 +59,5 @@ def Replicator( client, address ):
 
 
 fiber.spawn( Replicator, Params.PORT, Params.DEBUG, Params.LOG )
+Protocol.resources.close()
+

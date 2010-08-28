@@ -20,8 +20,6 @@ class FileTreeQ(Cache.File):
 
     assert not Params.FLAT
 
-    Params.log('Cache position: %s' % path)
-
     self.path = Params.ROOT + path
     self.file = None
 
@@ -36,8 +34,6 @@ class FileTreeQH(Cache.File):
         path = path[ :sep ] + os.sep + '#' + md5(path[sep:]).hexdigest()
 
     assert not Params.FLAT
-
-    Params.log('Cache position: %s' % path)
 
     self.path = Params.ROOT + path
     self.file = None

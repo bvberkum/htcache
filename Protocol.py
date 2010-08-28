@@ -15,8 +15,55 @@ if not os.path.exists(Params.RESOURCE_DB):
 
 resources = anydbm.open(Params.RESOURCE_DB, 'rw')
 
+def print_info(*paths):
+    import sys
+    recordcnt = 0
+    for path in paths:
+        if path not in resources:
+            print >>sys.stderr, "Unknown cache location: %s" % path
+        else:	
+            print path, json_read(resources[path])
+            recordcnt += 1
+    if recordcnt > 1:
+        print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
+    elif recordcnt == 1:    	
+        print >>sys.stderr, "Found one record"
+    else:        
+        print >>sys.stderr, "No record found"
+    resources.close()                
+    sys.exit(1) 
 
+def find_info(props):    
+    import sys
+    for path in resources:
+        res = json_read(resources[path])
+        for k in props:
+            if k in ('0','srcref'):
+                if props[k] in res[0]:
+                    print path
+            elif k in ('1','mediatype'):
+                if props[k] == res[1]:
+                    print path
+            elif k in ('2','charset'):
+                if props[k] == res[2]:
+                    print path
+            elif k in ('3','language'):
+                if props[k] in res[3]:
+                    print path
+            elif k in ('4','feature'):
+                for k2 in props[k]:
+                    if res[4][k2] == props[k][k2]:
+                        print path
+    resources.close()                
+    sys.exit(1) 
 
+if Params.PRINT_ALLRECORDS:
+    print_info(*resources.keys())
+elif Params.PRINT_RECORD:
+    print_info(*Params.PRINT_RECORD)
+elif Params.FIND_RECORDS:
+    find_info(Params.FIND_RECORDS)
+    
 DNSCache = {}
 
 def connect( addr ):
@@ -79,14 +126,14 @@ if os.path.isfile(Params.DROP):
 
 class CachedProtocol(object):
 
-  path = None
-
   def __init__(self, request):
     super(CachedProtocol, self).__init__()
-    self.cache = Cache.load_backend(Params.CACHE)( '%s:%i/%s' % request.url() )
+    path = '%s:%i/%s' % request.url() 
+    self.cache = Cache.load_backend(Params.CACHE)( path )
+    Params.log('Cache position: %s' % path)
 
   def has_descriptor(self):
-      return self.path in resources
+      return self.cache.path in resources
 
   def update_descriptor(self, srcrefs=(), mediatype=None, charset=None,
           languages=(), features={}):
@@ -101,16 +148,18 @@ class CachedProtocol(object):
       self.set_descriptor(*_descr)
 
   def set_descriptor(self, srcrefs, mediatype, charset, languages, features={}):
+      assert self.cache.path, (self,srcrefs,)
       if srcrefs and not (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)):
         assert isinstance(srcrefs, str)
         srcrefs = (srcrefs,)
       assert not srcrefs or (
               (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
               and isinstance(srcrefs[0], str)), srcrefs
-      resources[self.path] = json_write((srcrefs, mediatype, charset, languages, features))
+      resources[self.cache.path] = json_write((srcrefs, mediatype, charset, languages, features))
+      resources.sync()
 
   def get_descriptor(self):
-      return tuple(json_read(resources[self.path]))
+      return tuple(json_read(resources[self.cache.path]))
 
   def get_size(self):
     return self.cache.size;
@@ -154,13 +203,13 @@ class HttpProtocol(CachedProtocol):
   Response = None
 
   def __init__( self, request ):
+    super(HttpProtocol, self).__init__(request)
     host, port, path = request.url()
     if port != 80:
       hostinfo = "%s:%s" % (host, port)
     else:
       hostinfo = host
     self.requri = "http://%s/%s" %  (hostinfo, path)
-
     for pattern, compiled in DROP:
       if compiled.match("%s/%s" % (host, path)):
         # Respond by writing message as plain text, e.g echo/debug it:
@@ -181,9 +230,9 @@ class HttpProtocol(CachedProtocol):
             self.Response = Response.BlockedContentResponse
         Params.log('Dropping connection, matching pattern: %r.' % pattern)
         #self.cache = Cache.File('/var/http')
-    else:        
-        self.cache = Cache.load_backend(Params.CACHE)( '%s:%i/%s' % request.url() )
-    #super(HttpProtocol, self).__init__(request)
+        #self.cache = None
+    #else:        
+        #self.cache = Cache.load_backend(Params.CACHE)( '%s:%i/%s' % request.url() )
 
     if Params.STATIC and self.cache.full():
       Params.log('Static mode; serving file directly from cache')
@@ -325,10 +374,11 @@ class HttpProtocol(CachedProtocol):
 
       self.Response = Response.BlindResponse
 
+    assert self.requri, self
     if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
       features = {}
       for hd in ('Content-Type', 'Content-MD5', 'Content-Location',
-           'Content-Length', 'Content-Encoding'):
+           'Content-Length', 'Content-Encoding', 'ETag', 'Last-Modified'):
         if hd in self.__args:
           features[hd] = self.__args[hd]
       if not self.has_descriptor():

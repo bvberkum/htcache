@@ -23,6 +23,9 @@ HTML_PLACEHOLDER = '/var/lib/http-replicator/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/http-replicator/forbidden-sign.png'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 CACHE = 'Cache.File'
+PRINT_RECORD = []
+PRINT_ALLRECORDS = False
+FIND_RECORDS = {}
 USAGE = '''usage: %(PROG)s [options]
 
 options:
@@ -40,7 +43,15 @@ options:
      --offline       offline mode; never connect to server
      --limit RATE    limit download rate at a fixed K/s
      --log LOG       route output to log
-     --debug         switch from gather to debug output module''' % locals()
+     --debug         switch from gather to debug output module
+     --print-info PATH
+     --print-all-info
+                     print the resource record(s) for each cache location,
+                     then exit.  
+     --find-info KEY:[KEY:]ARG[,...]
+                    Search resources DB for exact record matches. ''' % locals()
+
+
 
 for _arg in _args:
 
@@ -96,6 +107,25 @@ for _arg in _args:
     LOG = _args.next()
   elif _arg == '--debug':
     DEBUG = True
+  elif _arg == '--print-info':
+    PRINT_RECORD.append(_args.next())
+  elif _arg == '--print-all-info':  
+    PRINT_ALLRECORDS = True  
+  elif _arg == '--find-info':  
+    args = _args.next()
+    _find={}
+    for a in args.split(','):
+        p = a.find(':')
+        k, a = a[:p], a[p+1:]
+        if ':' in a and not k == 'srcref':
+            p = a.find(':')
+            k2, a = a[:p], a[p+1:]
+            if k not in _find:
+                _find[k] = {}
+            _find[k][k2] = a
+        else:
+            _find[k] = a
+    FIND_RECORDS.update(_find)
   else:
     sys.exit( 'Error: invalid option %r' % _arg )
 
