@@ -110,6 +110,11 @@ class HttpRequest:
     self.__args.pop( 'Proxy-Connection', None )
     self.__args.pop( 'Proxy-Authorization', None )
 
+    # add  proxy via header
+    via = "%s:%i" % (socket.gethostname(), Params.PORT)
+    if self.__args.setdefault('Via', via) != via:
+      self.__args['Via'] += ', '+ via
+
   def recvbuf( self ):
 
     assert self.Protocol

@@ -1,4 +1,4 @@
-import Params, time, traceback
+import Params, time, traceback, socket
 
 
 class BlindResponse:
@@ -48,6 +48,10 @@ class DataResponse:
       args = self.__protocol.args()
     except:
       args = {}
+
+    via = "%s:%i" % (socket.gethostname(), Params.PORT)
+    if args.setdefault('Via', via) != via:
+      args['Via'] += ', '+ via
     args[ 'Connection' ] = 'close'
     args[ 'Date' ] = time.strftime( Params.TIMEFMT, time.gmtime() )
     if self.__protocol.mtime >= 0:

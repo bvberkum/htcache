@@ -23,6 +23,9 @@ class File:
     sep = path.find( '?' )
     if sep != -1:
       path = path[ :sep ] + path[ sep: ].replace( '/', '%2F' )
+      path = path[ :sep ] + path[ sep: ].replace( '%26', '/' )
+      path = path[ :sep ] + path[ sep: ].replace( '&', '/' )
+      path = path[ :sep ] + path[ sep: ].replace( ';', '/' )
     if Params.FLAT:
       path = os.path.basename( path )
     if Params.VERBOSE:
@@ -41,7 +44,8 @@ class File:
 
   def open_new( self ):
 
-    print 'Preparing new file in cache'
+    if Params.VERBOSE:
+      print 'Preparing new file in cache'
     try:
       makedirs( self.__path )
       self.__file = open( self.__path + Params.SUFFIX, 'w+' )
@@ -57,14 +61,16 @@ class File:
       assert offset <= self.tell(), 'range does not match file in cache'
       self.__file.seek( offset )
       self.__file.truncate()
-    print 'Resuming partial file in cache at byte', self.tell()
+    if Params.VERBOSE:
+      print 'Resuming partial file in cache at byte', self.tell()
 
   def open_full( self ):
 
     self.mtime = os.stat( self.__path ).st_mtime
     self.__file = open( self.__path, 'r' )
     self.size = self.tell()
-    print 'Reading complete file from cache'
+    if Params.VERBOSE:
+      print 'Reading complete file from cache'
 
   def remove_full( self ):
 
@@ -99,7 +105,8 @@ class File:
       os.utime( self.__path + Params.SUFFIX, ( self.mtime, self.mtime ) )
     if self.size == size:
       os.rename( self.__path + Params.SUFFIX, self.__path )
-      print 'Finalized', self.__path
+      if Params.VERBOSE:
+        print 'Finalized', self.__path
 
   def __del__( self ):
 
