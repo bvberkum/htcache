@@ -1,5 +1,7 @@
 :parent project: http://freshmeat.net/projects/http-replicator
-:homepage: 
+:homepage: http://github.com/dotmpe/htcache 
+
+.. contents::
 
 **htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy.
 It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
@@ -54,11 +56,13 @@ htcache client/server flow::
                                 |---static response(7)---->
    server <------------normal---|
           <------*conditional---' 
-           --*normal------------o
+           --*normal----------> o
                                 |--*normal----------------> 
                                 `--*nocache response(4)---> 
            ---not modified----> o--*cached response------->       
            ---error-----------> o---direct response------->       
+
+   * indicates wether there may be partial entity-content transfer
 
 .. planned implementation
 
@@ -86,8 +90,6 @@ htcache client/server flow::
                                     `*filtered response(6)>
            --error------------> o---blind response-------->       
 
-
-The asterix indicates wether there may be partial entity-content transfer. 
 
 Normally a request creates a new cache location and descriptor, static 
 responses are always served from cache and conditional requests may be.
@@ -125,36 +127,39 @@ the proxy server, which default action.
 
 To manage the cached resources and their descriptors, additional
 query and maintenance options are provided. Note that maintenance may need
-exclusive write access to the cache and descriptor backends, meaning it should
-not run while the proxy is running. 
+exclusive write access to the cache and descriptor backends, meaning don't run
+with active proxy.
 
 Cache backends
 ~~~~~~~~~~~~~~
 htcache uses a file-based Cache which may produce a file-tree similar to 
-that of ``wget -r``. This could create some problems with long filenames and 
-the characters that appear in HTTP query parts.
+that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect). 
+This can create problems with long filenames and 
+the characters that appear in the various URL parts.
 
-Additional backends are provided addressing mentioned problem.
-(default: Cache.File, ``--cache TYPE``):
+Additional backends address this. (default: Cache.File, ``--cache TYPE``)
 
-- caches.FileTreeQ - wget and HR fail on long filenames, usually caused by long
-  query parts. FileTreeQ encodes each query argument into a separate directory,
-  the first argument being prefixed with '?'.
+- caches.FileTreeQ - encodes each query argument into a separate directory,
+  the first argument being prefixed with '?'. FIXME: does not solve anything?
 - caches.FileTreeQH - Converts query into a hashsum. This one makes a bit more
   sense because queries are not hierarchical. The hashsum is encoded to a
   directory, the name prefixed with '#'.
-
+- caches.PartialMD5 - only encodes the excess part of the filename, the limit 
+  being hardcoded to 256 characters.
+- caches.FileTree - combines above three methods. 
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
   filename.
-
-- caches.HTContentStore - TODO: a content-hash index in dba2 api compat
+- caches.ArchiveTree - keep two to three trees...
 
 The storage location is futher affected by ``--archive`` and ``--nodir``.
 
 Regular archival of a resources is possible by prefixing a formatted date to
 the path. Ie. '%Y/%M/%d' would store a copy and maintain updates of a 
-resource for every day. Prefixing a timestamp would store a new copy for each
-request.
+resource for every day. Prefixing a timestamp would probably store a new copy 
+for each request.
+
+``--archive`` results in lots of redundant data. It also makes static, offline
+proxy operation on the resulting filesystem tree impossible. 
 
 The nodir parameter accepts a replacement for the directory separator and
 stores the path in a single filename. This may affect FileTreeQ.

@@ -49,6 +49,8 @@ class File(object):
         super(File, self).__init__()
         if path:
             self.init(path)
+            #assert len(self.path) < 255, \
+            #        "LBYL, cache location path to long for Cache.File! "
 
     def init(self, path):
         # encode query and/or fragment parts
@@ -65,8 +67,6 @@ class File(object):
         if Params.ARCHIVE:
             path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
         self.path = os.path.join(Params.ROOT, path)
-        assert len(self.path) < 255, \
-                "LBYL, cache location path to long for Cache.File! "
         self.file = None
 
     def partial( self ):

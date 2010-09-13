@@ -14,51 +14,51 @@ import Cache, Params
 
 
 class FileTreeQ(Cache.File):
-  """
-  Not only decode '/' in query part (after '?') but also
-  after this encode arg=val pairs into directory names, suffixing
-  the URL path with '?'.
+    """
+    Not only decode '/' in query part (after '?') but also
+    after this encode arg=val pairs into directory names, suffixing
+    the URL path with '?'.
 
-  Also sorts query args/vals.
-  """
+    Also sorts query args/vals.
+    """
 
-  def __init__( self, path ):
-    super(FileTreeQ, self).__init__(path)
+    def init(self, path):  
+        psep = Params.ENCODE_PATHSEP
+        # encode query and/or fragment parts
+        sep = Cache.min_pos(path.find('#'), path.find( '?' )) 
+        # sort query vals and turn into dirs
+        if sep != -1:
+            if psep:
+                path = path[:sep] + path[sep:].replace('%2F', psep)
+                path = path[:sep] + path[sep:].replace('/', psep)
+            if '&' in path[sep:]:
+                parts = path[sep+1:].split('&')
+            elif ';' in path[sep:]:
+                parts = path[sep+1:].split(';')
+            else:
+                parts = [path[sep+1:]]
+            if Params.FileTreeQ_SORT:    
+                parts.sort()   
+                while '' in parts:
+                    parts.remove('')
+            path = path[ :sep+1 ]
+            if parts:        
+                path = path + '/' + '/'.join(parts)
+        # optional removal of directories in path
+        if psep:
+          if sep == -1 or Params.FileTreeQ_ENCODE:
+              # entire path
+              path = path.replace( '/', psep)
+          else:
+              # URL path-part only
+              path = path[:sep].replace( '/', psep) + path[sep:] 
 
-  def init(self, path):  
-    # encode query and/or fragment parts
-    sep = Cache.min_pos(path.find('#'), path.find( '?' )) 
-    # sort query vals and turn into dirs
-    if sep != -1:
-        if '&' in path[sep:]:
-            parts = path[sep+1:].split('&')
-        elif ';' in path[sep:]:
-            parts = path[sep+1:].split(';')
-        else:
-            parts = [path[sep+1:]]
-        if Params.FileTreeQ_SORT:    
-            parts.sort()   
-            while '' in parts:
-                parts.remove('')
-        path = path[ :sep+1 ]
-        if parts:        
-            path = path + '/' + '/'.join(parts)
-    # optional removal of directories in path
-    psep = Params.ENCODE_PATHSEP
-    if psep:
-      if sep == -1 or Params.FileTreeQ_ENCODE:
-          # entire path
-          path = path.replace( '/', psep)
-      else:
-          # URL path-part only
-          path = path[:sep].replace( '/', psep) + path[sep:] 
-
-    # make archive path    
-    if Params.ARCHIVE:
-        path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
-    self.path = os.path.join(Params.ROOT, path)
-    #assert not Params.FLAT
-    self.file = None
+        # make archive path    
+        if Params.ARCHIVE:
+            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
+        self.path = os.path.join(Params.ROOT, path)
+        #assert not Params.FLAT
+        self.file = None
 
 
 class FileTreeQH(Cache.File):
@@ -68,35 +68,60 @@ class FileTreeQH(Cache.File):
   ENCODE_PATHSEP is applied after hashing query, before ARCHIVE.
   """
 
-  def __init__(self, path):
-    super(FileTreeQH, self).__init__(path)
-
   def init(self, path):
-    # encode query if present
-    sep = path.find( '?' )
-    # other encoding in query/fragment part        
-    if sep != -1:
-        if '&' in path[sep:]:
-            qsep='&'
-            parts = path[sep:].split('&')
-        elif ';' in path[sep:]:
-            qsep=';'
-            parts = path[sep:].split(';')
-        else:
-            qsep=''
-            parts = [path[sep:]]
-        parts.sort()   
-        path = path[ :sep ] + os.sep + '#' + md5(qsep.join(parts)).hexdigest()
-    # optional removal of directories in entire path
-    psep = Params.ENCODE_PATHSEP
-    if psep:
-        path = path.replace( '/', psep)
-    #assert not Params.FLAT
-    # make archive path    
-    if Params.ARCHIVE:
-        path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
-    self.path = os.path.join(Params.ROOT, path)
-    self.file = None
+      # encode query if present
+      sep = path.find( '?' )
+      # other encoding in query/fragment part        
+      if sep != -1:
+          if '&' in path[sep:]:
+              qsep='&'
+              parts = path[sep:].split('&')
+          elif ';' in path[sep:]:
+              qsep=';'
+              parts = path[sep:].split(';')
+          else:
+              qsep=''
+              parts = [path[sep:]]
+          parts.sort()   
+          path = path[ :sep ] + os.sep + '#' + md5(qsep.join(parts)).hexdigest()
+      # optional removal of directories in entire path
+      psep = Params.ENCODE_PATHSEP
+      if psep:
+          path = path.replace( '/', psep)
+      #assert not Params.FLAT
+      # make archive path    
+      if Params.ARCHIVE:
+          path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
+      self.path = os.path.join(Params.ROOT, path)
+      self.file = None
+
+
+class PartialMD5Tree(Cache.File):
+    def init(self, path):
+        if Params.ARCHIVE:
+            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
+        path = os.path.join(Params.ROOT, path)
+
+        s = Params.MAX_PATH_LENGTH - 34
+        if len(path) > Params.MAX_PATH_LENGTH:
+            path = path[:s] + os.sep + '#' + md5(path[s:]).hexdigest()
+        self.path = path            
+
+class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
+    def init(self, path):
+        path2 = path
+        if Params.ARCHIVE:
+            path2 = time.strftime( Params.ARCHIVE, time.gmtime() ) + path2
+        path2 = os.path.join(Params.ROOT, path2)
+        if len(path2) >= Params.MAX_PATH_LENGTH:
+            sep = Cache.min_pos(path2.find('#'), path2.find( '?' )) 
+            if sep != -1:
+                if (len(path2[:sep])+34) < Params.MAX_PATH_LENGTH:
+                    FileTreeQH.init(self, path)
+                else:
+                    PartialMD5Tree.init(self, path)
+        else:                    
+            FileTreeQ.init(self, path)
 
 
 class RefHash(Cache.File):

@@ -1,4 +1,5 @@
-import Params, time, traceback, socket
+import time, traceback, socket, hashlib
+import Params
 
 
 class BlindResponse:
@@ -35,115 +36,121 @@ class BlindResponse:
 
 class DataResponse:
 
-  Done = False
+    Done = False
 
-  def __init__( self, protocol, request ):
+    def __init__( self, protocol, request ):
 
-      self.__protocol = protocol
-      self.__pos, self.__end = request.range()
-      if self.__end == -1:
-          self.__end = self.__protocol.size
+        self.__protocol = protocol
+        self.__pos, self.__end = request.range()
+        if self.__end == -1:
+            self.__end = self.__protocol.size
 
-      try:
-          args = self.__protocol.args()
-      except:
-          args = {}
+        self.__hash = hashlib.sha1()
 
-      #if protocol.has_descriptor():
-      #  descr = protocol.get_descriptor()
-        #Params.log(descr)
-        # Abuse feature dict to store headers
-        # TODO: parse mediatype, charset, language..
-        #if descr[-1]:
-        #  for k, v in descr[-1].items():
-        #    #if 'encoding' in k.lower(): continue
-        #    args[k] = v
-      #else:
-      #  Params.log("No descriptor for %s" % protocol.path)
-      #srcrefs, mediatype, charset, languages, features = protocol.get_descriptor()
+        try:
+            args = self.__protocol.args()
+        except:
+            args = {}
 
-      via = "%s:%i" % (socket.gethostname(), Params.PORT)
-      if args.setdefault('Via', via) != via:
-          args['Via'] += ', '+ via
-      args[ 'Connection' ] = 'close'
-      if self.__protocol.mtime >= 0:
-          args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, time.gmtime( self.__protocol.mtime ) )
-      if self.__pos == 0 and self.__end == self.__protocol.size:
-          head = 'HTTP/1.1 200 OK'
-          if self.__protocol.size >= 0:
-              args[ 'Content-Length' ] = str( self.__protocol.size )
-      elif self.__end >= 0:
-          head = 'HTTP/1.1 206 Partial Content'
-          args[ 'Content-Length' ] = str( self.__end - self.__pos )
-          if self.__protocol.size >= 0:
-              args[ 'Content-Range' ] = 'bytes %i-%i/%i' % ( self.__pos, self.__end - 1, self.__protocol.size )
-          else:
-              args[ 'Content-Range' ] = 'bytes %i-%i/*' % ( self.__pos, self.__end - 1 )
-      else:
-          head = 'HTTP/1.1 416 Requested Range Not Satisfiable'
-          args[ 'Content-Range' ] = 'bytes */*'
-          args[ 'Content-Length' ] = '0'
+        #if protocol.has_descriptor():
+        #  descr = protocol.get_descriptor()
+          #Params.log(descr)
+          # Abuse feature dict to store headers
+          # TODO: parse mediatype, charset, language..
+          #if descr[-1]:
+          #  for k, v in descr[-1].items():
+          #    #if 'encoding' in k.lower(): continue
+          #    args[k] = v
+        #else:
+        #  Params.log("No descriptor for %s" % protocol.path)
+        #srcrefs, mediatype, charset, languages, features = protocol.get_descriptor()
 
-      Params.log('Replicator responds %s' % head)
-      if Params.VERBOSE > 1:
-          for key in args:
-              Params.log('> %s: %s' % ( key, args[ key ].replace( '\r\n', ' > ' ) ))
-      # Prepare response for client
-      self.__sendbuf = '\r\n'.join( [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
-      if Params.LIMIT:
-          self.__nextrecv = 0
+        via = "%s:%i" % (socket.gethostname(), Params.PORT)
+        if args.setdefault('Via', via) != via:
+            args['Via'] += ', '+ via
+        args[ 'Connection' ] = 'close'
+        if self.__protocol.mtime >= 0:
+            args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, time.gmtime( self.__protocol.mtime ) )
+        if self.__pos == 0 and self.__end == self.__protocol.size:
+            head = 'HTTP/1.1 200 OK'
+            if self.__protocol.size >= 0:
+                args[ 'Content-Length' ] = str( self.__protocol.size )
+        elif self.__end >= 0:
+            head = 'HTTP/1.1 206 Partial Content'
+            args[ 'Content-Length' ] = str( self.__end - self.__pos )
+            if self.__protocol.size >= 0:
+                args[ 'Content-Range' ] = 'bytes %i-%i/%i' % ( self.__pos, self.__end - 1, self.__protocol.size )
+            else:
+                args[ 'Content-Range' ] = 'bytes %i-%i/*' % ( self.__pos, self.__end - 1 )
+        else:
+            head = 'HTTP/1.1 416 Requested Range Not Satisfiable'
+            args[ 'Content-Range' ] = 'bytes */*'
+            args[ 'Content-Length' ] = '0'
 
-  def hasdata( self ):
+        Params.log('Replicator responds %s' % head)
+        if Params.VERBOSE > 1:
+            for key in args:
+                Params.log('> %s: %s' % ( key, args[ key ].replace( '\r\n', ' > ' ) ))
+        # Prepare response for client
+        self.__sendbuf = '\r\n'.join( [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
+        if Params.LIMIT:
+            self.__nextrecv = 0
 
-      if self.__sendbuf:
-          return True
-      elif self.__pos >= self.__protocol.tell():
-          return False
-      elif self.__pos < self.__end or self.__end == -1:
-          return True
-      else:
-          return False
+    def hasdata( self ):
 
-  def send( self, sock ):
+        if self.__sendbuf:
+            return True
+        elif self.__pos >= self.__protocol.tell():
+            return False
+        elif self.__pos < self.__end or self.__end == -1:
+            return True
+        else:
+            return False
 
-      assert not self.Done
-      if self.__sendbuf:
-          bytes = sock.send( self.__sendbuf )
-          self.__sendbuf = self.__sendbuf[ bytes: ]
-      else:
-          bytes = Params.MAXCHUNK
-          if 0 <= self.__end < self.__pos + bytes:
-              bytes = self.__end - self.__pos
-          chunk = self.__protocol.read( self.__pos, bytes )
-          try:
-              self.__pos += sock.send( chunk )
-          except:
-              Params.log("Error writing to client, aborted!")  
-              self.Done = True
-              if not self.__protocol.cache.full():
-                  self.__protocol.cache.remove_partial()
-              return
-      self.Done = not self.__sendbuf and ( self.__pos >= self.__protocol.size >= 0 or self.__pos >= self.__end >= 0 )
+    def send( self, sock ):
 
-  def needwait( self ):
+        assert not self.Done
+        if self.__sendbuf:
+            bytes = sock.send( self.__sendbuf )
+            self.__sendbuf = self.__sendbuf[ bytes: ]
+        else:
+            bytes = Params.MAXCHUNK
+            if 0 <= self.__end < self.__pos + bytes:
+                bytes = self.__end - self.__pos
+            chunk = self.__protocol.read( self.__pos, bytes )
+            try:
+                self.__pos += sock.send( chunk )
+            except:
+                Params.log("Error writing to client, aborted!")  
+                self.Done = True
+                if not self.__protocol.cache.full():
+                    self.__protocol.cache.remove_partial()
+                return
+        self.Done = not self.__sendbuf and ( self.__pos >= self.__protocol.size >= 0 or self.__pos >= self.__end >= 0 )
 
-      return Params.LIMIT and max( self.__nextrecv - time.time(), 0 )
+        # XXX: store hash for new recv'd content
+        if self.Done: print 'hash', self.__hash.hexdigest()
 
-  def recv( self, sock ):
+    def needwait( self ):
 
-      assert not self.Done
-      chunk = sock.recv( Params.MAXCHUNK )
-      if chunk:
-          self.__protocol.write( chunk )
-          if Params.LIMIT:
-              self.__nextrecv = time.time() + len( chunk ) / Params.LIMIT
-      else:
-          if self.__protocol.size >= 0:
-              assert self.__protocol.size == self.__protocol.tell(), 'connection closed prematurely'
-          else:
-              self.__protocol.size = self.__protocol.tell()
-              Params.log('Connection closed at byte %i' % self.__protocol.size)
-          self.Done = not self.hasdata()
+        return Params.LIMIT and max( self.__nextrecv - time.time(), 0 )
+
+    def recv( self, sock ):
+
+        assert not self.Done
+        chunk = sock.recv( Params.MAXCHUNK )
+        if chunk:
+            self.__protocol.write( chunk )
+            self.__hash.update( chunk )
+            if Params.LIMIT:
+                self.__nextrecv = time.time() + len( chunk ) / Params.LIMIT
+        else:
+            if self.__protocol.size >= 0:
+                assert self.__protocol.size == self.__protocol.tell(), 'connection closed prematurely'
+            else:
+                self.__protocol.size = self.__protocol.tell()
+                Params.log('Connection closed at byte %i' % self.__protocol.size)
+            self.Done = not self.hasdata()
 
 
 class ChunkedDataResponse( DataResponse ):
@@ -183,7 +190,7 @@ class BlockedContentResponse:
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
                         'location': '%s:%i/%s' % request.url(),
-                        'software': 'htcache/4.0alpha3' }
+                        'software': 'htcache/0.1' }
 
     def hasdata( self ):
         return bool( self.__sendbuf )

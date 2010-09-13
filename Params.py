@@ -15,9 +15,9 @@ ONLINE = True # XXX:bvb: useless..
 LIMIT = False
 LOG = False
 DEBUG = False
-DROP = '/etc/htcache/patterns.drop'
-NOCACHE = '/etc/htcache/patterns.nocache'
-SORT = '/etc/htcache/patterns.sort'
+DROP = '/etc/htcache/rules.drop'
+NOCACHE = '/etc/htcache/rules.nocache'
+SORT = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
 CACHE = 'Cache.File'
@@ -26,17 +26,23 @@ ENCODE_PATHSEP = ''
 FileTreeQ_SORT = True
 FileTreeQ_ENCODE = False
 # non user-configurable
+MAX_PATH_LENGTH = 256
 MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
+ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 RESOURCES = '/var/lib/htcache/resource.db'
-
+SHA1SUM = '/var/cache/sha1sum/'
+#TODO CRC, par2?
+#PAR2 = '/var/cache/par2/'
 # query params
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
 FIND_RECORDS = {}
 PRINT_MEDIA = []
+
+cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
 
 # maintenance params
 CHECK_DESCRIPTOR = []
@@ -45,8 +51,9 @@ CHECK_DESCRIPTOR = []
 
 USAGE = '''usage: %(PROG)s [options]
 
-proxy options:
   -h --help          show this help message and exit
+
+proxy options:
   -p --port PORT     listen on this port for incoming connections, default %(PORT)i
   -r --root DIR      set cache root directory, default current: %(ROOT)s
   -a --archive FMT   prefix cache location by a formatted datetime. 
@@ -54,6 +61,8 @@ proxy options:
   -c --cache TYPE    use module for caching, default %(CACHE)s. 
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
                      tree. does not encode `archive` prefix.
+  TODO --encode query sep                   
+  -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
   -d --drop FILE     filter requests for URI's based on regex patterns. 
                      read line for line from file, default %(DROP)s.
   TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
@@ -106,10 +115,6 @@ resource maintenance:
      TODO --x-force-fix
                      Use first likely value for
                      check-encodings/languages/mediatypes.
-     TODO --hash-resources
-                     Maintain a separate index with the SHA1 checksum of each
-                     resources.
-     TODO CRC, par2?
      TODO --check-dupes
                      Symlink duplicate content, check by size and hash.
                      Requires up to data hash index.
@@ -147,6 +152,14 @@ for _arg in _args:
             assert os.path.isdir(SORT)
         except:
             sys.exit( 'Error: %s requires an directory argument' % _arg )
+    elif _arg in ( '-s', '--sha1sum' ):
+        try:
+            ROOT = os.path.realpath( _args.next() ) + os.sep
+            assert os.path.isdir( ROOT )
+        except StopIteration:
+            sys.exit( 'Error: %s requires a directory argument' % _arg )
+        except:
+            sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
     elif _arg in ( '-r', '--root' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep

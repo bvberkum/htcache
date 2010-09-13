@@ -186,53 +186,53 @@ def spawn( generator, port, debug, log ):
 
         while True:
 
-        tryrecv = { listener.fileno(): None }
-        trysend = {}
-        expire = None
-        now = time.time()
+            tryrecv = { listener.fileno(): None }
+            trysend = {}
+            expire = None
+            now = time.time()
 
-        i = len( fibers )
-        while i:
-            i -= 1
-            state = fibers[ i ].state
-
-            if state and now > state.expire:
-                if isinstance( state, WAIT ):
-                    fibers[ i ].step()
-                else:
-                    fibers[ i ].step( throw='connection timed out' )
+            i = len( fibers )
+            while i:
+                i -= 1
                 state = fibers[ i ].state
 
-            if not state:
-                del fibers[ i ]
-                continue
+                if state and now > state.expire:
+                    if isinstance( state, WAIT ):
+                        fibers[ i ].step()
+                    else:
+                        fibers[ i ].step( throw='connection timed out' )
+                    state = fibers[ i ].state
 
-            if isinstance( state, RECV ):
-                tryrecv[ state.fileno ] = fibers[ i ]
-            elif isinstance( state, SEND ):
-                trysend[ state.fileno ] = fibers[ i ]
-            elif state.expire is None:
-                continue
+                if not state:
+                    del fibers[ i ]
+                    continue
 
-            if state.expire < expire or expire is None:
-                expire = state.expire
+                if isinstance( state, RECV ):
+                    tryrecv[ state.fileno ] = fibers[ i ]
+                elif isinstance( state, SEND ):
+                    trysend[ state.fileno ] = fibers[ i ]
+                elif state.expire is None:
+                    continue
 
-        if expire is None:
-            print '[ IDLE ]', time.ctime()
-            sys.stdout.flush()
-            canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-            print '[ BUSY ]', time.ctime()
-            sys.stdout.flush()
-        else:
-            canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
+                if state.expire < expire or expire is None:
+                    expire = state.expire
 
-        for fileno in canrecv:
-            if fileno is listener.fileno():
-                fibers.append( myFiber( generator( *listener.accept() ) ) )
+            if expire is None:
+                print '[ IDLE ]', time.ctime()
+                sys.stdout.flush()
+                canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
+                print '[ BUSY ]', time.ctime()
+                sys.stdout.flush()
             else:
-                tryrecv[ fileno ].step()
-        for fileno in cansend:
-            trysend[ fileno ].step()
+                canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
+
+            for fileno in canrecv:
+                if fileno is listener.fileno():
+                    fibers.append( myFiber( generator( *listener.accept() ) ) )
+                else:
+                    tryrecv[ fileno ].step()
+            for fileno in cansend:
+                trysend[ fileno ].step()
 
     except KeyboardInterrupt:
         print '[ DONE ]', generator.__name__, 'terminated'

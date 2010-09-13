@@ -83,27 +83,29 @@ class ProxyProtocol(object):
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()   
 
-    def filter_response(self, request):
+    def rewrite_response(self, request):
         host, port, path = request.url()
         args = request.args()
         return host, port, path, args
 
     def prepare_direct_response(self, request):
+        host, port, path = request.url()
+        if port == 8080 and host in ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1'):
+            self.Response = Response.DirectResponse
+            return True
         # Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.DirectResponse
         # Filter request by regex from patterns.drop
-        host, port, path = request.url()
         filtered_path = "%s/%s" % (host, path)
+        #print len(DROP), 'drop patterns,', filtered_path
         for pattern, compiled in DROP:
             if compiled.match(filtered_path):
                 self.set_blocked_response(path)
                 Params.log('Dropping connection, request matches pattern: %r.' % 
                     pattern)
-                self.__socket = None
                 return True
         if Params.STATIC and self.cache.full():
             Params.log('Static mode; serving file directly from cache')
-            self.__socket = None
             self.cache.open_full()
             self.Response = Response.DataResponse
             return True
@@ -175,7 +177,7 @@ class HttpProtocol(ProxyProtocol):
 
     def __init__( self, request ):
         super(HttpProtocol, self).__init__(request)
-        host, port, path, args = self.filter_response(request)
+        host, port, path, args = self.rewrite_response(request)
         # Prepare requri to identify request
         if port != 80:
             hostinfo = "%s:%s" % (host, port)
@@ -183,6 +185,7 @@ class HttpProtocol(ProxyProtocol):
             hostinfo = host
         self.requri = "http://%s/%s" %  (hostinfo, path)
         if self.prepare_direct_response(request):
+            self.__socket = None
             return
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
@@ -285,10 +288,18 @@ class HttpProtocol(ProxyProtocol):
                     Params.log('Illegal time format in Last-Modified: %s.' % 
                         self.__args[ 'Last-Modified' ])
                     # Try again:
-                    tmhdr = re.sub('\ [GMT0\+-]+$', '', 
-                        self.__args[ 'Last-Modified' ])
-                    self.mtime = calendar.timegm( time.strptime( 
-                        tmhdr, Params.TIMEFMT[:-4] ) )
+                    try:                    
+                        tmhdr = re.sub('\ [GMT0\+-]+$', '', 
+                            self.__args[ 'Last-Modified' ])
+                        self.mtime = calendar.timegm( time.strptime( 
+                            tmhdr, Params.TIMEFMT[:-4] ) )
+                    except:
+                        try:                    
+                            self.mtime = calendar.timegm( time.strptime( 
+                                self.__args[ 'Last-Modified' ],
+                                Params.ALTTIMEFMT ) )
+                        except:
+                            pass
             if 'Content-Length' in self.__args:
                 self.size = int( self.__args[ 'Content-Length' ] )
             if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':

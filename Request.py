@@ -114,7 +114,7 @@ class HttpRequest:
                 Params.TIMEFMT, time.gmtime() )
 
         # Add proxy Via header (per HTTP/1.1 14.45)
-        via = "1.1 %s:%i (htcache/4.0alpha3)" % (socket.gethostname(), Params.PORT)
+        via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
         if self.__args.setdefault('Via', via) != via:
             self.__args['Via'] += ', '+ via
 
@@ -157,7 +157,7 @@ class HttpRequest:
 
     def __hash__( self ):
         assert self.Protocol
-        return hash( self.__path )
+        return hash(( self.__host, self.__port, self.__path ))
 
     def __eq__( self, other ):
         assert self.Protocol

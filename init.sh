@@ -2,18 +2,34 @@
 # /etc/init.d/htcache
 #
 # System-V like init script for htcache.
-# Note path definitions here and in Params.py:
+# Note path definitions here and in Params.py.
 #
 # FIXME: this is inadequate and fragile, also htcache may want to handle
 # daemonization and running detection internally.
+#
+### BEGIN INIT INFO
+# Provides:          htcache
+# Required-Start:    
+# Required-Stop:     
+# Should-Start:      
+# Default-Start:     2 3 4 5
+# Default-Stop:      
+# Short-Description: a Python HTTP/FTP proxy
+# Description:       htcache is a python HTTP/FTP proxy with caching and filtering
+### END INIT INFO
 
-# Edit these to suit needs:
+set -e # check all commands
+
+DAEMON=/usr/bin/htcache
 LOG=/var/log/htcache.log 
-LOCK=/var/run/htcache.pid
+PID_FILE=/var/run/htcache.pid
 #CACHE=/var/cache/http/
 CACHE=/var/cache/www/
-FLAGS="--cache caches.FileTreeQ -a %Y/%m/%d/%H:%m- --nodir , "
+FLAGS="--cache caches.FileTree --nodir , "
+#FLAGS="--cache caches.FileTree -a %Y/%m/%d/%H:%M- --nodir , "
 #--static --offline
+
+test -x $DAEMON || exit 0
 
 # Assert cache dir
 if test ! -e $CACHE
@@ -21,48 +37,66 @@ then
     mkdir $CACHE
 fi
 
-start_replicator()
+htcache_start()
 {
-    if test ! -e $LOCK
+    if test ! -e $PID_FILE
     then
-        echo "Starting htcache"
+        #echo "Starting htcache"
         # TODO: check htcache status before redirecting output to lock
-        htcache -v -r $CACHE --log $LOG $FLAGS > $LOCK
-    else
-        echo "Found "$LOCK", htcache already running?"
+		$DAEMON -v -r $CACHE --log $LOG $FLAGS > $PID_FILE
+    #else
+        #echo "Found "$PID_FILE", htcache already running?"
     fi
 }
 
-stop_replicator()
+htcache_stop()
 {
-    if test ! -e $LOCK
+    if test ! -e $PID_FILE
     then
         echo "Not running"
     else
-        PID=`head -n 1 $LOCK`
+        PID=`head -n 1 $PID_FILE`
         if test -n "`ps -p $PID | grep $PID`"
         then
-            echo "Stopping htcache"
+            #echo "Stopping htcache"
             kill $PID
-            rm $LOCK
+            rm $PID_FILE
         else
-            echo "Not running under initial PID, please check and remove "$LOCK""
+            echo "Not running under initial PID, please check and remove "$PID_FILE""
         fi
     fi
 }
 
-# Handle init script argument
+## Handle init script argument
 case "$1" in
   start)
-    start_replicator
+	#log_daemon_msg "Starting HTTP proxy" "htcache"
+	#if [ -s $RSYNC_PID_FILE ] && kill -0 $(cat $RSYNC_PID_FILE) >/dev/null 2>&1; then
+	#	log_progress_msg "apparently already running"
+	#	log_end_msg 0
+	#	exit 0
+	#fi
+	htcache_start
     ;;
   stop)
-    stop_replicator
+  	#log_daemon_msg "Stopping HTTP proxy" "htcache"  
+  	#start-stop-daemon --stop --quiet --oknodo --pidfile $PID_FILE
+	#log_end_msg $?
+	#rm -f $PID_FILE
+    #htcache_stop
     ;;
+  reload|force-reload)  
+  	#log_warning_msg "Online reload not supported"  
+	;;
   restart)
-    stop_replicator
-    start_replicator
+	#log_daemon_msg "Restarting HTTP proxy" "htcache"
+    htcache_stop
+    htcache_start
     ;;
+#  status)
+#  	status_of_proc -p PID_FILE "$DAEMON" htcache
+#  	exit $? 
+#	;;
   *)
     echo "Usage: /etc/init.d/htcache {start|stop|restart}"
     exit 1
