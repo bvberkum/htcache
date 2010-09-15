@@ -45,7 +45,7 @@ class DataResponse:
         if self.__end == -1:
             self.__end = self.__protocol.size
 
-        self.__hash = hashlib.sha1()
+        # TODO: on/off: self.__hash = hashlib.sha1()
 
         try:
             args = self.__protocol.args()
@@ -129,7 +129,7 @@ class DataResponse:
         self.Done = not self.__sendbuf and ( self.__pos >= self.__protocol.size >= 0 or self.__pos >= self.__end >= 0 )
 
         # XXX: store hash for new recv'd content
-        if self.Done: print 'hash', self.__hash.hexdigest()
+        #if self.Done: print 'hash', self.__hash.hexdigest()
 
     def needwait( self ):
 
@@ -141,7 +141,7 @@ class DataResponse:
         chunk = sock.recv( Params.MAXCHUNK )
         if chunk:
             self.__protocol.write( chunk )
-            self.__hash.update( chunk )
+            #self.__hash.update( chunk )
             if Params.LIMIT:
                 self.__nextrecv = time.time() + len( chunk ) / Params.LIMIT
         else:

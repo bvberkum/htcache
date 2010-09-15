@@ -9,6 +9,7 @@ It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 Todo
  1. init.sh script is too fragile, and script can daemonize itself. rewrite.
  2. test FTP use   
+ 3. (auto) remove descriptors after manual path delete
 
 Issues
  1. Writing to client fails randomly, maybe malformed headers, probably dropped
