@@ -112,8 +112,9 @@ class ProxyProtocol(object):
 
     def prepare_filtered_response(self):
         "After parsing resheaders, return True "
-      # XXX: match on path only
+        # XXX: match on path only
         for pattern, compiled in NOCACHE:
+            #Params.log("nocache p %s" % pattern)
             if compiled.match(self.requri):
                 self.Response = Response.BlindResponse            	  
                 Params.log('Not caching request, matches pattern: %r.' % 

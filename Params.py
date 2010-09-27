@@ -74,7 +74,7 @@ proxy options:
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
      --limit RATE    limit download rate at a fixed K/s
-     --log LOG       route output to log
+     --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
 cache maintenance:
@@ -194,7 +194,7 @@ for _arg in _args:
             LIMIT = float( _args.next() ) * 1024
         except:
             sys.exit( 'Error: %s requires a numerical argument' % _arg )
-    elif _arg == '--log':
+    elif _arg == '--daemon':
         LOG = _args.next()
     elif _arg == '--debug':
         DEBUG = True

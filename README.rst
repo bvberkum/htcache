@@ -7,14 +7,18 @@
 It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 Todo
- 1. init.sh script is too fragile, and script can daemonize itself. rewrite.
- 2. test FTP use   
- 3. (auto) remove descriptors after manual path delete
+ - test FTP use.
+ - (auto) remove descriptors after manual path delete.
+ - use strict and other modes, adhere to RFC 2616:
+
+    - calculate Age field [14.6]  
+    - don't cache Authorization response [14.8]
+    - Cache-Control [14.9]
 
 Issues
- 1. Writing to client fails randomly, maybe malformed headers, probably dropped
-    connection (eg. cancelled mouseovers?)
- 2. Some date headers fail to parse.
+ 1. Writing to client fails randomly, probably dropped connection 
+    (eg. cancelled mouseovers)
+ 2. Some date headers in the wild still fail to parse.
  3. HTML placeholder served for all connections (e.g. also for flash, images)
  4. There is a version with other cl-options, it uses stdlib asyncore
     check: 

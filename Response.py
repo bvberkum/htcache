@@ -87,7 +87,7 @@ class DataResponse:
             args[ 'Content-Range' ] = 'bytes */*'
             args[ 'Content-Length' ] = '0'
 
-        Params.log('Replicator responds %s' % head)
+        Params.log('HTCache responds %s' % head)
         if Params.VERBOSE > 1:
             for key in args:
                 Params.log('> %s: %s' % ( key, args[ key ].replace( '\r\n', ' > ' ) ))
@@ -244,7 +244,7 @@ class DirectResponse:
 
     def __init__( self, status, request ):
 
-        lines = [ 'HTTP Replicator: %s' % status, '', 'Requesting:' ]
+        lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
         for line in head.splitlines():
             lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )

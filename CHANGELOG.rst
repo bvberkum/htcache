@@ -3,13 +3,13 @@
   * added support for alternative cache directory layouts using modular 
     cache backends  
   * added descriptor cache for resource metadata  
-  * allow simple queries on for cached data  
+  * allow simple queries on resource metadata  
   * added support to block request based on URL matching
   * added fancy html and image placeholder for blocked requests  
   * added support to bypass cache based on URL matching
   * created Sys-V init sh script
   * including HTTP Via header
-  * various more detailed changes from the past two years, see revision log
+  * various more changes from the past two years, see revision log
 
 2008-31-01 http-replicator version 4.0alpha2
   * added GPL licence file

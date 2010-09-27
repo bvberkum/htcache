@@ -41,11 +41,15 @@ htcache_start()
 {
     if test ! -e $PID_FILE
     then
-        #echo "Starting htcache"
+        echo "Starting htcache"
         # TODO: check htcache status before redirecting output to lock
-		$DAEMON -v -r $CACHE --log $LOG $FLAGS > $PID_FILE
-    #else
-        #echo "Found "$PID_FILE", htcache already running?"
+		PID=`$DAEMON -v -r $CACHE --daemon $LOG $FLAGS`
+		if test "$PID" -gt 0
+        then
+            echo $PID > $PID_FILE
+        fi
+    else
+		echo "Found "$PID_FILE", htcache already running? (PID: $PID)"
     fi
 }
 
@@ -58,7 +62,7 @@ htcache_stop()
         PID=`head -n 1 $PID_FILE`
         if test -n "`ps -p $PID | grep $PID`"
         then
-            #echo "Stopping htcache"
+            echo "Stopping htcache"
             kill $PID
             rm $PID_FILE
         else
@@ -83,9 +87,10 @@ case "$1" in
   	#start-stop-daemon --stop --quiet --oknodo --pidfile $PID_FILE
 	#log_end_msg $?
 	#rm -f $PID_FILE
-    #htcache_stop
+    htcache_stop
     ;;
   reload|force-reload)  
+  	echo "Online reload not supported"  
   	#log_warning_msg "Online reload not supported"  
 	;;
   restart)
