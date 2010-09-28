@@ -45,9 +45,6 @@ Also create files in /etc/htcache:
 * rules.drop
 * rules.nocache 
 * rules.sort
-* filter.request
-* filter.response
-* filter.always
 
 
 Overview
@@ -70,32 +67,6 @@ htcache client/server flow::
 
    * indicates wether there may be partial entity-content transfer
 
-.. planned implementation
-
-   .                         htcache 
-                             _______
-                                o <---*request------------  client
-                                |
-                                |---blocked response(1)--->
-                                |---static response(7)---->
-   server <-----------*normal---|
-          <-*rewritten(2)---'   |   
-          <------*conditional---' 
-          <-*rewritten(2)---'       
-           -*normal-------------. 
-             |                  v
-             `-*rewritten(3)--> o 
-                                |--*normal response-------> 
-                                |   |
-                                |--*sorted response(5)----> 
-                                |   |
-                                `--*noncached response(4)-> 
-                                    |
-           --not modified-----> o--*cached response------->       
-                                    |
-                                    `*filtered response(6)>
-           --error------------> o---blind response-------->       
-
 
 Normally a request creates a new cache location and descriptor, static 
 responses are always served from cache and conditional requests may be.
@@ -104,23 +75,10 @@ Beside these messages, also note the following special cases of request
 and response messages.
 
 1. blocked response                                  (rules.drop)
-2. TODO: rewritten request                           (rewrite.request)
-3. TODO: rewritten response (cache modified message) (rewrite.beforecache)
 4. blind response (uncached content)                 (rules.nocache)
-5. TODO: alternative cache location                  (rules.sort)
-6. TODO: rewritten response after caching            (rewrite.aftercache)
 
-All these cases are matched based on the following parts of a message:
+See the section _`Rule Syntax <Filter rules>` for the exact syntax.
 
-- host, port, path, URL, request-line, headers[, content]; for request, and
-- status, code, response-line, headers[, content]; for response.
-
-.. admonition:: XXX
-
-   with current implementation, only (a part) of the URL is considered
-   during filtering.
-
-See _`Filter <Filter rules>` and _`Rewrite rules` for the exact syntax.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -155,7 +113,6 @@ Additional backends address this. (default: Cache.File, ``--cache TYPE``)
 - caches.FileTree - combines above three methods. 
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
   filename.
-- caches.ArchiveTree - keep two to three trees...
 
 The storage location is futher affected by ``--archive`` and ``--nodir``.
 
@@ -169,38 +126,6 @@ proxy operation on the resulting filesystem tree impossible.
 
 The nodir parameter accepts a replacement for the directory separator and
 stores the path in a single filename. This may affect FileTreeQ.
-
-
-Configuration
--------------
-Syntax
-~~~~~~
-rules.drop::
-
-  # proto      hostpath              
-  *|ftp|http   [^/]*zedo\.com.*
-
-rules.nocache::
-
-  # proto      hostpath            
-  *            [^/]*gmail\.com.*
-
-rules.sort::
-
-  # proto  hostpath               replacement             root  archive nodir sortQ encodeQ
-  *        (.*)                   
-  *        [^/]*youtube\.com.*    /my/dir/youtube/\1.flv  
-
-filter.*::
-
-  # action                   proto       hostpath  content-match        -replace
-  (request|response|always)  (http|ftp)  .*        <script.*></script>  
-
-
-
-  
-
-
 
 Descriptor backends
 ~~~~~~~~~~~~~~~~~~~
@@ -226,4 +151,37 @@ TODO: multi-item rules, use python for list syntax
 Rewrite rules
 ~~~~~~~~~~~~~
 TODO: Requests and responses may have their various parts rewritten.
+
+Rule Syntax
+~~~~~~~~~~~
+rules.drop::
+
+  # hostpath
+  [^/]*zedo\.com.*
+
+Matching DROP rules deny access to the origin server, and instead serve a HTML
+or image placeholder.
+
+rules.nocache::
+
+  # hostpath            
+  [^/]*gmail\.com.*
+
+A matching NOCACHE rule bypasses the caching for a request, serving directly 
+from the origin server or the next proxy on the line.
+
+Both DROP and NOCACHE rule-format will change to include matching on protocol.
+
+rules.sort::
+
+  # proto  hostpath               replacement             root
+  *        (.*)                   
+  *        [^/]*youtube\.com.*    /my/dir/youtube/\1.flv  mydir/
+
+SORT rules currently prefix the cache-location with a tag, in above example the
+location under ROOT will be ``mydir/``. If the ``--archive`` option is in effect
+it is prefixed to this tag. Note that ``--nodir`` is applied after prefixing.
+
+This feature is under development.
+Rewriting content based on above message matching is planned.
 
