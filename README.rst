@@ -77,7 +77,7 @@ and response messages.
 1. blocked response                                  (rules.drop)
 4. blind response (uncached content)                 (rules.nocache)
 
-See the section `Rule Syntax`__ for the exact syntax.
+See the section `Rule Syntax`_ for the exact syntax.
 
 
 Configuration
