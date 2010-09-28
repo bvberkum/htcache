@@ -44,9 +44,10 @@ Also create files in /etc/htcache:
 
 * rules.drop
 * rules.nocache 
-* rewrite.request
-* rewrite.response
-* rewrite.always
+* rules.sort
+* filter.request
+* filter.response
+* filter.always
 
 
 Overview
@@ -128,19 +129,19 @@ option arguments to the program, and for their default settings. Other settings
 are given in the rewrite and rules files described above.
 
 The programs options are divided in three parts, the first group affects 
-the proxy server, which default action.
+the proxy server, which is the default action.
 
 To manage the cached resources and their descriptors, additional
 query and maintenance options are provided. Note that maintenance may need
 exclusive write access to the cache and descriptor backends, meaning don't run
 with active proxy.
 
-Cache backends
-~~~~~~~~~~~~~~
+Cache backends listing
+~~~~~~~~~~~~~~~~~~~~~~
 htcache uses a file-based Cache which may produce a file-tree similar to 
 that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect). 
-This can create problems with long filenames and 
-the characters that appear in the various URL parts.
+This can create problems with long filenames and the characters that appear 
+in the various URL parts.
 
 Additional backends address this. (default: Cache.File, ``--cache TYPE``)
 
@@ -168,6 +169,38 @@ proxy operation on the resulting filesystem tree impossible.
 
 The nodir parameter accepts a replacement for the directory separator and
 stores the path in a single filename. This may affect FileTreeQ.
+
+
+Configuration
+-------------
+Syntax
+~~~~~~
+rules.drop::
+
+  # proto      hostpath              
+  *|ftp|http   [^/]*zedo\.com.*
+
+rules.nocache::
+
+  # proto      hostpath            
+  *            [^/]*gmail\.com.*
+
+rules.sort::
+
+  # proto  hostpath               replacement             root  archive nodir sortQ encodeQ
+  *        (.*)                   
+  *        [^/]*youtube\.com.*    /my/dir/youtube/\1.flv  
+
+filter.*::
+
+  # action                   proto       hostpath  content-match        -replace
+  (request|response|always)  (http|ftp)  .*        <script.*></script>  
+
+
+
+  
+
+
 
 Descriptor backends
 ~~~~~~~~~~~~~~~~~~~

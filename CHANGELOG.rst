@@ -1,4 +1,10 @@
+TODO htcache version 1.0 (planned but non-committed)
+  * Tested FTP use.
+  * RFC 2616 adherence.
+  * On-line cache maintenance.  
+
 TODO htcache version 0.2    
+  * Rewrite rules.* 
 
 2010-09-28 htcache version 0.1
   * rename to htcache
