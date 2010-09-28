@@ -77,7 +77,7 @@ and response messages.
 1. blocked response                                  (rules.drop)
 4. blind response (uncached content)                 (rules.nocache)
 
-See the section _`Rule Syntax <Filter rules>` for the exact syntax.
+See the section _`Rule Syntax` for the exact syntax.
 
 
 Configuration
@@ -136,21 +136,6 @@ additional backends available at this time.
 TODO: a file-based header storage or perhaps even an Apache mod_asis
 compatible storage are under consideration. Depending on query/maintenance
 requirements.
-
-Filter rules
-~~~~~~~~~~~~
-Requests and responses may be filtered based on request URL, method, headers or content.
-Rules are provided in rules.drop and rules.nocache.
-
-The former causes a placeholder to be served instead of the origin server
-content, the latter bypasses caching.
-
-XXX: lines are expressions, empty or start with #
-TODO: multi-item rules, use python for list syntax
-
-Rewrite rules
-~~~~~~~~~~~~~
-TODO: Requests and responses may have their various parts rewritten.
 
 Rule Syntax
 ~~~~~~~~~~~
