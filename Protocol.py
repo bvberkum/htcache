@@ -57,6 +57,38 @@ if os.path.isfile(Params.NOCACHE):
     NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
         open(Params.NOCACHE).readlines() if not p.startswith('#')])
 
+def split_csv(line):
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return
+    values = []
+    vbuf = ''
+    Q = ('\'','\"')
+    inquote = False
+    for c in line:
+        if c in Q:
+            inquote = True
+        elif inquote:
+            if c in Q:
+                inquote = False
+            else:                
+                vbuf += c
+        elif c == ',' or c.isspace():
+            if vbuf:
+                values.append(vbuf)
+                vbuf = ''
+        else:
+            vbuf += c
+    if vbuf:
+        values.append(vbuf)
+        vbuf = ''
+    return values
+
+SORT = {}
+if os.path.isfile(Params.SORT):
+    SORT.update([(p[1],re.compile(p[0])) for p in
+        map(split_csv, open(Params.SORT).readlines()) if p])
+
 
 #Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
 
@@ -79,6 +111,9 @@ class ProxyProtocol(object):
     def __init__(self, request):
         super(ProxyProtocol, self).__init__()
         cache_location = '%s:%i/%s' % request.url() 
+        for tag, pattern in SORT.items():
+            if pattern.match(cache_location):
+                cache_location=os.path.join(tag,cache_location)
         self.cache = Cache.load_backend(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()   

@@ -66,7 +66,7 @@ proxy options:
   -d --drop FILE     filter requests for URI's based on regex patterns. 
                      read line for line from file, default %(DROP)s.
   TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
-  TODO -s --sort FILE     sort requests based on regex, directory pairs from file.
+  -s --sort SORT     sort requests based on regex, directory-name pairs from file.
                      unmatched requests are cached normally.
   -v --verbose       increase output, use twice to show http headers
   -t --timeout SEC   break connection after so many seconds of inactivity, default %(TIMEOUT)i
@@ -144,14 +144,15 @@ for _arg in _args:
     elif _arg in ( '-n', '--nocache' ):
         try:
             NOCACHE = os.path.realpath( _args.next() )
+            #assert os.path.exists(NOCACHE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-s', '--sort' ):
         try:
             SORT = os.path.realpath( _args.next() )
-            assert os.path.isdir(SORT)
+            #assert os.path.exists(SORT)
         except:
-            sys.exit( 'Error: %s requires an directory argument' % _arg )
+            sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-s', '--sha1sum' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep

@@ -53,6 +53,8 @@ class File(object):
             #        "LBYL, cache location path to long for Cache.File! "
 
     def init(self, path):
+        assert not path.startswith(os.sep), \
+            "FIXME: implement saving in other roots"
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' )) 
         # optional removal of directories in entire path

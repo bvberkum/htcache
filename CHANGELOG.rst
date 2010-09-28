@@ -1,4 +1,6 @@
-2010-08-28 htcache version 0.1
+TODO htcache version 0.2    
+
+2010-09-28 htcache version 0.1
   * rename to htcache
   * added support for alternative cache directory layouts using modular 
     cache backends  
@@ -9,6 +11,7 @@
   * added support to bypass cache based on URL matching
   * created Sys-V init sh script
   * including HTTP Via header
+  * Updated Makefile for tar'ed dists and incremental snapshots.
   * various more changes from the past two years, see revision log
 
 2008-31-01 http-replicator version 4.0alpha2
