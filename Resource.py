@@ -1,12 +1,19 @@
 """ """
 import os, re, anydbm, sets
 import Params
+
+# XXX dont use cjson, its buggy, see comments at
+# http://pypi.python.org/pypi/python-cjson
+# use jsonlib or simplejson
 try:
-    import cjson as json
-    json_read = json.decode
-    json_write = json.encode
+    #import cjson as json
+    #json_read = json.decode
+    #json_write = json.encode
+    import simplejson
+    json_read = simplejson.loads
+    json_write = simplejson.dumps
 except:
-    import json as json
+    import json
     json_read = json.read
     json_write = json.write
 
