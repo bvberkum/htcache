@@ -1,5 +1,10 @@
 """ """
-import os, re, anydbm, sets
+import os, re, anydbm
+try:
+    # Py >= 2.4
+    assert set
+except AssertionError:
+    from sets import Set as set
 import Params
 
 # XXX dont use cjson, its buggy, see comments at
@@ -96,7 +101,7 @@ class AnyDBStorage(object):
 
     def update(self, path, srcrefs, headers):
         descr = self.get(path)
-        srcrefs = list(sets.Set(srcrefs).union(descr[0]))
+        srcrefs = list(set(srcrefs).union(descr[0]))
         headers.update(descr[4])
         self.set(path, srcrefs, headers)
 
