@@ -38,7 +38,11 @@ class AnyDBStorage(object):
 
     def __init__(self, path):
         if not os.path.exists(path):
-            anydbm.open(path, 'n').close()
+            try:
+                anydbm.open(path, 'n').close()
+            except Exception as e:
+                raise Exception("Unable to create new resource DB at <%s>" %
+                        path)
         self.__be = anydbm.open(path, 'rw')
 
     def close(self):
