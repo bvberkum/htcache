@@ -14,6 +14,7 @@ Todo
     - calculate Age field [14.6]  
     - don't cache Authorization response [14.8]
     - Cache-Control [14.9]
+ - rules.sort prefixes paths
 
 Issues
  1. Writing to client fails randomly, probably dropped connection 
@@ -26,7 +27,10 @@ Issues
      * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
      * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
   
- 5. Reinstate use of unit-test?   
+ 5. Embedded youtube does not work, but the site runs fine..
+
+Unittests
+     No known failures.
 
 Installation
 ------------

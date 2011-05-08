@@ -58,7 +58,7 @@ class File(object):
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' )) 
         # optional removal of directories in entire path
-        psep = Parameters.ENCODE_PATHSEP
+        psep = Params.ENCODE_PATHSEP
         if psep:
             path = path.replace( '/', psep)
         else:

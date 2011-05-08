@@ -1,12 +1,24 @@
 """ """
-import os, re, anydbm, sets
-import Params
+import os, re, anydbm
 try:
-    import cjson as json
-    json_read = json.decode
-    json_write = json.encode
+    # Py >= 2.4
+    assert set
+except AssertionError:
+    from sets import Set as set
+import Params
+
+# XXX dont use cjson, its buggy, see comments at
+# http://pypi.python.org/pypi/python-cjson
+# use jsonlib or simplejson
+try:
+    #import cjson as json
+    #json_read = json.decode
+    #json_write = json.encode
+    import simplejson
+    json_read = simplejson.loads
+    json_write = simplejson.dumps
 except:
-    import json as json
+    import json
     json_read = json.read
     json_write = json.write
 
@@ -26,7 +38,11 @@ class AnyDBStorage(object):
 
     def __init__(self, path):
         if not os.path.exists(path):
-            anydbm.open(path, 'n').close()
+            try:
+                anydbm.open(path, 'n').close()
+            except Exception as e:
+                raise Exception("Unable to create new resource DB at <%s>" %
+                        path)
         self.__be = anydbm.open(path, 'rw')
 
     def close(self):
@@ -89,7 +105,7 @@ class AnyDBStorage(object):
 
     def update(self, path, srcrefs, headers):
         descr = self.get(path)
-        srcrefs = list(sets.Set(srcrefs).union(descr[0]))
+        srcrefs = list(set(srcrefs).union(descr[0]))
         headers.update(descr[4])
         self.set(path, srcrefs, headers)
 

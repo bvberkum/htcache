@@ -3,10 +3,9 @@ TODO htcache version 1.0 (planned but non-committed)
   * RFC 2616 adherence.
   * On-line cache maintenance.  
 
-TODO htcache version 0.2    
-  * Rewrite rules.* 
+2010-09-28 htcache version 0.3 (development)
 
-2010-09-28 htcache version 0.1
+2010-09-28 htcache version 0.2
   * rename to htcache
   * added support for alternative cache directory layouts using modular 
     cache backends  
