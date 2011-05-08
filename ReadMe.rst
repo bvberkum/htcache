@@ -11,6 +11,7 @@ Status
 Todo
  - (auto) remove descriptors after manual path delete.
  - use strict and other modes, adhere to RFC 2616:
+
    - calculate Age field [14.6]  
    - don't cache Authorization response [14.8]
    - Cache-Control [14.9]
@@ -25,8 +26,8 @@ Issues
  4. There is a version with other cl-options, it uses stdlib asyncore
     check: 
  
-     * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
-     * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
+    * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
+    * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
   
  5. Embedded youtube does not work, but the site runs fine.
 
