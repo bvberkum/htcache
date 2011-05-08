@@ -1,0 +1,38 @@
+./Response.py:48:        # TODO: on/off: self.__hash = hashlib.sha1()
+./Response.py:59:          # TODO: parse mediatype, charset, language..
+./Response.py:131:        # XXX: store hash for new recv'd content
+./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
+./Resource.py:79:        # XXX: safe headers as features for now..    
+./Resource.py:157:        # TODO: documents 
+./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
+./init.sh:45:        # TODO: check htcache status before redirecting output to lock
+./.git/logs/HEAD:14:9a411eb3a3780d7eddde55413b7d946ce94b57b5 33284a02ea31762412c57cbbfdff7a99bee37e5e Berend <berend@sam.laptop> 1284541615 +0200	commit: Added TODO and removed SHA1 for time being
+./.git/logs/HEAD:15:33284a02ea31762412c57cbbfdff7a99bee37e5e 1ecb0eb99ff12251eaeb76b1eeb6f8d476f16d16 B. van Berkum <dev@dotmpe.com> 1285618617 +0200	commit: Rename done. Added TODO's. Renamed back to , perhaps alias it. Minor init.sh changes.
+./.git/logs/refs/heads/master:14:9a411eb3a3780d7eddde55413b7d946ce94b57b5 33284a02ea31762412c57cbbfdff7a99bee37e5e Berend <berend@sam.laptop> 1284541615 +0200	commit: Added TODO and removed SHA1 for time being
+./.git/logs/refs/heads/master:15:33284a02ea31762412c57cbbfdff7a99bee37e5e 1ecb0eb99ff12251eaeb76b1eeb6f8d476f16d16 B. van Berkum <dev@dotmpe.com> 1285618617 +0200	commit: Rename done. Added TODO's. Renamed back to , perhaps alias it. Minor init.sh changes.
+./Cache.py:57:            "FIXME: implement saving in other roots"
+./CHANGELOG.rst:1:TODO htcache version 1.0 (planned but non-committed)
+./CHANGELOG.rst:6:TODO htcache version 0.2    
+./README.rst:107:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./README.rst:136:TODO: a file-based header storage or perhaps even an Apache mod_asis
+./README.rst:148:XXX: lines are expressions, empty or start with #
+./README.rst:149:TODO: multi-item rules, use python for list syntax
+./README.rst:153:TODO: Requests and responses may have their various parts rewritten.
+./Protocol.py:150:        # XXX: match on path only
+./Protocol.py:286:            # XXX: title caps improper for acronyms
+./Protocol.py:361:            # FIXME: update last-modified? 
+./Params.py:14:ONLINE = True # XXX:bvb: useless..
+./Params.py:37:#TODO CRC, par2?
+./Params.py:64:  TODO --encode query sep                   
+./Params.py:68:  TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
+./Params.py:81:     TODO --prune-stale
+./Params.py:83:     TODO --prune-gone
+./Params.py:94:     FIXME --print-mode line|tree
+./Params.py:95:     TODO --print-url
+./Params.py:96:     TODO --print-path
+./Params.py:107:     TODO --check-exists
+./Params.py:110:     TODO --check-encodings
+./Params.py:111:     TODO --check-languages
+./Params.py:112:     TODO --check-mediatypes
+./Params.py:115:     TODO --x-force-fix
+./Params.py:118:     TODO --check-dupes

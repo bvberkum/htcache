@@ -123,8 +123,9 @@ class DataResponse:
             except:
                 Params.log("Error writing to client, aborted!")  
                 self.Done = True
-                if not self.__protocol.cache.full():
-                    self.__protocol.cache.remove_partial()
+                # Unittest 2: keep partial file 
+                #if not self.__protocol.cache.full():
+                #    self.__protocol.cache.remove_partial()
                 return
         self.Done = not self.__sendbuf and ( self.__pos >= self.__protocol.size >= 0 or self.__pos >= self.__end >= 0 )
 

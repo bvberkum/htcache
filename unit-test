@@ -1,8 +1,12 @@
 #! /bin/bash
+# 
+# Unit tests originally for http-replicator, 
+# adapted for htcache. Public domain?
+# 
 
 PORT=8090
 NUM="$1"
-PREFIX="/tmp/unittest$NUM"
+PREFIX="/tmp/htcache-unittest$NUM"
 URL_HTTP="www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
 URL_CHUNKED="jigsaw.w3.org:80/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
@@ -175,7 +179,7 @@ case $1 in
     http_proxy=localhost:$PORT download http://$URL_HTTP out
     summary "RESUMING PARTIAL FILE BY CLIENT"
     check_log "received complete file" "Server responds HTTP/1.1 200 OK"
-    check_log "served partial file" "Replicator responds HTTP/1.1 206 Partial Content"
+    check_log "served partial file" "HTCache responds HTTP/1.1 206 Partial Content"
     check_equal "cached and served file are equal" cache/$URL_HTTP out
     stopserver
     ;;
@@ -283,14 +287,14 @@ case $1 in
     check_log "refusing to connect to server" "AssertionError: operating in off-line mode"
     stopserver
     ;;
-  16)
-    startserver --flat
-    http_proxy=localhost:$PORT download http://$URL_HTTP out
-    summary "DOWNLOADING NEW FILE, FLAT MODE"
-    check_log "serving complete file" "Replicator responds HTTP/1.1 200 OK"
-    check_exists "file cached and finalized" cache/`basename $URL_HTTP`
-    stopserver
-    ;;
+#  16)
+#    startserver --flat
+#    http_proxy=localhost:$PORT download http://$URL_HTTP out
+#    summary "DOWNLOADING NEW FILE, FLAT MODE"
+#    check_log "serving complete file" "Replicator responds HTTP/1.1 200 OK"
+#    check_exists "file cached and finalized" cache/`basename $URL_HTTP`
+#    stopserver
+#    ;;
   *)
     exit 1
     ;;
