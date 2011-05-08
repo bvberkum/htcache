@@ -17,6 +17,8 @@ Todo
    - Cache-Control [14.9]
 
  - rules.sort prefixes paths
+ - would be nice to let addon's provide new rules.
+   Ex: user- or community provided favicons.
 
 Issues
  1. Writing to client fails randomly, probably dropped connection 
@@ -106,8 +108,9 @@ that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
 This can create problems with long filenames and the characters that appear 
 in the various URL parts.
 
-Additional backends can deal with this issue.
-The default backend is Cache.File (``--cache TYPE``)
+Additional backends can deal with this issue ``--cache TYPE``).
+The default backend is Cache.File which is inadequate for general use during
+web surfing.
 
 - caches.FileTreeQ - encodes each query argument into a separate directory,
   the first argument being prefixed with '?'. FIXME: does not solve anything?

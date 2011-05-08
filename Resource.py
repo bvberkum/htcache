@@ -14,14 +14,12 @@ try:
     #import cjson as json
     #json_read = json.decode
     #json_write = json.encode
-    import simplejson
-    json_read = simplejson.loads
-    json_write = simplejson.dumps
+    import simplejson as _json
 except:
-    import json
-    json_read = json.read
-    json_write = json.write
+    import json as _json
 
+json_read = _json.loads
+json_write = _json.dumps
 
 class Descriptor(object):
     pass
