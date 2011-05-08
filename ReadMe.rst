@@ -1,8 +1,8 @@
 :parent project: http://freshmeat.net/projects/http-replicator
 :homepage: http://github.com/dotmpe/htcache 
 
-**htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy.
-It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
+**htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy
+in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 .. contents::
 
@@ -11,10 +11,9 @@ Status
 Todo
  - (auto) remove descriptors after manual path delete.
  - use strict and other modes, adhere to RFC 2616:
-
-    - calculate Age field [14.6]  
-    - don't cache Authorization response [14.8]
-    - Cache-Control [14.9]
+   - calculate Age field [14.6]  
+   - don't cache Authorization response [14.8]
+   - Cache-Control [14.9]
 
  - rules.sort prefixes paths
 
@@ -106,7 +105,8 @@ that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
 This can create problems with long filenames and the characters that appear 
 in the various URL parts.
 
-Additional backends address this. (default: Cache.File, ``--cache TYPE``)
+Additional backends can deal with this issue.
+The default backend is Cache.File (``--cache TYPE``)
 
 - caches.FileTreeQ - encodes each query argument into a separate directory,
   the first argument being prefixed with '?'. FIXME: does not solve anything?
@@ -124,10 +124,11 @@ The storage location is futher affected by ``--archive`` and ``--nodir``.
 Regular archival of a resources is possible by prefixing a formatted date to
 the path. Ie. '%Y/%M/%d' would store a copy and maintain updates of a 
 resource for every day. Prefixing a timestamp would probably store a new copy 
-for each request.
+for each request. 
 
-``--archive`` results in lots of redundant data. It also makes static, offline
-proxy operation on the resulting filesystem tree impossible. 
+This option (``--archive FMT``) results in lots of redundant data. It also 
+makes static, off-line proxy operation on the resulting filesystem tree 
+impossible. 
 
 The nodir parameter accepts a replacement for the directory separator and
 stores the path in a single filename. This may affect FileTreeQ.
@@ -135,8 +136,8 @@ stores the path in a single filename. This may affect FileTreeQ.
 Descriptor backends
 ~~~~~~~~~~~~~~~~~~~
 The descriptor backend (which contains URI, mediatype, charset, language and
-other resource-header data) is by default stored in a flat index DB. No
-additional backends available at this time.
+other resource-header data) is by default a flat index DB storage.
+No additional backends available at this time.
 
 TODO: a file-based header storage or perhaps even an Apache mod_asis
 compatible storage are under consideration. Depending on query/maintenance
@@ -161,6 +162,8 @@ A matching NOCACHE rule bypasses the caching for a request, serving directly
 from the origin server or the next proxy on the line.
 
 Both DROP and NOCACHE rule-format will change to include matching on protocol.
+Currently, both rules match on hostname and following URL parts only (hence 
+the [^/] pattern).
 
 rules.sort::
 
@@ -169,8 +172,9 @@ rules.sort::
   *        [^/]*youtube\.com.*    /my/dir/youtube/\1.flv  mydir/
 
 SORT rules currently prefix the cache-location with a tag, in above example the
-location under ROOT will be ``mydir/``. If the ``--archive`` option is in effect
-it is prefixed to this tag. Note that ``--nodir`` is applied after prefixing.
+location under ROOT for all content from `youtube.com` will be ``mydir/``. If 
+the ``--archive`` option is in effect it is prefixed to this tag. (Note that 
+``--nodir`` is applied *after prefixing*)
 
 This feature is under development.
 Rewriting content based on above message matching is planned.
