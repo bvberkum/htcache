@@ -1,19 +1,21 @@
 :parent project: http://freshmeat.net/projects/http-replicator
 :homepage: http://github.com/dotmpe/htcache 
 
-.. contents::
-
 **htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy.
 It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
+.. contents::
+
+Status
+------
 Todo
- - test FTP use.
  - (auto) remove descriptors after manual path delete.
  - use strict and other modes, adhere to RFC 2616:
 
     - calculate Age field [14.6]  
     - don't cache Authorization response [14.8]
     - Cache-Control [14.9]
+
  - rules.sort prefixes paths
 
 Issues
@@ -27,10 +29,10 @@ Issues
      * http://web.archive.org/web/20070816213819/gertjan.freezope.org/replicator/http-replicator
      * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
   
- 5. Embedded youtube does not work, but the site runs fine..
+ 5. Embedded youtube does not work, but the site runs fine.
 
 Unittests
-     No known failures.
+ No known failures.
 
 Installation
 ------------
@@ -49,7 +51,6 @@ Also create files in /etc/htcache:
 * rules.drop
 * rules.nocache 
 * rules.sort
-
 
 Overview
 --------
