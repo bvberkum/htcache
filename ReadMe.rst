@@ -109,8 +109,9 @@ This can create problems with long filenames and the characters that appear
 in the various URL parts.
 
 Additional backends can deal with this issue ``--cache TYPE``).
-The default backend is Cache.File which is inadequate for general use during
-web surfing.
+The default backend was Cache.File which is compatible with ``wget -r`` but
+is inadequate for general use as web proxy. The new default caches.FileTreeQ 
+combines some aspects desirable to deal with a wider range of resources.
 
 - caches.FileTreeQ - encodes each query argument into a separate directory,
   the first argument being prefixed with '?'. FIXME: does not solve anything?

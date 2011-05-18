@@ -90,7 +90,7 @@ class HttpRequest:
             host = self.__url[ 6: ]
             port = 21
         else:
-            raise AssertionError, 'invalid url: %s' % self.__url
+            host = self.__url
         if '/' in host:
             host, path = host.split( '/', 1 )
         else:
