@@ -1,3 +1,4 @@
+
 PACK:=htcache
 VERSION:=0.1
 REV:=$(shell cat REVISION)
@@ -6,17 +7,19 @@ SRC:=$(PACK) init.sh $(wildcard *.py) $(wildcard *.rst) \
 	forbidden-sign.png forbidden-sign.svg
 
 .PHONY: default dist
+
 default:
+
+test::
+	@COVERAGE=0 ./unit-test
 
 TODO.list: ./
 	rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
-snapshot:
+snapshot::
 	echo $$(expr $$(cat REVISION) + 1) > REVISION
 	tar czvf dist/$(PACK)_$(VERSION)_r$$(cat REVISION).tar.gz $(SRC)
 
-dist:
+dist::
 	tar czvf dist/$(PACK)_$(VERSION).tar.gz $(SRC)
 
-
-# :vim:set noet:

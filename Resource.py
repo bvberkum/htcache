@@ -135,6 +135,7 @@ class AnyDBStorage(object):
 
 if os.path.isdir(Params.RESOURCES):
     backend =  FileStorage(Params.RESOURCES)
+
 elif Params.RESOURCES.endswith('.db'):
     backend =  AnyDBStorage(Params.RESOURCES)
 

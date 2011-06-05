@@ -32,6 +32,8 @@ class HttpRequest:
         if eol == 0:
             return 0
 
+        #print '__parse_args', repr(chunk)
+
         line = chunk[ :eol ]
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
@@ -72,6 +74,7 @@ class HttpRequest:
         self.__recvbuf += chunk
         while self.__parse:
             bytes = self.__parse( self.__recvbuf )
+            print 'recv', repr(bytes)
             if not bytes:
                 return
             self.__recvbuf = self.__recvbuf[ bytes: ]
@@ -91,6 +94,7 @@ class HttpRequest:
             port = 21
         else:
             host = self.__url
+            port = 8080
         if '/' in host:
             host, path = host.split( '/', 1 )
         else:

@@ -109,6 +109,7 @@ class ProxyProtocol(object):
     "the htcache response class"
 
     def __init__(self, request):
+        "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
         cache_location = '%s:%i/%s' % request.url() 
         for tag, pattern in SORT.items():
@@ -124,8 +125,15 @@ class ProxyProtocol(object):
         return host, port, path, args
 
     def prepare_direct_response(self, request):
+        """
+        Serve either a proxy page, a replacement for blocked content, of static
+        content. All directly from local storage.
+        
+        Returns true on direct-response ready.
+        """
         host, port, path = request.url()
-        if port == 8080 and host in ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1'):
+        print 'prepare_direct_response', host, port, path
+        if port == 8080 and host in ('localhost', socket.gethostname(), '127.0.0.1'):
             self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
@@ -297,6 +305,7 @@ class HttpProtocol(ProxyProtocol):
         return eol
 
     def recv( self, sock ):
+        " Read until header can be parsed, then determine Response type. "
         assert not self.hasdata()
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
