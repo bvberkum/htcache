@@ -76,6 +76,12 @@ class ProxyProtocol(object):
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()
 
+    def has_descriptor(self):
+        return self.cache.path in self.descriptors
+
+    def get_descriptor(self):
+        return self.descriptors[self.cache.path]
+
     def rewrite_response(self, request):
         host, port, path = request.url()
         args = request.args()

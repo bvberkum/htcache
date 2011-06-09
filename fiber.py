@@ -1,6 +1,8 @@
 import sys, os, select, time, socket, traceback
 
 
+class Restart(Exception): pass
+
 class SEND:
 
     def __init__( self, sock, timeout ):
@@ -45,6 +47,8 @@ class Fiber:
             state = self.__generator.next()
             assert isinstance( state, (SEND, RECV, WAIT) ), 'invalid waiting state %r' % state
             self.state = state
+        except Restart:
+            raise 
         except KeyboardInterrupt:
             raise
         except StopIteration:
@@ -244,6 +248,9 @@ def spawn( generator, port, debug, log ):
     except KeyboardInterrupt:
         print '[ DONE ]', generator.__name__, 'terminated'
         sys.exit( 0 )
+    except Restart:
+        listener.close()
+        raise
     except:
         print '[ DONE ]', generator.__name__, 'crashed'
         traceback.print_exc( file=sys.stdout )

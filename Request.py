@@ -102,8 +102,8 @@ class HttpRequest:
             port = 21
         # Accept static requests, and further parse host
         else:
-            host = self.__reqpath
-            port = 80
+            host = self.__url
+            port = 8080
         if '/' in host:
             host, path = host.split( '/', 1 )
         else:
