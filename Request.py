@@ -91,6 +91,7 @@ class HttpRequest:
             port = 21
         else:
             host = self.__url
+            port = 8080
         if '/' in host:
             host, path = host.split( '/', 1 )
         else:

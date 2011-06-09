@@ -1,5 +1,7 @@
-import time, traceback, socket, hashlib
-import Params
+import sys, time, traceback, socket, hashlib
+from pprint import pformat
+
+import Params, fiber
 
 
 class BlindResponse:
@@ -33,6 +35,9 @@ class BlindResponse:
         elif not self.__sendbuf:
           self.Done = True
 
+    def finalize(self, client):
+        pass
+
 
 class DataResponse:
 
@@ -52,18 +57,18 @@ class DataResponse:
         except:
             args = {}
 
-        #if protocol.has_descriptor():
-        #  descr = protocol.get_descriptor()
-          #Params.log(descr)
+        if protocol.has_descriptor():
+          descr = protocol.get_descriptor()
+          srcrefs, mediatype, charset, languages, features = descr
+          Params.log(descr)
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
-          #if descr[-1]:
-          #  for k, v in descr[-1].items():
-          #    #if 'encoding' in k.lower(): continue
-          #    args[k] = v
-        #else:
-        #  Params.log("No descriptor for %s" % protocol.path)
-        #srcrefs, mediatype, charset, languages, features = protocol.get_descriptor()
+          if descr[-1]:
+            for k, v in descr[-1].items():
+              #if 'encoding' in k.lower(): continue
+              args[k] = v
+        else:
+          Params.log("No descriptor for %s" % protocol.path)
 
         via = "%s:%i" % (socket.gethostname(), Params.PORT)
         if args.setdefault('Via', via) != via:
@@ -153,6 +158,9 @@ class DataResponse:
                 Params.log('Connection closed at byte %i' % self.__protocol.size)
             self.Done = not self.hasdata()
 
+    def finalize(self, client):
+        pass
+
 
 class ChunkedDataResponse( DataResponse ):
 
@@ -209,6 +217,9 @@ class BlockedContentResponse:
     def recv( self ):
         raise AssertionError
 
+    def finalize(self, client):
+        pass
+
 class BlockedImageContentResponse:
 
     Done = False
@@ -235,6 +246,9 @@ class BlockedImageContentResponse:
     def recv( self ):
         raise AssertionError
 
+    def finalize(self, client):
+        pass
+
 
 class DirectResponse:
     """
@@ -243,19 +257,40 @@ class DirectResponse:
 
     Done = False
 
+    urlmap = {
+        'reload': 'reload_proxy',
+    }
+
     def __init__( self, status, request ):
+        path = request.url()[2]
+        self.action = None
 
-        lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
-        head, body = request.recvbuf().split( '\r\n\r\n', 1 )
-        for line in head.splitlines():
-            lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
-        if body:
-            lines.append( '+ Body: %i bytes' % len( body ) )
-        lines.append( '' )
-        lines.append( traceback.format_exc() )
+        if path in self.urlmap:
+            self.action = self.urlmap[path]
+            getattr(self, self.action)()
+        else:
+            lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
+            head, body = request.recvbuf().split( '\r\n\r\n', 1 )
+            for line in head.splitlines():
+                lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
+            if body:
+                lines.append( '+ Body: %i bytes' % len( body ) )
+            lines.append( '' )
+            lines.append( traceback.format_exc() )
 
-        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
+            self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
       
+    def reload_proxy(self):
+        self.prepare_response("200 OK", "Restarting gateway")
+
+    def prepare_response(self, status, msg):
+        if isinstance(msg, list):
+            lines = msg
+        else:
+            lines = [msg]
+        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % (
+                status, '\n'.join( lines ) )
+
     def hasdata( self ):
 
         return bool( self.__sendbuf )
@@ -266,7 +301,12 @@ class DirectResponse:
         bytes = sock.send( self.__sendbuf )
         self.__sendbuf = self.__sendbuf[ bytes: ]
         if not self.__sendbuf:
-          self.Done = True
+            self.Done = True
+
+    def finalize(self, client):
+        if self.action == 'reload_proxy':
+            client.close()
+            raise fiber.Restart()
 
     def needwait( self ):
 
