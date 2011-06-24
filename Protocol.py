@@ -48,7 +48,6 @@ class BlindProtocol:
         pass
 
 
-
 class ProxyProtocol(object):
     """
     Open cache and descriptor index for requested resources.
@@ -76,16 +75,23 @@ class ProxyProtocol(object):
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()
 
-    def has_descriptor(self):
-        return self.cache.path in self.descriptors
+        self.request = request
+        resource = request.resource
 
-    def get_descriptor(self):
-        return self.descriptors[self.cache.path]
 
-    def rewrite_response(self, request):
-        host, port, path = request.url()
-        args = request.args()
-        return host, port, path, args
+        #self.descriptors = Resource.init_backend(request)
+        cache_be = Cache.load_backend_type(Params.CACHE)
+        # 
+        #self.cache = request.resource.init(self.descriptors, cache_be)
+        cache_location = '%s:%i%s' % (resource.host, resource.port, resource.path)
+        self.cache = cache_be(cache_location)
+        Params.log('Cache locator: %s' % self.cache.path)
+
+#    def has_descriptor(self):
+#        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
+#
+#    def get_descriptor(self):
+#        return self.descriptors[self.cache.path]
 
     def prepare_direct_response(self, request):
         """
@@ -175,17 +181,100 @@ class HTTP:
 
     OK = 200
     PARTIAL_CONTENT = 206
+    MULTIPLE_CHOICES = 300 # Variant resource, see alternatives list
+    MOVED_TEMPORARILY = 301 # Located elsewhere
+    FOUND = 302 # Moved permanently
+    SEE_OTHER = 303 # Resource for request located elsewhere using GET
     NOT_MODIFIED = 304
+    #USE_PROXY = 305
+    _ = 306 # Reserved
+    TEMPORARY_REDIRECT = 307 # Same as 302,
+    # added to explicitly contrast with 302 mistreated as 303
+
     FORBIDDEN = 403
     GONE = 410
     REQUEST_RANGE_NOT_STATISFIABLE = 416
+
+    Entity_Headers =  (
+        # RFC 2616
+        'Allow',
+        'Content-Encoding',
+        'Content-Language',
+        'Content-Length',
+        'Content-Location',
+        'Content-MD5',
+        'Content-Range',
+        'Content-Type',
+        'Expires',
+        'Last-Modified',
+    # extension-header
+    )
+    Request_Headers = (
+        # RFC 2616
+        'Accept',
+        'Accept-Charset',
+        'Accept-Encoding',
+        'Accept-Language',
+        'Authorization',
+        'Expect',
+        'From',
+        'Host',
+        'If-Match',
+        'If-Modified-Since',
+        'If-None-Match',
+        'If-Range',
+        'If-Unmodified-Since',
+        'Max-Forwards',
+        'Proxy-Authorization',
+        'Range',
+        'Referer',
+        'TE',
+        'User-Agent',
+        # RFC 2295
+        'Accept-Features',
+        'Negotiate',
+    )
+    Response_Headers = (
+        # RFC 2616
+        'Accept-Ranges',
+        'Age',
+        'ETag',
+        'Location',
+        'Proxy-Authenticate',
+        'Retry-After',
+        'Server',
+        'Vary',
+        'WWW-Authenticate',
+        # RFC 2295
+        'Alternates',
+        'TCN',
+        'Variant-Vary',
+    )
+    Cache_Headers = Entity_Headers + (
+            'ETag',
+            )
+
+
+    Message_Headers = Request_Headers + Response_Headers +\
+            Entity_Headers + (
+                    # Generic headers
+                    # RFC 2616
+                    'Date',
+                    'Cache-Control', # RFC 2616 14.9
+                    'Pragma', # RFC 2616 14.32
+                )
+    """
+    For information on other registered HTTP headers, see RFC 4229.
+    """
 
 
 class HttpProtocol(ProxyProtocol):
 
     def __init__( self, request ):
         super(HttpProtocol, self).__init__(request)
-        host, port, path, args = self.rewrite_response(request)
+        resource = request.resource
+        host, port, path = resource.host, resource.port, resource.path
+        args = request.args()
         # Prepare requri to identify request
         if port != 80:
             hostinfo = "%s:%s" % (host, port)
@@ -211,7 +300,7 @@ class HttpProtocol(ProxyProtocol):
                 #return True
 
         # Prepare request for contact with origin server..
-        head = 'GET /%s HTTP/1.1' % path
+        head = 'GET %s HTTP/1.1' % path
         args.pop( 'Accept-Encoding', None )
         args.pop( 'Range', None )
         stat = self.cache.partial() or self.cache.full()
@@ -353,6 +442,11 @@ class HttpProtocol(ProxyProtocol):
                     HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) \
                     and self.cache.partial():
             self.cache.remove_partial()
+            self.Response = Response.BlindResponse
+
+        elif self.__status in (HTTP.FOUND, HTTP.MOVED_TEMPORARILY,
+                    HTTP.TEMPORARY_REDIRECT):
+            location = self.__args['Location']
             self.Response = Response.BlindResponse
 
         else:

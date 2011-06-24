@@ -24,18 +24,159 @@ except:
 json_read = _json.loads
 json_write = _json.dumps
 
-class Descriptor(object):
-    pass
+URL_SCHEMES = ['ftp', 'http']
 
+
+def strip_root(path):
+    if path.startswith(Params.ROOT):
+        path = path[len(Params.ROOT):]
+    if path.startswith(os.sep):
+        path = path[1:]
+    return path
 
 # descriptor storages:
 
+class Descriptor(object):
+
+    mapping = [
+        'locations',
+        'mediatype',
+        'size',
+        'etag',
+        'last_modified',
+        'quality_indicator',
+        'encodings',
+        'language',
+        'features',
+        'extension_headers',
+    ]
+    """
+    Item names for each tuple index.
+    """
+
+    def __init__(self, data):#, be=None):
+        assert isinstance(data, tuple)
+        if len(data) > len(self.mapping):
+            raise ValueError()
+        self.__data = data
+        self.storage = None
+        #if be != None:
+        #    self.bind(be)
+
+    def __getattr__(self, name):
+        if name in self.mapping:
+            idx = self.mapping.index(name)
+            return self[idx]
+        else:
+            return super(Descriptor, self).__getattr__(self, name)
+
+    @property
+    def data(self):
+        return self.__data
+
+    def bind(self, location, storage):
+        self.cache_location = location
+        self.storage = storage
+        return self
+
+    def __getitem__(self, idx):
+        if idx >= len(self.data):
+            raise IndexError()
+        #if idx < len(self.data):
+        return self.__data[idx]
+
+    def __setitem__(self, idx, value):
+        self.__data[idx] = value
+
+    def __contains__(self, value):
+        return value in self.__data
+
+    def __iter__(self):
+        return iter(self.__data)
+
+    def update(self, values):# *values, **kwds):
+        if not isinstance(values, Descriptor):
+            assert isinstance(values, tuple), values
+        else:
+            values = values.data
+        _update = ()
+        len_values = len(values)
+        for idx, name in enumerate(self.mapping):
+            if len_values == idx:
+                break
+            if self[idx] != values[idx]:
+                self[idx] = values[idx]
+                _update += (idx,)
+        return _update
+
+    def commit(self):
+        ""
+        self.storage[self.cache_location] = self
+
+    def from_headers(class_, args):
+        for hn in Protocol.HTTP.Cache_Headers:
+            
+            pass
+
+
+class DescriptorStorage(object):
+
+    """
+    Item is the local path to a cached resource.
+    """
+
+    def __init__(self, *params):
+        pass
+
+    def __getitem__(self, path):
+        path = strip_root(path)
+        if path in self:
+            return self.get(path)
+        else:
+            d = Descriptor((None,) * len(Descriptor.mapping))\
+                .bind(path, self)
+            return d
+
+    def __setitem__(self, path, values):
+        if not isinstance(values, Descriptor):
+            assert isinstance(values, tuple)
+        else:
+            values = values.data
+        if path in self:
+            self[path].update(values)
+        else:
+            new_values = self[path]
+            new_values.update(values)
+            self.set(path, new_values)
+
+    def __contains__(self, path):
+        raise AbstractClass()
+
+    def __len__(self):
+        raise AbstractClass()
+
+    def __iter__(self):
+        raise AbstractClass()
+
+    def get(self, path):
+        raise AbstractClass()
+
+    def set(self, path, name, value):
+        raise AbstractClass()
+
+    def commit(self):
+        raise AbstractClass()
+
+    def close(self):
+        raise AbstractClass()
+
+
 class FileStorage(object):
-    def close(self): pass  
+    def close(self): pass
     def update(self, hrds): pass
 
 
-class AnyDBStorage(object):
+class AnyDBStorage(DescriptorStorage):
 
     def __init__(self, path):
         if not os.path.exists(path):
@@ -56,26 +197,17 @@ class AnyDBStorage(object):
     def keys(self):
         return self.__be.keys()
 
-    def __contains__(self, path):
-        return self.has(path)
-
     def __iter__(self):
         return iter(self.__be)
 
-    def __setitem__(self, path, value):
-        if path in self.__be:
-            self.update(path, *value)
-        else:  
-            self.set(path, *value)
-
-    def __getitem__(self, path):
-        return self.get(path)
-
-    def has(self, path):
+    def __contains__(self, path):
+        path = strip_root(path)
         return path in self.__be
 
     def get(self, path):
-        return tuple(json_read(self.__be[path]))
+        data = self.__be[path]
+        value = tuple(json_read(data))
+        return Descriptor(value, be=self)
 
     def set(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
@@ -127,7 +259,7 @@ class AnyDBStorage(object):
 #              _descr[4].update(features)
 #        self.set_descriptor(*_descr)
 
-#    def set_descriptor(self, srcrefs, mediatype, charset, languages, 
+#    def set_descriptor(self, srcrefs, mediatype, charset, languages,
 #            features={}):
 #        assert self.cache.path, (self,srcrefs,)
 #        if srcrefs and not (isinstance(srcrefs, tuple) \
@@ -139,19 +271,45 @@ class AnyDBStorage(object):
 #                and isinstance(srcrefs[0], str)), srcrefs
 
 
+class RelationalStorage(DescriptorStorage):
 
-if os.path.isdir(Params.RESOURCES):
-    backend =  FileStorage(Params.RESOURCES)
+    def __init__(self, dbref):
+        engine = create_engine(dbref)
+        self._session = sessionmaker(bind=engine)()
 
-elif Params.RESOURCES.endswith('.db'):
-    backend =  AnyDBStorage(Params.RESOURCES)
-
-def get_backend():
-    return backend
-
+    def get(self, url):
+        self._session.query(
+                taxus.data.Resource, taxus.data.Locator).join('lctr').filter_by(ref=url).all()
 
 
-# special command line options allow resource DB queries:
+def _is_db(be):
+    # file -s resource.db | grep -i berkeley
+    return os.path.isdir(os.path.dirname(be)) and be.endswith('.db')
+
+def _is_sql(be):
+    # file -s resource.db | grep -i sqlite
+    return \
+        be.startswith('sqlite:///') or \
+        be.startswith('mysql://') or \
+        be.endswith('.sqlite')
+
+Params.BACKENDS.update(dict(
+        # TODO: filestorage not implemented
+        file= (lambda p: os.path.isdir(p), FileStorage),
+        anydb= (_is_db, AnyDBStorage),
+        sql= (_is_sql, RelationalStorage)
+    ))
+
+def init_backend(request, be=Params.BACKEND):
+
+    for name in Params.BACKENDS:
+        if Params.BACKENDS[name][Params.BD_IDX_TEST](be):
+            return Params.BACKENDS[name][Params.BD_IDX_TYPE](be)
+
+    raise Exception("Unable to find backend type of %r" % be)
+
+
+# psuedo-Main: special command line options allow resource DB queries:
 
 def print_info(*paths):
     import sys
@@ -161,22 +319,22 @@ def print_info(*paths):
             path = Params.ROOT + path
         if path not in backend:
             print >>sys.stderr, "Unknown cache location: %s" % path
-        else:    
-            print path, backend[path]  
+        else:
+            print path, backend[path]
             recordcnt += 1
     if recordcnt > 1:
         print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
-    elif recordcnt == 1:        
+    elif recordcnt == 1:
         print >>sys.stderr, "Found one record"
-    else:        
+    else:
         print >>sys.stderr, "No record found"
-    backend.close()                
-    sys.exit(1) 
+    backend.close()
+    sys.exit(1)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
     for m in media:
-        # TODO: documents 
+        # TODO: documents
         if m == 'image':
             for path in backend:
                 res = backend[path]
@@ -195,7 +353,7 @@ def print_media_list(*media):
     import sys
     sys.exit()
 
-def find_info(props):    
+def find_info(props):
     import sys
     for path in backend:
         res = backend[path]
@@ -218,8 +376,8 @@ def find_info(props):
                         continue
                     if res[4][k2] == props[k][k2]:
                         print path
-    backend.close()                
-    sys.exit(1) 
+    backend.close()
+    sys.exit(1)
 
 if Params.PRINT_ALLRECORDS:
     print_info(*backend.keys())
@@ -229,5 +387,6 @@ elif Params.FIND_RECORDS:
     find_info(Params.FIND_RECORDS)
 elif Params.PRINT_MEDIA:
     print_media_list(*Params.PRINT_MEDIA)
+
 
 

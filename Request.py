@@ -1,6 +1,6 @@
 import os, socket, time
 
-import Params, Protocol
+import Params, Protocol, Resource
 
 
 class HttpRequest:
@@ -102,20 +102,35 @@ class HttpRequest:
             port = 21
         # Accept static requests, and further parse host
         else:
-            host = self.__url
-            port = 8080
-        if '/' in host:
-            host, path = host.split( '/', 1 )
-        else:
-            path = ''
-        if ':' in host:
-            host, port = host.split( ':' )
-            port = int( port )
+            self.Protocol = Protocol.BlindProtocol
+            scheme = ''
 
-        self.__host = host
-        self.__port = port
-        self.__path = path
-        self.__args[ 'Host' ] = host
+        if scheme:
+            if '/' in host:
+                host, path = host.split( '/', 1 )
+            else:
+                path = ''
+            if ':' in host:
+                hostinfo = host
+                host, port = host.split( ':' )
+                port = int( port )
+            else:
+                hostinfo = "%s:%s" % (host, port)
+
+        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
+        self.resource = Resource.forRequest(req_url)
+
+        if not self.resource:
+            self.resource = Resource.new(req_url)
+        
+        if Params.VERBOSE > 1:
+            print 'Matched to resource', req_url
+        
+        if self.resource and 'Host' not in self.__args:
+            # Become HTTP/1.1 compliant
+            self.__args['Host'] = self.resource.ref.host
+
+        # Prepare rest of headers for pass-through to target server
         self.__args[ 'Connection' ] = 'close'
         self.__args.pop( 'Keep-Alive', None )
         self.__args.pop( 'Proxy-Connection', None )
@@ -131,6 +146,10 @@ class HttpRequest:
         if self.__args.setdefault('Via', via) != via:
             self.__args['Via'] += ', '+ via
 
+    @property
+    def hostinfo(self):
+        return self.resource.location.host, self.resource.location.port
+
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
         lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__path ) ]
@@ -143,32 +162,19 @@ class HttpRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
+    def envelope(self):
+        return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
+
     def url( self ):
         assert self.Protocol, "Request has no protocol"
         return self.__host, self.__port, self.__path
 
     def args( self ):
         assert self.Protocol, "Request has no protocol"
-        return self.__args.copy()
+        assert self.resource.location.port, self.resource.href
+        return self.resource.location.host, self.resource.location.port, self.resource.path
 
-    def range( self ):
-        byterange = self.__args.get( 'Range' )
-        if not byterange:
-            return 0, -1
-        try:
-            assert byterange.startswith( 'bytes=' )
-            beg, end = byterange[ 6: ].split( '-' )
-            if not beg:
-                return int( end ), -1
-            elif not end:
-                return int( beg ), -1
-            else:
-                return int( beg ), int( end ) + 1
-        except:
-            raise AssertionError, \
-                'invalid byterange specification: %s' % byterange
-
-    def __hash__( self ):
+    def args( self ):
         assert self.Protocol, "no protocol"
         return hash(( self.__host, self.__port, self.__path ))
 

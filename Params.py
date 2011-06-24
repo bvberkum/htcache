@@ -17,6 +17,7 @@ LOG = False
 DEBUG = False
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
+<<<<<<< HEAD
 #PROC = []
 #PROC_FILE = '/etc/htcache/rules.proc'
 JOIN = []
@@ -24,6 +25,11 @@ JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 SORT = {}
+=======
+NOCACHE = []
+NOCACHE_FILE = '/etc/htcache/rules.nocache'
+SORT = []
+>>>>>>> Tried to do a lot of refactoring on the backends, keeping support for sql-less installs. From now on though the flat DB backends are no longer supported, until SQL is implemented and perhaps can be compartimentalized.
 SORT_FILE = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
@@ -40,7 +46,16 @@ TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
-RESOURCES = '/var/lib/htcache/resource.db'
+#BACKEND = '/var/lib/htcache/resource.db'
+#BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
+#BACKEND = 'mysql://rsr:rAz0r1@robin/rsr_o'
+BACKEND = 'mysql://root:MassRootSql@robin/taxus_o'
+
+BACKENDS = {
+        # name: test, type
+    }
+BD_IDX_TEST, BD_IDX_TYPE = 0, 1
+
 SHA1SUM = '/var/cache/sha1sum/'
 # query params
 PRINT_RECORD = []
@@ -56,11 +71,17 @@ USAGE = '''usage: %(PROG)s [options]
 
   -h --help          show this help message and exit
 
+<<<<<<< HEAD
 Proxy:
+=======
+proxy options:
+
+>>>>>>> Tried to do a lot of refactoring on the backends, keeping support for sql-less installs. From now on though the flat DB backends are no longer supported, until SQL is implemented and perhaps can be compartimentalized.
   -p --port PORT     listen on this port for incoming connections, default %(PORT)i
   -r --root DIR      set cache root directory, default current: %(ROOT)s
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
+<<<<<<< HEAD
      --limit RATE    FIXME: limit download rate at a fixed K/s
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
@@ -79,11 +100,35 @@ Cache:
 
 Rules:
   -d --drop FILE     filter requests for URI's based on regex patterns.
+=======
+     --limit RATE    limit download rate at a fixed K/s
+     --daemon LOG    daemonize process and print PID, route output to LOG
+     --debug         switch from gather to debug output module
+
+plugins:
+
+  -c --cache TYPE    use module for caching, default %(CACHE)s. 
+  -b --backend REF   initialize metadata backend from reference, default 
+                     %(BACKEND)s.
+
+cache options:
+
+  -a --archive FMT   prefix cache location by a formatted datetime. 
+                     ie. store a new copy every hour, day, etc. 
+  -D --nodir SEP     replace unix path separator, ie. don't create a directory
+                     tree. does not encode `archive` prefix.
+  TODO --encode query sep                   
+
+proxy rules:
+
+  -d --drop FILE     filter requests for URI's based on regex patterns. 
+>>>>>>> Tried to do a lot of refactoring on the backends, keeping support for sql-less installs. From now on though the flat DB backends are no longer supported, until SQL is implemented and perhaps can be compartimentalized.
                      read line for line from file, default %(DROP)s.
   -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
   -s --sort SORT     sort requests based on regex, directory-name pairs from file.
                      unmatched requests are cached normally.
 
+<<<<<<< HEAD
 Misc.:
   -t --timeout SEC   break connection after so many seconds of inactivity,
                      default %(TIMEOUT)i
@@ -94,6 +139,26 @@ Misc.:
 Maintenance:
      --prune-stale   TODO: Delete outdated cached resources.
      --prune-gone    TODO: Remove resources no longer online.
+=======
+misc. proxy options:
+
+  -6 --ipv6          try ipv6 addresses if available
+  -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
+  -t --timeout SEC   break connection after so many seconds of inactivity, 
+                     default %(TIMEOUT)i
+  -v --verbose       increase output, use twice to show http headers
+
+
+See the documentation in ReadMe regarding configuration of the proxy. The
+following options don't run the proxy but access the cache and descriptor backend::
+
+cache maintenance:
+
+     TODO --prune-stale
+                     Delete outdated cached resources.
+     TODO --prune-gone
+                     Remove resources no longer online.
+>>>>>>> Tried to do a lot of refactoring on the backends, keeping support for sql-less installs. From now on though the flat DB backends are no longer supported, until SQL is implemented and perhaps can be compartimentalized.
 
 Resources:
      --print-info FILE
@@ -143,6 +208,11 @@ for _arg in _args:
             assert PORT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
+    elif _arg in ( '-b', '--backend' ):
+        try:
+            BACKEND = _args.next()
+        except:
+            sys.exit( 'Error: %s requires an backend-reference for argument' % _arg )
     elif _arg in ( '-c', '--cache' ):
         try:
             CACHE = _args.next()
@@ -310,7 +380,6 @@ def parse_joinlist(fpath=JOIN_FILE):
         JOIN.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
             for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
-
 def split_csv(line):
     line = line.strip()
     if not line or line.startswith('#'):
@@ -325,7 +394,7 @@ def split_csv(line):
         elif inquote:
             if c in Q:
                 inquote = False
-            else:
+            else:                
                 vbuf += c
         elif c == ',' or c.isspace():
             if vbuf:

@@ -56,18 +56,18 @@ class DataResponse:
         except:
             args = {}
 
-        if protocol.has_descriptor():
-          descr = protocol.get_descriptor()
-          srcrefs, mediatype, charset, languages, features = descr
-          Params.log(descr)
-          # Abuse feature dict to store headers
-          # TODO: parse mediatype, charset, language..
-          if descr[-1]:
-            for k, v in descr[-1].items():
-              #if 'encoding' in k.lower(): continue
-              args[k] = v
-        else:
-          Params.log("No descriptor for %s" % protocol.path)
+        #if protocol.has_descriptor():
+        #  descr = protocol.get_descriptor()
+        #  srcrefs, mediatype, charset, languages, features = descr
+        #  Params.log("Stored %r" % (descr,))
+        #  # Abuse feature dict to store headers
+        #  # TODO: parse mediatype, charset, language..
+        #  if descr[-1]:
+        #    for k, v in descr[-1].items():
+        #      #if 'encoding' in k.lower(): continue
+        #      args[k] = v
+        #else:
+        #  Params.log("No descriptor for %s" % protocol.cache.path)
 
         via = "%s:%i" % (socket.gethostname(), Params.PORT)
         if args.setdefault('Via', via) != via:

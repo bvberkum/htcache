@@ -9,12 +9,16 @@ DOWNLOADS = weakref.WeakValueDictionary()
 
 Params.parse_joinlist()
 # XXX:Params.parse_proclist()
+Params.parse_droplist()
+Params.parse_nocache()
+Params.parse_sort()
 
 
 def HTCache( client, address ):
 
     print 'Accepted request from %s:%i' % address
 
+    protocol = None
     request = Request.HttpRequest()
     while not request.Protocol:
         yield fiber.RECV( client, Params.TIMEOUT )
@@ -63,16 +67,18 @@ def HTCache( client, address ):
 
     print 'Transaction successfully completed'
 
-  response.finalize(client)
+    if protocol:
+        if response:
+            response.finalize(client)
+        #protocol.descriptors.close()
 
 while True:
-    try:
-        fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
-    except fiber.Restart, e:
-        Resource.get_backend().close()
-        for mod in (Params, Protocol, Request, Response, Resource, fiber):
-            mod = reload(mod)
-    except Exception, e:
-        break
-Resource.get_backend().close()
+        try:
+                fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
+        except fiber.Restart, e:
+                Resource.get_backend().close()
+                for mod in (Params, Protocol, Request, Response, Resource, fiber):
+                        mod = reload(mod)
+        except Exception, e:
+                break
 
