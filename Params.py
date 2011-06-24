@@ -1,4 +1,4 @@
-import sys, os, socket
+import re, sys, os, socket
 
 
 _args = iter( sys.argv )
@@ -15,9 +15,12 @@ ONLINE = True # XXX:bvb: useless..
 LIMIT = False
 LOG = False
 DEBUG = False
-DROP = '/etc/htcache/rules.drop'
-NOCACHE = '/etc/htcache/rules.nocache'
-SORT = '/etc/htcache/rules.sort'
+DROP = []
+DROP_FILE = '/etc/htcache/rules.drop'
+NOCACHE = []
+NOCACHE_FILE = '/etc/htcache/rules.nocache'
+SORT = []
+SORT_FILE = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
 #CACHE = 'Cache.File'
@@ -33,7 +36,16 @@ TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
-RESOURCES = '/var/lib/htcache/resource.db'
+#BACKEND = '/var/lib/htcache/resource.db'
+#BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
+#BACKEND = 'mysql://rsr:rAz0r1@robin/rsr_o'
+BACKEND = 'mysql://root:MassRootSql@robin/taxus_o'
+
+BACKENDS = {
+        # name: test, type
+    }
+BD_IDX_TEST, BD_IDX_TYPE = 0, 1
+
 SHA1SUM = '/var/cache/sha1sum/'
 #TODO CRC, par2?
 #PAR2 = '/var/cache/par2/'
@@ -56,30 +68,51 @@ USAGE = '''usage: %(PROG)s [options]
   -h --help          show this help message and exit
 
 proxy options:
+
   -p --port PORT     listen on this port for incoming connections, default %(PORT)i
   -r --root DIR      set cache root directory, default current: %(ROOT)s
-  -a --archive FMT   prefix cache location by a formatted datetime. 
-                     ie. store a new copy every hour, day, etc. 
-  -c --cache TYPE    use module for caching, default %(CACHE)s. 
-  -D --nodir SEP     replace unix path separator, ie. don't create a directory
-                     tree. does not encode `archive` prefix.
-  TODO --encode query sep                   
-  -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
-  -d --drop FILE     filter requests for URI's based on regex patterns. 
-                     read line for line from file, default %(DROP)s.
-  TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
-  -s --sort SORT     sort requests based on regex, directory-name pairs from file.
-                     unmatched requests are cached normally.
-  -v --verbose       increase output, use twice to show http headers
-  -t --timeout SEC   break connection after so many seconds of inactivity, default %(TIMEOUT)i
-  -6 --ipv6          try ipv6 addresses if available
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
      --limit RATE    limit download rate at a fixed K/s
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
+plugins:
+
+  -c --cache TYPE    use module for caching, default %(CACHE)s. 
+  -b --backend REF   initialize metadata backend from reference, default 
+                     %(BACKEND)s.
+
+cache options:
+
+  -a --archive FMT   prefix cache location by a formatted datetime. 
+                     ie. store a new copy every hour, day, etc. 
+  -D --nodir SEP     replace unix path separator, ie. don't create a directory
+                     tree. does not encode `archive` prefix.
+  TODO --encode query sep                   
+
+proxy rules:
+
+  -d --drop FILE     filter requests for URI's based on regex patterns. 
+                     read line for line from file, default %(DROP)s.
+  TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
+  -s --sort SORT     sort requests based on regex, directory-name pairs from file.
+                     unmatched requests are cached normally.
+
+misc. proxy options:
+
+  -6 --ipv6          try ipv6 addresses if available
+  -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
+  -t --timeout SEC   break connection after so many seconds of inactivity, 
+                     default %(TIMEOUT)i
+  -v --verbose       increase output, use twice to show http headers
+
+
+See the documentation in ReadMe regarding configuration of the proxy. The
+following options don't run the proxy but access the cache and descriptor backend::
+
 cache maintenance:
+
      TODO --prune-stale
                      Delete outdated cached resources.
      TODO --prune-gone
@@ -133,6 +166,11 @@ for _arg in _args:
             assert PORT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
+    elif _arg in ( '-b', '--backend' ):
+        try:
+            BACKEND = _args.next()
+        except:
+            sys.exit( 'Error: %s requires an backend-reference for argument' % _arg )
     elif _arg in ( '-c', '--cache' ):
         try:
             CACHE = _args.next()
@@ -259,4 +297,52 @@ def log(msg, threshold=0):
   # see fiber.py which manages stdio
   if VERBOSE > threshold:
     print msg
+
+def parse_droplist(fpath=DROP_FILE):
+    global DROP
+    DROP = []
+    if os.path.isfile(fpath):
+        DROP.extend([(p.strip(),re.compile(p.strip())) for p in
+            open(fpath).readlines() if not p.startswith('#')])
+
+def parse_nocache(fpath=NOCACHE_FILE):
+    global NOCACHE
+    NOCACHE = []
+    if os.path.isfile(fpath):
+        NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
+            open(fpath).readlines() if not p.startswith('#')])
+
+def split_csv(line):
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return
+    values = []
+    vbuf = ''
+    Q = ('\'','\"')
+    inquote = False
+    for c in line:
+        if c in Q:
+            inquote = True
+        elif inquote:
+            if c in Q:
+                inquote = False
+            else:                
+                vbuf += c
+        elif c == ',' or c.isspace():
+            if vbuf:
+                values.append(vbuf)
+                vbuf = ''
+        else:
+            vbuf += c
+    if vbuf:
+        values.append(vbuf)
+        vbuf = ''
+    return values
+
+def parse_sort(fpath=SORT_FILE):
+    global SORT
+    SORT = {}
+    if os.path.isfile(fpath):
+        SORT.update([(p[1],re.compile(p[0])) for p in
+            map(split_csv, open(fpath).readlines()) if p])
 

@@ -2,7 +2,7 @@ import time, os, sys
 import Params, Resource
 
 
-def load_backend(tp):
+def load_backend_type(tp):
     if '.' in tp:
         p = tp.split('.')
         path, name = '.'.join(p[:-1]), p[-1]
@@ -55,6 +55,9 @@ class File(object):
     def init(self, path):
         assert not path.startswith(os.sep), \
             "FIXME: implement saving in other roots"
+        for tag, pattern in Params.SORT.items():
+            if pattern.match(path):
+                path = os.path.join(tag, path)
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' )) 
         # optional removal of directories in entire path

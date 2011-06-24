@@ -1,5 +1,6 @@
-import Params, Protocol
-import time, socket, os
+import os, socket, sys, time
+
+import Params, Protocol, Resource
 
 
 class HttpRequest:
@@ -20,7 +21,7 @@ class HttpRequest:
         Params.log('Client sends '+ line.rstrip())
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
-        self.__cmd, self.__url, dummy = fields
+        self.__verb, self.__reqpath, self.__prototag = fields
         self.__args = {}
         self.__parse = self.__parse_args
 
@@ -42,7 +43,7 @@ class HttpRequest:
         elif line in ( '\r\n', '\n' ):
             self.__size = int( self.__args.get( 'Content-Length', 0 ) )
             if self.__size:
-                assert self.__cmd == 'POST', '%s request conflicts with message body' % self.__cmd
+                assert self.__verb == 'POST', '%s request conflicts with message body' % self.__verb
                 Params.log('Opening temporary file for POST upload', 1)
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
@@ -64,8 +65,13 @@ class HttpRequest:
         return len( chunk )
 
     def recv( self, sock ):
+        """
+        Receive request, parsing header and option body, then determine
+        Resource, and prepare Protocol for relaying the request to the content
+        origin server.
+        """
 
-        assert not self.Protocol
+        assert not self.Protocol, "Cant have protocol"
 
         chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, 'client closed connection before sending a complete message header'
@@ -77,51 +83,73 @@ class HttpRequest:
             self.__recvbuf = self.__recvbuf[ bytes: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
-        if self.__url.startswith( 'http://' ):
-            host = self.__url[ 7: ]
+        # Headers are parsed, determine target server and resource
+        verb, requrl, protocol = self.envelope()
+
+        if requrl.startswith( 'http://' ):
+            host = requrl[ 7: ]
             port = 80
-            if self.__cmd == 'GET':
+            scheme = 'http'
+            if verb == 'GET':
                 self.Protocol = Protocol.HttpProtocol
             else:
                 self.Protocol = Protocol.BlindProtocol
-        elif self.__url.startswith( 'ftp://' ):
-            assert self.__cmd == 'GET', '%s request unsupported for ftp' % self.__cmd
-            self.Protocol = Protocol.FtpProtocol
-            host = self.__url[ 6: ]
+        elif requrl.startswith( 'ftp://' ):
+            scheme = 'ftp'
+            host = requrl[ 6: ]
             port = 21
+            assert verb == 'GET', '%s request unsupported for FTP' % verb
+            self.Protocol = Protocol.FtpProtocol
         else:
-            host = self.__url
-            port = 8080
-        if '/' in host:
-            host, path = host.split( '/', 1 )
-        else:
-            path = ''
-        if ':' in host:
-            host, port = host.split( ':' )
-            port = int( port )
+            self.Protocol = Protocol.BlindProtocol
+            scheme = ''
 
-        self.__host = host
-        self.__port = port
-        self.__path = path
-        self.__args[ 'Host' ] = host
+        if scheme:
+            if '/' in host:
+                host, path = host.split( '/', 1 )
+            else:
+                path = ''
+            if ':' in host:
+                hostinfo = host
+                host, port = host.split( ':' )
+                port = int( port )
+            else:
+                hostinfo = "%s:%s" % (host, port)
+
+        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
+        self.resource = Resource.forRequest(req_url)
+
+        if not self.resource:
+            self.resource = Resource.new(req_url)
+        
+        if Params.VERBOSE > 1:
+            print 'Matched to resource', req_url
+        
+        if self.resource and 'Host' not in self.__args:
+            # Become HTTP/1.1 compliant
+            self.__args['Host'] = self.resource.ref.host
+
+        # Prepare rest of headers for pass-through to target server
         self.__args[ 'Connection' ] = 'close'
         self.__args.pop( 'Keep-Alive', None )
         self.__args.pop( 'Proxy-Connection', None )
         self.__args.pop( 'Proxy-Authorization', None )
-
-        # Add Date (as per HTTP/1.1 14.18)
+        # Add Date (as per RFC 2616 14.18)
         if 'Date' not in self.__args:
             self.__args[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
-
-        # Add proxy Via header (per HTTP/1.1 14.45)
+        # Add proxy Via header (per RFC 2616 14.45)
         via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
         if self.__args.setdefault('Via', via) != via:
             self.__args['Via'] += ', '+ via
 
+    @property
+    def hostinfo(self):
+        return self.resource.location.host, self.resource.location.port
+
     def recvbuf( self ):
-        assert self.Protocol
-        lines = [ '%s /%s HTTP/1.1' % ( self.__cmd, self.__path ) ]
+        assert self.Protocol, "No protocol yet"
+        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.resource.path ) ]
         lines.extend( map( ': '.join, self.__args.items() ) )
         lines.append( '' )
         if self.__body:
@@ -131,12 +159,15 @@ class HttpRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
+    def envelope(self):
+        return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
+
     def url( self ):
         assert self.Protocol
-        return self.__host, self.__port, self.__path
+        assert self.resource.location.port, self.resource.href
+        return self.resource.location.host, self.resource.location.port, self.resource.path
 
     def args( self ):
-        assert self.Protocol
         return self.__args.copy()
 
     def range( self ):
@@ -158,11 +189,11 @@ class HttpRequest:
 
     def __hash__( self ):
         assert self.Protocol
-        return hash(( self.__host, self.__port, self.__path ))
+        return hash(( self.resource.host, self.resource.gport, self.resource.path ))
 
     def __eq__( self, other ):
         assert self.Protocol
-        request1 = self.__cmd,  self.__host,  self.__port,  self.__path
-        request2 = other.__cmd, other.__host, other.__port, other.__path
+        request1 = self.__verb,  self.resource.ref.host,  self.resource.ref.port,  self.resource.path
+        request2 = other.__verb, other.resource.ref.host, other.resource.ref.port, other.resource.path
         return request1 == request2
 
