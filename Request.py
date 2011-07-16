@@ -152,7 +152,7 @@ class HttpRequest:
 
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
-        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__path ) ]
+        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__reqpath ) ]
         lines.extend( map( ': '.join, self.__args.items() ) )
         lines.append( '' )
         if self.__body:
@@ -167,7 +167,7 @@ class HttpRequest:
 
     def url( self ):
         assert self.Protocol, "Request has no protocol"
-        return self.__host, self.__port, self.__path
+        return self.__host, self.__port, self.__reqpath
 
     def args( self ):
         assert self.Protocol, "Request has no protocol"
@@ -176,11 +176,11 @@ class HttpRequest:
 
     def args( self ):
         assert self.Protocol, "no protocol"
-        return hash(( self.__host, self.__port, self.__path ))
+        return hash(( self.__host, self.__port, self.__reqpath ))
 
     def __eq__( self, other ):
         assert self.Protocol, "no protocol"
-        request1 = self.__verb,  self.__host,  self.__port,  self.__path
-        request2 = other.__verb, other.__host, other.__port, other.__path
+        request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
+        request2 = other.__verb, other.__host, other.__port, other.__reqpath
         return request1 == request2
 
