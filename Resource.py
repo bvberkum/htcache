@@ -12,7 +12,7 @@ from error import *
 from gate.util import HeaderDict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from taxus.data import initialize, Resource, Locator, ContentDescriptor, \
+from taxus.data import initialize, Resource, Locator, CachedContent, \
         Status, Description, Variant, Invariant, Relocated
 import uriref
 
@@ -60,15 +60,11 @@ class CachedResource(object):
         #self.descriptor = descriptors[cache_location].bind(cache_location, self)
         #return self.cache
 
-    def update(self, status, headers):
-        for hn in headers:
-            if hn == 'Content-Location':
-                url = headers[hn]
-            elif hn == 'Content-Type':
-                headers[hn]
+    def update(self, **kv):
         #self.headers = HeaderDict(args)
         #if status in (HTTP.OK, HTTP.PARTIAL_CONTENT, HTTP.FOUND, HTTP.MOVED_TEMPORARILY):
         #self.descriptors[self.cache.path] = [self.resource.href], headers
+        pass
 
     @property
     def location(self):
@@ -93,7 +89,7 @@ class CachedResource(object):
             return getattr(self.location, name)
 
 
-def new(request_url, type_=Relocated):
+def new(request_url, type_=Invariant):
     session = initialize(Params.BACKEND)
 
     now = datetime.datetime.now()
@@ -102,18 +98,16 @@ def new(request_url, type_=Relocated):
     resource = type_(location=locator, date_added=now)
     session.add(resource)
     session.commit()
-    return resource
+    return CachedResource(resource)
+
 
 def forRequest(request_url):
-    return
-
     session = initialize(Params.BACKEND)
 
     resource = session.query(Relocated, Locator)\
         .join('location')\
         .filter(Locator.ref == request_url)\
         .first()
-
     if resource:
         Params.log("Found Relocated resource at %s" % request_url)
         return CachedResource(resource[0])
@@ -122,7 +116,6 @@ def forRequest(request_url):
         .join('location')\
         .filter(Locator.ref == request_url)\
         .first()
-
     if resource:
         Params.log("Found Variant resource at %s" % request_url)
         return CachedResource(resource[0])
@@ -131,7 +124,6 @@ def forRequest(request_url):
         .join('location')\
         .filter(Locator.ref == request_url)\
         .first()
-
     if resource:
         Params.log("Found untyped resource at %s" % request_url)
         return CachedResource(resource[0])

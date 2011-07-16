@@ -40,6 +40,8 @@ IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 #BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
 #BACKEND = 'mysql://rsr:rAz0r1@robin/rsr_o'
 BACKEND = 'mysql://root:MassRootSql@robin/taxus_o'
+#BACKEND = 'mysql://root:MassRootSql@robin/taxus_t'
+#BACKEND = 'mysql://root:MassRootSql@robin/taxus_p'
 
 BACKENDS = {
         # name: test, type

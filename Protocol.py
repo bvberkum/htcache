@@ -76,12 +76,12 @@ class ProxyProtocol(object):
         self.request = request
         resource = request.resource
 
-
         #self.descriptors = Resource.init_backend(request)
         cache_be = Cache.load_backend_type(Params.CACHE)
         # 
         #self.cache = request.resource.init(self.descriptors, cache_be)
-        cache_location = '%s:%i%s' % (resource.host, resource.port, resource.path)
+        print resource, resource.location, resource.location.__class__
+        cache_location = '%s:%i%s' % (resource.location.host, resource.location.port, resource.path)
         self.cache = cache_be(cache_location)
         Params.log('Cache locator: %s' % self.cache.path)
 
@@ -264,12 +264,44 @@ class HTTP:
     """
 
 
+def map_headers_to_resource(headers):
+    kwds = {}
+    mapping = {
+        'allow': 'allow',
+        'content-encoding': 'content.encodings',
+        'content-length': 'size',
+        'content-language': 'language',
+        'content-location': 'location',
+        'content-md5': 'content.md5',
+        #'content-range': '',
+        #'vary': 'vary',
+        #'content-type': 'mediatype',
+        'expires': 'content.expires',
+        'last-modified': 'last_modified',
+
+        'etag': 'etag',
+    }
+    for hn, hv in headers.items():
+        hn, hv = hn.lower(), hv.lower()
+        if hn == 'content-type':
+            if ';' in hn:
+                kwds['mediatype'] = re.search('^[^;]*', hv).group(0).strip()
+                if 'charset' in hv:
+                    kwds['charset'] = re.search(';\s*charset=([a-zA-Z0-9]*)',
+                            hv).group(1)
+        elif hn.lower() in mapping:
+            kwds[mapping[hn.lower()]] = hv
+        else:
+            print "Warning: ignored", hn
+    return kwds
+
+
 class HttpProtocol(ProxyProtocol):
 
     def __init__( self, request ):
         super(HttpProtocol, self).__init__(request)
         resource = request.resource
-        host, port, path = resource.host, resource.port, resource.path
+        host, port, path = resource.host, resource.location.port, resource.path
         args = request.args()
         # Prepare requri to identify request
         if port != 80:
@@ -429,12 +461,24 @@ class HttpProtocol(ProxyProtocol):
                     HTTP.TEMPORARY_REDIRECT):
             location = self.__args['Location']
             self.Response = Response.BlindResponse
+            if isinstance(self.request.resource, (Variant, Invariant)):
+                print 'Variant resource has moved'
+            elif isinstance(self.request.resource, Resource):
+                print 'Resource has moved'
+            elif isinstance(self.request.resource, Relocated):
+                print 'Relocated has moved'
+
+            self.request.resource.update(
+                    status=self.__status, 
+                    **map_headers_to_resource(self.__args))
 
         else:
             self.Response = Response.BlindResponse
 
         # Update descriptor
-        self.request.resource.update(self.__status, self.__args)
+        self.request.resource.update(status=self.__status, 
+                **map_headers_to_resource(self.__args))
+
 
     def recvbuf( self ):
         return '\r\n'.join(

@@ -149,7 +149,7 @@ class HttpRequest:
 
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
-        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.resource.path ) ]
+        lines = [ '%s %s HTTP/1.1' % ( self.__verb, self.resource.path ) ]
         lines.extend( map( ': '.join, self.__args.items() ) )
         lines.append( '' )
         if self.__body:
