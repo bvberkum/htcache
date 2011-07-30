@@ -223,6 +223,19 @@ class HttpProtocol(ProxyProtocol):
         if self.prepare_direct_response(request):
             self.__socket = None
             return
+
+        filtered_path = "%s/%s" % (host, path)
+        for pattern, compiled, target in Params.JOIN:
+            m = compiled.match(filtered_path)
+            if m:
+                target_path = target % m.groups()
+                Params.log('Join downloads by squashing URL %s to %s' %
+                        (filtered_path, target_path))
+                self.cache = Cache.load_backend(Params.CACHE)(target_path)
+                Params.log('Joined with cache position: %s' % self.cache.path)
+                #self.Response = Response.DataResponse
+                #return True
+
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
         args.pop( 'Accept-Encoding', None )

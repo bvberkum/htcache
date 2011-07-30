@@ -5,6 +5,9 @@ import Params, Protocol, Request, Response, fiber, weakref
 DOWNLOADS = weakref.WeakValueDictionary()
 
 
+Params.parse_joinlist()
+
+
 def HTCache( client, address ):
 
   print 'Accepted request from %s:%i' % address
