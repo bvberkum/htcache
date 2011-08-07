@@ -220,6 +220,7 @@ class HttpProtocol(ProxyProtocol):
         else:
             hostinfo = host
         self.requri = "http://%s/%s" %  (hostinfo, path)
+
         if self.prepare_direct_response(request):
             self.__socket = None
             return
@@ -228,6 +229,7 @@ class HttpProtocol(ProxyProtocol):
         for pattern, compiled, target in Params.JOIN:
             m = compiled.match(filtered_path)
             if m:
+                #arg_dict = dict([(idx, val) for idx, val in enumerate(m.groups())])
                 target_path = target % m.groups()
                 Params.log('Join downloads by squashing URL %s to %s' %
                         (filtered_path, target_path))

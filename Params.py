@@ -261,7 +261,6 @@ def parse_joinlist(fpath=JOIN_FILE):
         JOIN.extend([(p.strip(),re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
             for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
-
 def log(msg, threshold=0):
   "Not much of a log.."
   # see fiber.py which manages stdio
