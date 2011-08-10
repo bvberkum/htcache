@@ -65,7 +65,8 @@ proxy options:
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
                      tree. does not encode `archive` prefix.
   TODO --encode query sep                   
-  -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
+  TODO -H --hash     
+  TODO -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
   -d --drop FILE     filter requests for URI's based on regex patterns. 
                      read line for line from file, default %(DROP)s.
   TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
@@ -156,7 +157,7 @@ for _arg in _args:
             #assert os.path.exists(SORT)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
-    elif _arg in ( '-s', '--sha1sum' ):
+    elif _arg in ( '-H', '--hash' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep
             assert os.path.isdir( ROOT )
@@ -164,6 +165,14 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a directory argument' % _arg )
         except:
             sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
+    elif _arg in ( '-s', '--sha1sum' ):
+#        try:
+#            ROOT = os.path.realpath( _args.next() ) + os.sep
+#            assert os.path.isdir( ROOT )
+#        except StopIteration:
+#            sys.exit( 'Error: %s requires a directory argument' % _arg )
+#        except:
+#            sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
     elif _arg in ( '-r', '--root' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep
