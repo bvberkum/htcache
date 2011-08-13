@@ -16,6 +16,8 @@ LIMIT = False
 LOG = False
 DEBUG = False
 DROP = '/etc/htcache/rules.drop'
+PROC_FILE = '/etc/htcache/rules.proc'
+PROC = []
 JOIN_FILE = '/etc/htcache/rules.join'
 JOIN = []
 NOCACHE = '/etc/htcache/rules.nocache'
@@ -262,6 +264,23 @@ for _arg in _args:
 
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
+
+def parse_proclist(fpath=PROC_FILE):
+    global PROC
+    PROC = []
+    if os.path.isfile(fpath):
+        lines - open(fpath).readlines()
+        for l in lines:
+            if not line.strip() or line.startswith('#'):
+                continue
+            p = l.find(' ')
+            if not p:
+                print "Skipped procline", l
+                continue
+            pattern, cmdline = l[:p], l[p+1:]
+            PROC.append(re.compile("^"+p.strip()+"$"),r.strip()
+#        PROC.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
+#            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
 def parse_joinlist(fpath=JOIN_FILE):
     global JOIN
