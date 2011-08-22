@@ -175,6 +175,7 @@ for _arg in _args:
 #            sys.exit( 'Error: %s requires a directory argument' % _arg )
 #        except:
 #            sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
+        pass
     elif _arg in ( '-r', '--root' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep
@@ -269,16 +270,16 @@ def parse_proclist(fpath=PROC_FILE):
     global PROC
     PROC = []
     if os.path.isfile(fpath):
-        lines - open(fpath).readlines()
+        lines = open(fpath).readlines()
         for l in lines:
-            if not line.strip() or line.startswith('#'):
+            if not l.strip() or l.startswith('#'):
                 continue
             p = l.find(' ')
             if not p:
                 print "Skipped procline", l
                 continue
             pattern, cmdline = l[:p], l[p+1:]
-            PROC.append(re.compile("^"+p.strip()+"$"),r.strip()
+            PROC.append((re.compile("^"+pattern.strip()+"$"),cmdline))
 #        PROC.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
 #            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
