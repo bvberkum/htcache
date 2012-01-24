@@ -112,6 +112,7 @@ htcache client/server flow::
 
 
 
+
    * indicates wether there may be partial entity-content transfer
 
 
