@@ -110,6 +110,7 @@ htcache client/server flow::
            ---error-----------> o---blind----------------->
 
 
+
    * indicates wether there may be partial entity-content transfer
 
 
@@ -191,7 +192,7 @@ that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
 This can create problems with long filenames and the characters that appear
 in the various URL parts.
 
-Additional backends can deal with this issue ``--cache TYPE``).
+Additional backends can deal with this issue (``--cache TYPE``).
 The default backend was Cache.File which is compatible with ``wget -r`` but
 is inadequate for general use as web proxy. The new default caches.FileTreeQ
 combines some aspects desirable to deal with a wider range of resources.
@@ -205,7 +206,7 @@ combines some aspects desirable to deal with a wider range of resources.
   being hardcoded to 256 characters.
 - caches.FileTree - combines above three methods.
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
-  filename.
+  filename, simple and effective.
 
 Cache options
 _______________

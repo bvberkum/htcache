@@ -482,8 +482,8 @@ class HttpProtocol(ProxyProtocol):
             self.Response = Response.BlindResponse
             if isinstance(self.request.resource, (Variant, Invariant)):
                 print 'Variant resource has moved'
-            elif isinstance(self.request.resource, Resource):
-                print 'Resource has moved'
+            #elif isinstance(self.request.resource, Resource):
+            #    print 'Resource has moved'
             elif isinstance(self.request.resource, Relocated):
                 print 'Relocated has moved'
 
