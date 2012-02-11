@@ -8,6 +8,9 @@ SRC:=$(PACK) init.sh $(wildcard *.py) $(wildcard *.rst) \
 .PHONY: default dist
 default:
 
+test::
+	@COVERAGE=0 ./unit-test
+
 TODO.list: ./
 	rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
