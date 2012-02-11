@@ -42,7 +42,8 @@ class HttpRequest:
         elif line in ( '\r\n', '\n' ):
             self.__size = int( self.__args.get( 'Content-Length', 0 ) )
             if self.__size:
-                assert self.__cmd == 'POST', '%s request conflicts with message body' % self.__cmd
+                assert self.__cmd == 'POST', \
+                        '%s request conflicts with message body' % self.__cmd
                 Params.log('Opening temporary file for POST upload', 1)
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
@@ -57,7 +58,8 @@ class HttpRequest:
     def __parse_body( self, chunk ):
 
         self.__body.write( chunk )
-        assert self.__body.tell() <= self.__size, 'message body exceeds content-length'
+        assert self.__body.tell() <= self.__size, \
+                 'message body exceeds content-length'
         if self.__body.tell() == self.__size:
             self.__parse = None
 
@@ -68,7 +70,8 @@ class HttpRequest:
         assert not self.Protocol
 
         chunk = sock.recv( Params.MAXCHUNK )
-        assert chunk, 'client closed connection before sending a complete message header'
+        assert chunk, \
+                'client closed connection before sending a complete message header'
         self.__recvbuf += chunk
         while self.__parse:
             bytes = self.__parse( self.__recvbuf )
@@ -77,6 +80,7 @@ class HttpRequest:
             self.__recvbuf = self.__recvbuf[ bytes: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
+        # Accept http and ftp proxy requests
         if self.__url.startswith( 'http://' ):
             host = self.__url[ 7: ]
             port = 80
@@ -85,10 +89,12 @@ class HttpRequest:
             else:
                 self.Protocol = Protocol.BlindProtocol
         elif self.__url.startswith( 'ftp://' ):
-            assert self.__cmd == 'GET', '%s request unsupported for ftp' % self.__cmd
+            assert self.__cmd == 'GET', \
+                    '%s request unsupported for ftp' % self.__cmd
             self.Protocol = Protocol.FtpProtocol
             host = self.__url[ 6: ]
             port = 21
+        # Accept static requests, and further parse host
         else:
             host = self.__url
             port = 80
