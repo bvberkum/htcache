@@ -3,13 +3,15 @@ import Params, Response, Resource, Cache
 from Params import log
 
 
+
+LOCALHOSTS = ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1')
 DNSCache = {}
 
 def connect( addr ):
     assert Params.ONLINE, 'operating in off-line mode'
     if addr not in DNSCache:
         Params.log('Requesting address info for %s:%i' % addr)
-        DNSCache[ addr ] = socket.getaddrinfo( 
+        DNSCache[ addr ] = socket.getaddrinfo(
             addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
     family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
     Params.log('Connecting to %s:%i' % sockaddr)
@@ -46,50 +48,6 @@ class BlindProtocol:
         pass
 
 
-# Compile drop rules from file upon startup
-DROP = []
-if os.path.isfile(Params.DROP):
-    DROP.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(Params.DROP).readlines() if not p.startswith('#')])
-
-NOCACHE = []
-if os.path.isfile(Params.NOCACHE):
-    NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(Params.NOCACHE).readlines() if not p.startswith('#')])
-
-def split_csv(line):
-    line = line.strip()
-    if not line or line.startswith('#'):
-        return
-    values = []
-    vbuf = ''
-    Q = ('\'','\"')
-    inquote = False
-    for c in line:
-        if c in Q:
-            inquote = True
-        elif inquote:
-            if c in Q:
-                inquote = False
-            else:                
-                vbuf += c
-        elif c == ',' or c.isspace():
-            if vbuf:
-                values.append(vbuf)
-                vbuf = ''
-        else:
-            vbuf += c
-    if vbuf:
-        values.append(vbuf)
-        vbuf = ''
-    return values
-
-SORT = {}
-if os.path.isfile(Params.SORT):
-    SORT.update([(p[1],re.compile(p[0])) for p in
-        map(split_csv, open(Params.SORT).readlines()) if p])
-
-
 #Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
 
 class ProxyProtocol(object):
@@ -109,14 +67,15 @@ class ProxyProtocol(object):
     "the htcache response class"
 
     def __init__(self, request):
+        "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
-        cache_location = '%s:%i/%s' % request.url() 
+        cache_location = '%s:%i/%s' % request.url()
         for tag, pattern in SORT.items():
             if pattern.match(cache_location):
                 cache_location=os.path.join(tag,cache_location)
         self.cache = Cache.load_backend(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
-        self.descriptors = Resource.get_backend()   
+        self.descriptors = Resource.get_backend()
 
     def rewrite_response(self, request):
         host, port, path = request.url()
@@ -124,8 +83,14 @@ class ProxyProtocol(object):
         return host, port, path, args
 
     def prepare_direct_response(self, request):
+        """
+        Serve either a proxy page, a replacement for blocked content, of static
+        content. All directly from local storage.
+
+        Returns true on direct-response ready.
+        """
         host, port, path = request.url()
-        if port == 8080 and host in ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1'):
+        if port == 8080 and host in LOCALHOSTS:
             self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
@@ -133,11 +98,11 @@ class ProxyProtocol(object):
         # Filter request by regex from patterns.drop
         filtered_path = "%s/%s" % (host, path)
         #print len(DROP), 'drop patterns,', filtered_path
-        for pattern, compiled in DROP:
+        for pattern, compiled in Params.DROP:
             if compiled.match(filtered_path):
                 self.set_blocked_response(path)
-                Params.log('Dropping connection, request matches pattern: %r.' % 
-                    pattern)
+                Params.log('Dropping connection, '
+                            'request matches pattern: %r.' % pattern)
                 return True
         if Params.STATIC and self.cache.full():
             Params.log('Static mode; serving file directly from cache')
@@ -147,25 +112,25 @@ class ProxyProtocol(object):
 
     def prepare_filtered_response(self):
         "After parsing resheaders, return True "
-        # XXX: match on path only
-        for pattern, compiled in NOCACHE:
+        # XXX: matches on path only
+        for pattern, compiled in Params.NOCACHE:
             #Params.log("nocache p %s" % pattern)
             if compiled.match(self.requri):
-                self.Response = Response.BlindResponse            	  
-                Params.log('Not caching request, matches pattern: %r.' % 
+                self.Response = Response.BlindResponse
+                Params.log('Not caching request, matches pattern: %r.' %
                     pattern)
                 return True
 
     def set_blocked_response(self, path):
-        # Respond by writing filter warning:
+        "Respond to client by writing filter warning about blocked content. "
         if '?' in path or '#' in path:
             pf = path.find('#')
             pq = path.find('?')
             p = len(path)
-            if pf > 0: p = pf            	
+            if pf > 0: p = pf
             if pq > 0: p = pq
             nameext = os.path.splitext(path[:p])
-        else:            
+        else:
             nameext = os.path.splitext(path)
         if len(nameext) == 2 and nameext[1][1:] in Params.IMG_TYPE_EXT:
             self.Response = Response.BlockedImageContentResponse
@@ -201,6 +166,7 @@ class ProxyProtocol(object):
 
 
 class HTTP:
+
     OK = 200
     PARTIAL_CONTENT = 206
     NOT_MODIFIED = 304
@@ -245,19 +211,19 @@ class HttpProtocol(ProxyProtocol):
         stat = self.cache.partial() or self.cache.full()
         if stat:
             size = stat.st_size
-            mtime = time.strftime( 
+            mtime = time.strftime(
                 Params.TIMEFMT, time.gmtime( stat.st_mtime ) )
             if self.cache.partial():
-                Params.log('Requesting resume of partial file in cache: ' 
+                Params.log('Requesting resume of partial file in cache: '
                     '%i bytes, %s' % ( size, mtime ), 1)
                 args[ 'Range' ] = 'bytes=%i-' % size
                 args[ 'If-Range' ] = mtime
             else:
-                Params.log('Checking complete file in cache: %i bytes, %s' % 
+                Params.log('Checking complete file in cache: %i bytes, %s' %
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
         self.__socket = connect( request.url()[ :2 ] )
-        self.__sendbuf = '\r\n'.join( 
+        self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
         self.__parse = HttpProtocol.__parse_head
@@ -298,8 +264,6 @@ class HttpProtocol(ProxyProtocol):
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
-            # XXX: title caps improper for acronyms
-            key = key.title()
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
             else:
@@ -312,11 +276,12 @@ class HttpProtocol(ProxyProtocol):
         return eol
 
     def recv( self, sock ):
+        " Read until header can be parsed, then determine Response type. "
         assert not self.hasdata()
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
-        assert chunk, \
-            'server closed connection before sending a complete message header'
+        assert chunk, 'server closed connection before sending '\
+                        'a complete message header'
         self.__recvbuf += chunk
         while self.__parse:
             bytes = self.__parse( self, self.__recvbuf )
@@ -333,20 +298,20 @@ class HttpProtocol(ProxyProtocol):
             self.cache.open_new()
             if 'Last-Modified' in self.__args:
                 try:
-                    self.mtime = calendar.timegm( time.strptime( 
+                    self.mtime = calendar.timegm( time.strptime(
                         self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
                 except:
-                    Params.log('Illegal time format in Last-Modified: %s.' % 
+                    Params.log('Illegal time format in Last-Modified: %s.' %
                         self.__args[ 'Last-Modified' ])
                     # Try again:
-                    try:                    
-                        tmhdr = re.sub('\ [GMT0\+-]+$', '', 
+                    try:
+                        tmhdr = re.sub('\ [GMT0\+-]+$', '',
                             self.__args[ 'Last-Modified' ])
-                        self.mtime = calendar.timegm( time.strptime( 
+                        self.mtime = calendar.timegm( time.strptime(
                             tmhdr, Params.TIMEFMT[:-4] ) )
                     except:
-                        try:                    
-                            self.mtime = calendar.timegm( time.strptime( 
+                        try:
+                            self.mtime = calendar.timegm( time.strptime(
                                 self.__args[ 'Last-Modified' ],
                                 Params.ALTTIMEFMT ) )
                         except:
@@ -373,7 +338,7 @@ class HttpProtocol(ProxyProtocol):
               self.Response = Response.DataResponse
 
         elif self.__status == HTTP.NOT_MODIFIED and self.cache.full():
-            # FIXME: update last-modified? 
+            # FIXME: update last-modified?
             self.cache.open_full()
             self.Response = Response.DataResponse
 
@@ -385,13 +350,13 @@ class HttpProtocol(ProxyProtocol):
 
         else:
             self.Response = Response.BlindResponse
-        
-        # Update descriptor      
+
+        # Update descriptor
         if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
             self.descriptors[self.cache.path] = [self.requri], self.__args
 
     def recvbuf( self ):
-        return '\r\n'.join( 
+        return '\r\n'.join(
             [ 'HTTP/1.1 %i %s' % ( self.__status, self.__message ) ] +
             map( ': '.join, self.__args.items() ) + [ '', '' ] )
 
@@ -497,9 +462,9 @@ class FtpProtocol( ProxyProtocol ):
             return
         assert code == 213, \
             'server sends %i; expected 213 (file status)' % code
-        self.mtime = calendar.timegm( time.strptime( 
+        self.mtime = calendar.timegm( time.strptime(
             line.rstrip(), '%Y%m%d%H%M%S' ) )
-        Params.log('Modification time: %s' % time.strftime( 
+        Params.log('Modification time: %s' % time.strftime(
             Params.TIMEFMT, time.gmtime( self.mtime ) ))
         stat = self.cache.partial()
         if stat and stat.st_mtime == self.mtime:

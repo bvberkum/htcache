@@ -6,10 +6,15 @@ SRC:=$(PACK) init.sh $(wildcard *.py) $(wildcard *.rst) \
 	forbidden-sign.png forbidden-sign.svg
 
 .PHONY: default dist
+
 default:
 
 test::
 	@COVERAGE=0 ./unit-test
+
+debug::
+	mkdir debug-root
+	htcache -v -r debug-root 
 
 TODO.list: ./
 	rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@

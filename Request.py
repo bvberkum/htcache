@@ -20,7 +20,7 @@ class HttpRequest:
         Params.log('Client sends '+ line.rstrip())
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
-        self.__cmd, self.__url, dummy = fields
+        self.__verb, self.__url, self.__prototag = fields
         self.__args = {}
         self.__parse = self.__parse_args
 
@@ -42,8 +42,8 @@ class HttpRequest:
         elif line in ( '\r\n', '\n' ):
             self.__size = int( self.__args.get( 'Content-Length', 0 ) )
             if self.__size:
-                assert self.__cmd == 'POST', \
-                        '%s request conflicts with message body' % self.__cmd
+                assert self.__verb == 'POST', \
+                        '%s request conflicts with message body' % self.__verb
                 Params.log('Opening temporary file for POST upload', 1)
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
@@ -84,13 +84,13 @@ class HttpRequest:
         if self.__url.startswith( 'http://' ):
             host = self.__url[ 7: ]
             port = 80
-            if self.__cmd == 'GET':
+            if self.__verb == 'GET':
                 self.Protocol = Protocol.HttpProtocol
             else:
                 self.Protocol = Protocol.BlindProtocol
         elif self.__url.startswith( 'ftp://' ):
-            assert self.__cmd == 'GET', \
-                    '%s request unsupported for ftp' % self.__cmd
+            assert self.__verb == 'GET', \
+                    '%s request unsupported for ftp' % self.__verb
             self.Protocol = Protocol.FtpProtocol
             host = self.__url[ 6: ]
             port = 21
@@ -126,8 +126,8 @@ class HttpRequest:
             self.__args['Via'] += ', '+ via
 
     def recvbuf( self ):
-        assert self.Protocol
-        lines = [ '%s /%s HTTP/1.1' % ( self.__cmd, self.__path ) ]
+        assert self.Protocol, "No protocol yet"
+        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__path ) ]
         lines.extend( map( ': '.join, self.__args.items() ) )
         lines.append( '' )
         if self.__body:
@@ -168,7 +168,7 @@ class HttpRequest:
 
     def __eq__( self, other ):
         assert self.Protocol
-        request1 = self.__cmd,  self.__host,  self.__port,  self.__path
-        request2 = other.__cmd, other.__host, other.__port, other.__path
+        request1 = self.__verb,  self.__host,  self.__port,  self.__path
+        request2 = other.__verb, other.__host, other.__port, other.__path
         return request1 == request2
 

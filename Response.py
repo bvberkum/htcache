@@ -237,6 +237,7 @@ class BlockedImageContentResponse:
 
 
 class DirectResponse:
+
     """
     Echo request header in response body.
     """
@@ -244,7 +245,6 @@ class DirectResponse:
     Done = False
 
     def __init__( self, status, request ):
-
         lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
         for line in head.splitlines():
@@ -257,37 +257,31 @@ class DirectResponse:
         self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
       
     def hasdata( self ):
-
         return bool( self.__sendbuf )
 
     def send( self, sock ):
-
         assert not self.Done
         bytes = sock.send( self.__sendbuf )
         self.__sendbuf = self.__sendbuf[ bytes: ]
         if not self.__sendbuf:
-          self.Done = True
+            self.Done = True
 
     def needwait( self ):
-
         return False
 
     def recv( self ):
-
         raise AssertionError
 
 
 class NotFoundResponse( DirectResponse ):
 
     def __init__( self, protocol, request ):
-
         DirectResponse.__init__( self, '404 Not Found', request )
 
 
 class ExceptionResponse( DirectResponse ):
 
     def __init__( self, request ):
-
         traceback.print_exc()
         DirectResponse.__init__( self, '500 Internal Server Error', request )
 

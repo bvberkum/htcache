@@ -4,6 +4,18 @@
 **htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
+branches
+    new_stable (current)
+        - Sort, Join and Proc rules in addition to NoCache and Drop.
+    stable
+        - FIXME: Not working!
+        - TODO: conains unused? CachedResource code , integrate or  remove
+    master
+        - FIXME: Not working!
+        - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
+    development
+        - trying to incoorporate gate.Resource, impl. htache.Resource
+
 .. contents::
 
 Status
@@ -60,16 +72,20 @@ htcache client/server flow::
 
    .                         htcache 
                              _______
+
                                 o <------------*request---  client
                                 |
                                 |---blocked response(1)--->
                                 |---static response(7)---->
    server <------------normal---|
           <------*conditional---' 
+
            --*normal----------> o
                                 |--*normal----------------> 
                                 `--*nocache response(4)---> 
+
            ---not modified----> o--*cached response------->       
+
            ---error-----------> o---direct response------->       
 
    * indicates wether there may be partial entity-content transfer
@@ -91,7 +107,7 @@ Configuration
 ~~~~~~~~~~~~~
 There is no separate configuration file, see Params.py and init.sh for 
 option arguments to the program, and for their default settings. Other settings
-are given in the rewrite and rules files described above.
+are given in the rewrite and rules files described before.
 
 The programs options are divided in three parts, the first group affects 
 the proxy server, which is the default action.
@@ -101,8 +117,10 @@ query and maintenance options are provided. Note that maintenance may need
 exclusive write access to the cache and descriptor backends, meaning don't run
 with active proxy.
 
-Cache backends listing
-~~~~~~~~~~~~~~~~~~~~~~
+See ``htcache [-h|--help]``.
+
+Cache backends
+______________________
 htcache uses a file-based Cache which may produce a file-tree similar to 
 that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect). 
 This can create problems with long filenames and the characters that appear 
@@ -124,6 +142,8 @@ combines some aspects desirable to deal with a wider range of resources.
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
   filename.
 
+Cache options
+_______________
 The storage location is futher affected by ``--archive`` and ``--nodir``.
 
 Regular archival of a resources is possible by prefixing a formatted date to
@@ -139,7 +159,7 @@ The nodir parameter accepts a replacement for the directory separator and
 stores the path in a single filename. This may affect FileTreeQ.
 
 Descriptor backends
-~~~~~~~~~~~~~~~~~~~
+____________________
 The descriptor backend (which contains URI, mediatype, charset, language and
 other resource-header data) is by default a flat index DB storage.
 No additional backends available at this time.
@@ -148,12 +168,13 @@ TODO: a file-based header storage or perhaps even an Apache mod_asis
 compatible storage are under consideration. Depending on query/maintenance
 requirements.
 
+
 Rule Syntax
 ~~~~~~~~~~~
-rules.drop::
+rules.drop and rules.nocache::
 
   # hostpath
-  [^/]*zedo\.com.*
+  [^/]*expample\.net.*
 
 Matching DROP rules deny access to the origin server, and instead serve a HTML
 or image placeholder.
@@ -170,11 +191,11 @@ Both DROP and NOCACHE rule-format will change to include matching on protocol.
 Currently, both rules match on hostname and following URL parts only (hence 
 the [^/] pattern).
 
-rules.sort::
+rules.{req,res,resp}.sort::
 
   # proto  hostpath               replacement             root
-  *        (.*)                   
-  *        [^/]*youtube\.com.*    /my/dir/youtube/\1.flv  mydir/
+  *        (.*)                   \1                      
+  *        [^/]*example\.net.*    canonical-example.net   mydir/
 
 SORT rules currently prefix the cache-location with a tag, in above example the
 location under ROOT for all content from `youtube.com` will be ``mydir/``. If 

@@ -1,5 +1,6 @@
 """ """
 import os, re, anydbm
+
 try:
     # Py >= 2.4
     assert set
@@ -17,6 +18,7 @@ try:
     import simplejson as _json
 except:
     import json as _json
+
 
 json_read = _json.loads
 json_write = _json.dumps
@@ -39,9 +41,13 @@ class AnyDBStorage(object):
             try:
                 anydbm.open(path, 'n').close()
             except Exception as e:
-                raise Exception("Unable to create new resource DB at <%s>" %
-                        path)
-        self.__be = anydbm.open(path, 'rw')
+                raise Exception("Unable to create new resource DB at <%s>: %s" %
+                        (path, e))
+        try:
+            self.__be = anydbm.open(path, 'rw')
+        except anydbm.error, e:#bsddb.db.DBAccessError, e:
+            raise Exception("Unable to access resource DB at <%s>: %s" % 
+                    (path, e))
 
     def close(self):
         self.__be.close()
@@ -135,6 +141,7 @@ class AnyDBStorage(object):
 
 if os.path.isdir(Params.RESOURCES):
     backend =  FileStorage(Params.RESOURCES)
+
 elif Params.RESOURCES.endswith('.db'):
     backend =  AnyDBStorage(Params.RESOURCES)
 
