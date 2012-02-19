@@ -206,7 +206,7 @@ combines some aspects desirable to deal with a wider range of resources.
   being hardcoded to 256 characters.
 - caches.FileTree - combines above three methods.
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
-  filename, simple and effective.
+  filename. Simple and effective.
 
 Cache options
 _______________
