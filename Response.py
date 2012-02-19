@@ -57,9 +57,10 @@ class DataResponse:
             args = {}
 
         #if protocol.has_descriptor():
+        #  descr = protocol.descriptors[protocol.cache.path]
         #  descr = protocol.get_descriptor()
         #  srcrefs, mediatype, charset, languages, features = descr
-        #  Params.log("Stored %r" % (descr,))
+        #  Params.log("Descriptor: %s" % pformat(descr))
         #  # Abuse feature dict to store headers
         #  # TODO: parse mediatype, charset, language..
         #  if descr[-1]:
@@ -193,11 +194,12 @@ class BlockedContentResponse:
     Done = False
 
     def __init__(self, status, request):
+        url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
                 open(Params.HTML_PLACEHOLDER).read() % { 
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
-                        'location': '%s:%i/%s' % request.url(),
+                        'location': '%s:%i/%s' % url,
                         'software': 'htcache/0.1' }
 
     def hasdata( self ):
@@ -256,6 +258,10 @@ class DirectResponse:
     """
 
     Done = False
+
+    urlmap = {
+        'reload': 'reload_proxy',
+    }
 
     def __init__( self, status, request ):
         lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]

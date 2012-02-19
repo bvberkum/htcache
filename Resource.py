@@ -269,6 +269,15 @@ class AnyDBStorage(DescriptorStorage):
 #                and isinstance(srcrefs[0], str)), srcrefs
 
 
+if os.path.isdir(Params.RESOURCES):
+    backend =  FileStorage(Params.RESOURCES)
+
+elif Params.RESOURCES.endswith('.db'):
+    backend =  AnyDBStorage(Params.RESOURCES)
+
+def get_backend():
+    return backend
+
 class RelationalStorage(DescriptorStorage):
 
     def __init__(self, dbref):
@@ -291,12 +300,12 @@ def _is_sql(be):
         be.startswith('mysql://') or \
         be.endswith('.sqlite')
 
-Params.BACKENDS.update(dict(
-        # TODO: filestorage not implemented
-        file= (lambda p: os.path.isdir(p), FileStorage),
-        anydb= (_is_db, AnyDBStorage),
-        sql= (_is_sql, RelationalStorage)
-    ))
+#Params.BACKENDS.update(dict(
+#        # TODO: filestorage not implemented
+#        file= (lambda p: os.path.isdir(p), FileStorage),
+#        anydb= (_is_db, AnyDBStorage),
+#        sql= (_is_sql, RelationalStorage)
+#    ))
 
 def init_backend(request, be=Params.BACKEND):
 
@@ -377,13 +386,13 @@ def find_info(props):
     backend.close()
     sys.exit(1)
 
-if Params.PRINT_ALLRECORDS:
-    print_info(*backend.keys())
-elif Params.PRINT_RECORD:
-    print_info(*Params.PRINT_RECORD)
-elif Params.FIND_RECORDS:
-    find_info(Params.FIND_RECORDS)
-elif Params.PRINT_MEDIA:
-    print_media_list(*Params.PRINT_MEDIA)
+#if Params.PRINT_ALLRECORDS:
+#    print_info(*backend.keys())
+#elif Params.PRINT_RECORD:
+#    print_info(*Params.PRINT_RECORD)
+#elif Params.FIND_RECORDS:
+#    find_info(Params.FIND_RECORDS)
+#elif Params.PRINT_MEDIA:
+#    print_media_list(*Params.PRINT_MEDIA)
 
 

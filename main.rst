@@ -6,16 +6,13 @@ in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
     master (current)
-        - SQL version
-        - FIXME: Not working!
-        - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
-        - Proxy restart command
+        - Follows new_stable
     stable
         - FIXME: Not working!
         - SQL version
         - TODO: contains unused? CachedResource code , integrate or  remove
         - Proxy restart command
-    new_stable (current)
+    new_stable
         - Tests pass up to FTP tests.
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
@@ -24,8 +21,14 @@ branches
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
         - trying to incoorporate gate.Resource, impl. htache.Resource
+        - started Resource
+        - started fiber.protocol
+        - request.hostinfo()
+        - request.envelope instead of reparsing req
     new_development
-        - Running.
+        - Running
+        - Proxy restart command
+        - request.url()
 
 .. contents::
 
@@ -105,9 +108,9 @@ htcache client/server flow::
                                 |---rewritten(6)------>
                                 `--*nocache(7)-------->
 
-           ---not modified----> o--*cached---------------->
+           ---not modified----> o--*cached------------>
 
-           ---error-----------> o---blind----------------->
+           ---error-----------> o---blind------------->
 
 
 
@@ -178,8 +181,8 @@ are given in the rewrite and rules files described before.
 The programs options are divided in three parts, the first group affects
 the proxy server, which is the default action.
 
-User/system settings are provided using GNU/POSIX Command Line options. 
-These are roughly divided in three parts; the first group affects 
+User/system settings are provided using GNU/POSIX Command Line options.
+These are roughly divided in three parts; the first group affects
 the proxy server, which is the default action. The other two query or process
 cached data, and are usefull for maintenance. Note that maintenance may need
 exclusive write access to the cache and descriptor backends, meaning don't run
