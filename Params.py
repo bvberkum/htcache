@@ -162,7 +162,7 @@ for _arg in _args:
     elif _arg in ( '-s', '--sort' ):
         try:
             SORT_FILE = os.path.realpath( _args.next() )
-            #assert os.path.exists(SORT)
+            #assert os.path.exists(SORT_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-s', '--sha1sum' ):
@@ -304,12 +304,13 @@ def parse_nocache(fpath=NOCACHE_FILE):
 #        PROC.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
 #            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
-def parse_joinlist(fpath=JOIN_FILE):
-    global JOIN
-    JOIN = []
-    if os.path.isfile(fpath):
-        JOIN.extend([(p.strip(),re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
-            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
+# TODO: join rules
+#def parse_joinlist(fpath=JOIN_FILE):
+#    global JOIN
+#    JOIN = []
+#    if os.path.isfile(fpath):
+#        JOIN.extend([(p.strip(),re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
+#            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
 def split_csv(line):
     line = line.strip()

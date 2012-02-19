@@ -24,6 +24,7 @@ except:
 json_read = _json.loads
 json_write = _json.dumps
 
+# XXX: URL_SCHEMES = ['ftp', 'http']
 
 class Descriptor(object):
     pass

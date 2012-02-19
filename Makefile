@@ -1,4 +1,3 @@
-
 PACK:=htcache
 VERSION:=0.1
 REV:=$(shell cat REVISION)
