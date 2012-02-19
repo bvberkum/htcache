@@ -16,8 +16,8 @@ branches
         - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
     development
         - trying to incoorporate gate.Resource, impl. htache.Resource
-    new_development
-        ..
+    new_development (current)
+        - Running.
 
 .. contents::
 

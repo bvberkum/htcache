@@ -26,7 +26,7 @@ class BlindProtocol:
     Response = None
 
     def __init__( self, request ):
-        self.__socket = connect( request.url()[ :2 ] )
+        self.__socket = connect( request.hostinfo )
         self.__sendbuf = request.recvbuf()
 
     def socket( self ):
@@ -50,6 +50,7 @@ class BlindProtocol:
 
 
 class ProxyProtocol(object):
+
     """
     Open cache and descriptor index for requested resources.
     Filter requests using DROP, NOCACHE and .. rules.
@@ -89,7 +90,9 @@ class ProxyProtocol(object):
         Returns true on direct-response ready.
         """
         host, port, path = request.url()
-        if port == 8080 and host in LOCALHOSTS:
+        if port == 8080:
+            Params.log("Direct request")
+            assert host in LOCALHOSTS, "Cannot serve %s" % host
             self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
@@ -206,9 +209,8 @@ class HttpProtocol(ProxyProtocol):
                 Params.log('Checking complete file in cache: %i bytes, %s' %
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
-        hostinfo = request.url()[ :2 ]
-        Params.log("Connecting to %s:%s" % hostinfo)
-        self.__socket = connect(hostinfo)
+        Params.log("Connecting to %s:%s" % request.hostinfo)
+        self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
@@ -218,7 +220,7 @@ class HttpProtocol(ProxyProtocol):
         return bool( self.__sendbuf )
 
     def send( self, sock ):
-        assert self.hasdata()
+        assert self.hasdata(), "no data"
 
         bytes = sock.send( self.__sendbuf )
         self.__sendbuf = self.__sendbuf[ bytes: ]
@@ -264,7 +266,7 @@ class HttpProtocol(ProxyProtocol):
 
     def recv( self, sock ):
         " Read until header can be parsed, then determine Response type. "
-        assert not self.hasdata()
+        assert not self.hasdata(), "has data"
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
         assert chunk, 'server closed connection before sending '\
@@ -334,10 +336,10 @@ class HttpProtocol(ProxyProtocol):
                     and self.cache.partial():
             self.cache.remove_partial()
 
-        elif self.__status in (HTTP.FOUND, HTTP.MOVED_TEMPORARILY,
-                    HTTP.TEMPORARY_REDIRECT):
-            location = self.__args['Location']
-            self.Response = Response.BlindResponse
+        #elif self.__status in (HTTP.FOUND, HTTP.MOVED_TEMPORARILY,
+        #            HTTP.TEMPORARY_REDIRECT):
+        #    location = self.__args['Location']
+        #    self.Response = Response.BlindResponse
 
         else:
             self.Response = Response.BlindResponse

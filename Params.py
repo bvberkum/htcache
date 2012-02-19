@@ -1,4 +1,4 @@
-import sys, os, socket
+import sys, os, re, socket
 
 
 _args = iter( sys.argv )
@@ -276,14 +276,14 @@ def log(msg, threshold=0):
 
 # Compile drop rules from file upon startup
 DROP = []
-if os.path.isfile(Params.DROP):
+if os.path.isfile(DROP_FILE):
     DROP.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(Params.DROP).readlines() if not p.startswith('#')])
+        open(DROP_FILE).readlines() if not p.startswith('#')])
 
 NOCACHE = []
-if os.path.isfile(Params.NOCACHE):
+if os.path.isfile(NOCACHE_FILE):
     NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(Params.NOCACHE).readlines() if not p.startswith('#')])
+        open(NOCACHE_FILE).readlines() if not p.startswith('#')])
 
 def split_csv(line):
     line = line.strip()
@@ -313,9 +313,9 @@ def split_csv(line):
     return values
 
 SORT = {}
-if os.path.isfile(Params.SORT):
+if os.path.isfile(SORT_FILE):
     SORT.update([(p[1],re.compile(p[0])) for p in
-        map(split_csv, open(Params.SORT).readlines()) if p])
+        map(split_csv, open(SORT_FILE).readlines()) if p])
 
 
 #Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))

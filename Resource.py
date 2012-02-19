@@ -1,6 +1,5 @@
 """ """
 import os, re, anydbm
-from bsddb.db import DBAccessError
 
 try:
     # Py >= 2.4
@@ -24,6 +23,7 @@ except:
 
 json_read = _json.loads
 json_write = _json.dumps
+
 
 class Descriptor(object):
     pass
