@@ -146,10 +146,6 @@ class HttpRequest:
         if self.__args.setdefault('Via', via) != via:
             self.__args['Via'] += ', '+ via
 
-    @property
-    def hostinfo(self):
-        return self.resource.location.host, self.resource.location.port
-
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
         lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__reqpath ) ]
@@ -162,14 +158,19 @@ class HttpRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
-    def envelope(self):
-        return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
+    @property
+    def hostinfo(self):
+        # XXX: return self.resource.location.host, self.resource.location.port
+        return self.__host, self.__port
 
-    def url( self ):
-        assert self.Protocol, "Request has no protocol"
-        return self.__host, self.__port, self.__reqpath
+    @property
+    def envelope(self):
+        # XXX: used before protocol is determined,  assert self.Protocol
+        return self.__verb, self.__reqpath, self.__prototag
+        # XXX: return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
     def args( self ):
+        # XXX: used before protocol is determined,  assert self.Protocol
         assert self.Protocol, "Request has no protocol"
         assert self.resource.location.port, self.resource.href
         return self.resource.location.host, self.resource.location.port, self.resource.path
@@ -180,7 +181,8 @@ class HttpRequest:
 
     def __hash__( self ):
         assert self.Protocol, "no protocol"
-        return hash(( self.resource.host, self.resource.gport, self.resource.path ))
+        return hash(( self.__host, self.__port, self.__path ))
+        # XXX return hash(( self.resource.host, self.resource.gport, self.resource.path ))
 
     def __eq__( self, other ):
         assert self.Protocol, "no protocol"

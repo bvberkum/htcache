@@ -17,14 +17,10 @@ LOG = False
 DEBUG = False
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
-#PROC = []
-#PROC_FILE = '/etc/htcache/rules.proc'
 JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-SORT = {}
-SORT_FILE = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
 #CACHE = 'Cache.File'
@@ -99,8 +95,6 @@ Rules:
   -d --drop FILE     filter requests for URI's based on regex patterns. 
                      read line for line from file, default %(DROP)s.
   -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
-  -s --sort SORT     sort requests based on regex, directory-name pairs from file.
-                     unmatched requests are cached normally.
 
 Misc.:
   -t --timeout SEC   break connection after so many seconds of inactivity,
@@ -183,12 +177,6 @@ for _arg in _args:
         try:
             NOCACHE = os.path.realpath( _args.next() )
             #assert os.path.exists(NOCACHE)
-        except:
-            sys.exit( 'Error: %s requires an filename argument' % _arg )
-    elif _arg in ( '-s', '--sort' ):
-        try:
-            SORT = os.path.realpath( _args.next() )
-            #assert os.path.exists(SORT)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-H', '--hash' ):
@@ -361,10 +349,4 @@ def split_csv(line):
         vbuf = ''
     return values
 
-def parse_sort(fpath=SORT_FILE):
-    global SORT
-    SORT = {}
-    if os.path.isfile(fpath):
-        SORT.update([(p[1], re.compile(p[0])) for p in
-            map(split_csv, open(fpath).readlines()) if p])
 
