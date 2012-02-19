@@ -17,10 +17,19 @@ branches
     new_stable
         - Tests pass up to FTP tests.
         - Sort, Join and Proc rules in addition to NoCache and Drop.
+<<<<<<< HEAD
         - No restart command  
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
+=======
+    master
+        - FIXME: Not working!
+        - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
+        - Proxy restart command
+    development
+        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
+>>>>>>> 6b03d5c01ff443530fa7ae6a33d79fc23170788a
         - trying to incoorporate gate.Resource, impl. htache.Resource
     new_development (current)
         - Running.

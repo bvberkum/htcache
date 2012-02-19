@@ -311,7 +311,6 @@ def parse_joinlist(fpath=JOIN_FILE):
         JOIN.extend([(p.strip(),re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
             for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
-
 def split_csv(line):
     line = line.strip()
     if not line or line.startswith('#'):
@@ -346,4 +345,5 @@ def parse_sort(fpath=SORT_FILE):
         SORT.update([(p[1], re.compile(p[0])) for p in
             map(split_csv, open(fpath).readlines()) if p])
     # XXX: output interferes with init.sh log('Sort: Loaded %i rules from %s' % (len(SORT), SORT_FILE))
+
 
