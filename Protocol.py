@@ -4,7 +4,6 @@ import Params, Response, Resource, Cache
 
 
 
-
 LOCALHOSTS = ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1')
 DNSCache = {}
 

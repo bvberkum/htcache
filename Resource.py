@@ -1,5 +1,5 @@
 """ """
-import os, re, anydbm
+import anydbm, datetime, os, re
 
 try:
     # Py >= 2.4
@@ -7,7 +7,7 @@ try:
 except AssertionError:
     from sets import Set as set
 
-import Params, Protocol
+import Params
 from error import *
 
 #from gate.util import HeaderDict
@@ -33,6 +33,10 @@ except:
 json_read = _json.loads
 json_write = _json.dumps
 
+#URL_SCHEMES = ['ftp', 'http']
+
+
+class CachedResource(object):
 
 def strip_root(path):
     if path.startswith(Params.ROOT):

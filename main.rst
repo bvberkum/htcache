@@ -16,7 +16,7 @@ branches
         - Tests pass up to FTP tests.
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - No restart command
+        - Proxy restart command
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
