@@ -2,7 +2,7 @@ import time, os, sys
 import Params, Resource
 
 
-def load_backend(tp):
+def load_backend_type(tp):
     if '.' in tp:
         p = tp.split('.')
         path, name = '.'.join(p[:-1]), p[-1]

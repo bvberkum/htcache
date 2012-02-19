@@ -7,6 +7,7 @@ try:
     assert set
 except AssertionError:
     from sets import Set as set
+
 import Params
 
 # XXX dont use cjson, its buggy, see comments at
@@ -19,6 +20,7 @@ try:
     import simplejson as _json
 except:
     import json as _json
+
 
 json_read = _json.loads
 json_write = _json.dumps

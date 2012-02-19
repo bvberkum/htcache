@@ -1,3 +1,6 @@
+.coverage.*
 *.pyc
 dist
 *.sw[op]
+*.log
+htmlcov

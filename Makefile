@@ -13,6 +13,10 @@ default:
 test::
 	@COVERAGE=0 ./unit-test
 
+debug::
+	-mkdir debug-root
+	htcache -v -r debug-root -f debug-root/resources.db
+
 TODO.list: ./
 	rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
@@ -23,3 +27,5 @@ snapshot::
 dist::
 	tar czvf dist/$(PACK)_$(VERSION).tar.gz $(SRC)
 
+
+# :vim:set noet:
