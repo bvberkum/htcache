@@ -70,10 +70,10 @@ class ProxyProtocol(object):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
         cache_location = '%s:%i/%s' % request.url()
-        for tag, pattern in SORT.items():
+        for tag, pattern in Params.SORT.items():
             if pattern.match(cache_location):
                 cache_location=os.path.join(tag,cache_location)
-        self.cache = Cache.load_backend(Params.CACHE)(cache_location)
+        self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()
 
@@ -199,7 +199,7 @@ class HttpProtocol(ProxyProtocol):
                 target_path = target % m.groups()
                 Params.log('Join downloads by squashing URL %s to %s' %
                         (filtered_path, target_path))
-                self.cache = Cache.load_backend(Params.CACHE)(target_path)
+                self.cache = Cache.load_backend_type(Params.CACHE)(target_path)
                 Params.log('Joined with cache position: %s' % self.cache.path)
                 #self.Response = Response.DataResponse
                 #return True

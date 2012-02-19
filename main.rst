@@ -6,6 +6,7 @@ in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
     new_stable (current)
+        - Tests pass up to FTP tests.
         - Sort, Join and Proc rules in addition to NoCache and Drop.
     stable
         - FIXME: Not working!

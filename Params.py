@@ -17,13 +17,13 @@ LOG = False
 DEBUG = False
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
-PROC = []
-PROC_FILE = '/etc/htcache/rules.proc'
+#PROC = []
+#PROC_FILE = '/etc/htcache/rules.proc'
 JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-SORT = []
+SORT = {}
 SORT_FILE = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
@@ -61,8 +61,7 @@ USAGE = '''usage: %(PROG)s [options]
 
   -h --help          show this help message and exit
 
-proxy options:
-
+Proxy:
   -p --port PORT     listen on this port for incoming connections, default %(PORT)i
   -r --root DIR      set cache root directory, default current: %(ROOT)s
      --static        static mode; assume files never change
@@ -75,6 +74,7 @@ Plugins:
   -c --cache TYPE    use module for caching, default %(CACHE)s. 
 
 Cache:
+  -f RESOURCES       
   -a --archive FMT   prefix cache location by a formatted datetime. 
                      ie. store a new copy every hour, day, etc. 
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
@@ -215,7 +215,8 @@ for _arg in _args:
         LOG = _args.next()
     elif _arg == '--debug':
         DEBUG = True
-
+    elif _arg == '-f':
+        RESOURCES = _args.next()
 # resource queries
     elif _arg == '--print-info':
         PRINT_RECORD.append(_args.next())
@@ -288,20 +289,20 @@ def parse_nocache(fpath=NOCACHE_FILE):
         NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
             open(fpath).readlines() if not p.startswith('#')])
 
-def parse_proclist(fpath=PROC_FILE):
-    global PROC
-    PROC = []
-    if os.path.isfile(fpath):
-        lines = open(fpath).readlines()
-        for l in lines:
-            if not l.strip() or l.startswith('#'):
-                continue
-            p = l.find(' ')
-            if not p:
-                print "Skipped procline", l
-                continue
-            pattern, cmdline = l[:p], l[p+1:]
-            PROC.append((re.compile("^"+pattern.strip()+"$"),cmdline))
+#def parse_proclist(fpath=PROC_FILE):
+#    global PROC
+#    PROC = []
+#    if os.path.isfile(fpath):
+#        lines = open(fpath).readlines()
+#        for l in lines:
+#            if not l.strip() or l.startswith('#'):
+#                continue
+#            p = l.find(' ')
+#            if not p:
+#                print "Skipped procline", l
+#                continue
+#            pattern, cmdline = l[:p], l[p+1:]
+#            PROC.append((re.compile("^"+pattern.strip()+"$"),cmdline))
 #        PROC.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
 #            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 

@@ -6,7 +6,7 @@ DOWNLOADS = weakref.WeakValueDictionary()
 
 
 Params.parse_joinlist()
-Params.parse_proclist()
+# XXX:Params.parse_proclist()
 
 
 def HTCache( client, address ):
