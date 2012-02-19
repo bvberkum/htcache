@@ -31,7 +31,7 @@ class Descriptor(object):
 # descriptor storages:
 
 class FileStorage(object):
-    def close(self): pass  
+    def close(self): pass
     def update(self, hrds): pass
 
 
@@ -47,7 +47,7 @@ class AnyDBStorage(object):
         try:
             self.__be = anydbm.open(path, 'rw')
         except anydbm.error, e:#bsddb.db.DBAccessError, e:
-            raise Exception("Unable to access resource DB at <%s>: %s" % 
+            raise Exception("Unable to access resource DB at <%s>: %s" %
                     (path, e))
 
     def close(self):
@@ -65,7 +65,7 @@ class AnyDBStorage(object):
     def __setitem__(self, path, value):
         if path in self.__be:
             self.update(path, *value)
-        else:  
+        else:
             self.set(path, *value)
 
     def __getitem__(self, path):
@@ -127,7 +127,7 @@ class AnyDBStorage(object):
 #              _descr[4].update(features)
 #        self.set_descriptor(*_descr)
 
-#    def set_descriptor(self, srcrefs, mediatype, charset, languages, 
+#    def set_descriptor(self, srcrefs, mediatype, charset, languages,
 #            features={}):
 #        assert self.cache.path, (self,srcrefs,)
 #        if srcrefs and not (isinstance(srcrefs, tuple) \
@@ -151,7 +151,7 @@ def get_backend():
 
 
 
-# special command line options allow resource DB queries:
+# psuedo-Main: special command line options allow resource DB queries:
 
 def print_info(*paths):
     import sys
@@ -161,22 +161,22 @@ def print_info(*paths):
             path = Params.ROOT + path
         if path not in backend:
             print >>sys.stderr, "Unknown cache location: %s" % path
-        else:    
-            print path, backend[path]  
+        else:
+            print path, backend[path]
             recordcnt += 1
     if recordcnt > 1:
         print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
-    elif recordcnt == 1:        
+    elif recordcnt == 1:
         print >>sys.stderr, "Found one record"
-    else:        
+    else:
         print >>sys.stderr, "No record found"
-    backend.close()                
-    sys.exit(1) 
+    backend.close()
+    sys.exit(1)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
     for m in media:
-        # TODO: documents 
+        # TODO: documents
         if m == 'image':
             for path in backend:
                 res = backend[path]
@@ -195,7 +195,7 @@ def print_media_list(*media):
     import sys
     sys.exit()
 
-def find_info(props):    
+def find_info(props):
     import sys
     for path in backend:
         res = backend[path]
@@ -218,8 +218,8 @@ def find_info(props):
                         continue
                     if res[4][k2] == props[k][k2]:
                         print path
-    backend.close()                
-    sys.exit(1) 
+    backend.close()
+    sys.exit(1)
 
 if Params.PRINT_ALLRECORDS:
     print_info(*backend.keys())

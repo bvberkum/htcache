@@ -51,7 +51,9 @@ class Fiber:
             del self.__generator
             pass
         except AssertionError, msg:
-            print 'Error:', msg
+            if not str(msg):
+                msg = traceback.format_exc()
+            print 'Assertion failure:', msg
         except:
             traceback.print_exc()
 

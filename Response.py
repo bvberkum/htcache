@@ -1,4 +1,5 @@
-import time, traceback, socket, hashlib
+import hashlib, socket, time, traceback
+
 import Params
 
 
@@ -186,11 +187,12 @@ class BlockedContentResponse:
     Done = False
 
     def __init__(self, status, request):
+        url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
                 open(Params.HTML_PLACEHOLDER).read() % { 
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
-                        'location': '%s:%i/%s' % request.url(),
+                        'location': '%s:%i/%s' % url,
                         'software': 'htcache/0.1' }
 
     def hasdata( self ):
@@ -253,7 +255,6 @@ class DirectResponse:
             lines.append( '+ Body: %i bytes' % len( body ) )
         lines.append( '' )
         lines.append( traceback.format_exc() )
-
         self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
       
     def hasdata( self ):

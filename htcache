@@ -1,12 +1,13 @@
 #! /usr/bin/env python
-import Params, Protocol, Request, Response, fiber, weakref
+import sys, time, weakref
+
+import Params, Protocol, Request, Response, fiber
 
 
 DOWNLOADS = weakref.WeakValueDictionary()
 
-
-Params.parse_joinlist()
-# XXX:Params.parse_proclist()
+Params.parse_droplist()
+Params.parse_nocache()
 
 
 def HTCache( client, address ):

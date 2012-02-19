@@ -5,22 +5,25 @@
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
+    master
+        - Follows new_stable
     stable
         - FIXME: Not working!
-        - TODO: conains unused? CachedResource code , integrate or  remove
+        - SQL version
+        - TODO: contains unused? CachedResource code , integrate or  remove
+        - Proxy restart command
     new_stable (current)
         - Tests pass up to FTP tests.
+        - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - No restart command  
-    master
-        - FIXME: Not working!
-        - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
-        - Proxy restart command
+        - No restart command
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
+        - anydbm storage
         - trying to incoorporate gate.Resource, impl. htache.Resource
     new_development
-        - Running.
+        - Running
+        - Proxy restart command
 
 .. contents::
 
