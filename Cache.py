@@ -1,5 +1,5 @@
 import time, os, sys
-import Params, Resource
+import Params
 
 
 def load_backend_type(tp):
@@ -55,8 +55,12 @@ class File(object):
     def init(self, path):
         assert not path.startswith(os.sep), \
             "FIXME: implement saving in other roots"
+        # TODO: sort
+        #for tag, pattern in Params.SORT.items():
+        #    if pattern.match(path):
+        #        path = os.path.join(tag, path)
         # encode query and/or fragment parts
-        sep = min_pos(path.find('#'), path.find( '?' )) 
+        sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path
         psep = Params.ENCODE_PATHSEP
         if psep:
@@ -65,9 +69,9 @@ class File(object):
             # partial pathsep encode
             if sep != -1:
                 path = path[ :sep ] + path[ sep: ].replace( '/', psep)
-        # make archive path    
+        # make archive path
         if Params.ARCHIVE:
-            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
+            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path
         self.path = os.path.join(Params.ROOT, path)
         self.file = None
 

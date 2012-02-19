@@ -11,6 +11,7 @@ branches
     new_stable (current)
         - Tests pass up to FTP tests.
         - Sort, Join and Proc rules in addition to NoCache and Drop.
+        - No restart command  
     master
         - FIXME: Not working!
         - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)

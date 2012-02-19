@@ -49,8 +49,7 @@ PRINT_RECORD = []
 PRINT_ALLRECORDS = False
 FIND_RECORDS = {}
 PRINT_MEDIA = []
-
-cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
+#cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
 
 # maintenance params
 CHECK_DESCRIPTOR = []
@@ -90,7 +89,8 @@ Rules:
                      unmatched requests are cached normally.
 
 Misc.:
-  -t --timeout SEC   break connection after so many seconds of inactivity, default %(TIMEOUT)i
+  -t --timeout SEC   break connection after so many seconds of inactivity,
+                     default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
   -s --sha1sum DIR   TODO: maintain an index with the SHA1 checksum for each resource
   -v --verbose       increase output, use twice to show http headers
