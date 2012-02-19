@@ -179,7 +179,7 @@ class HttpRequest:
         return hash(( self.__host, self.__port, self.__reqpath ))
 
     def __hash__( self ):
-        assert self.Protocol
+        assert self.Protocol, "no protocol"
         return hash(( self.resource.host, self.resource.gport, self.resource.path ))
 
     def __eq__( self, other ):

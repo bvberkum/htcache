@@ -24,8 +24,6 @@ except:
 json_read = _json.loads
 json_write = _json.dumps
 
-#XXX: URL_SCHEMES = ['ftp', 'http']
-
 
 def strip_root(path):
     if path.startswith(Params.ROOT):
