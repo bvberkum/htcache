@@ -1,5 +1,6 @@
+import os, socket, time
+
 import Params, Protocol
-import time, socket, os
 
 
 class HttpRequest:
@@ -79,10 +80,10 @@ class HttpRequest:
                 'client closed connection before sending a complete message header'
         self.__recvbuf += chunk
         while self.__parse:
-            bytes = self.__parse( self.__recvbuf )
-            if not bytes:
+            bytecnt = self.__parse( self.__recvbuf )
+            if not bytecnt:
                 return
-            self.__recvbuf = self.__recvbuf[ bytes: ]
+            self.__recvbuf = self.__recvbuf[ bytecnt: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
         # Accept http and ftp proxy requests
@@ -143,11 +144,11 @@ class HttpRequest:
         return '\r\n'.join( lines )
 
     def url( self ):
-        assert self.Protocol
+        assert self.Protocol, "Request has no protocol"
         return self.__host, self.__port, self.__path
 
     def args( self ):
-        assert self.Protocol
+        assert self.Protocol, "Request has no protocol"
         return self.__args.copy()
 
     def range( self ):
@@ -168,11 +169,11 @@ class HttpRequest:
                 'invalid byterange specification: %s' % byterange
 
     def __hash__( self ):
-        assert self.Protocol
+        assert self.Protocol, "no protocol"
         return hash(( self.__host, self.__port, self.__path ))
 
     def __eq__( self, other ):
-        assert self.Protocol
+        assert self.Protocol, "no protocol"
         request1 = self.__verb,  self.__host,  self.__port,  self.__path
         request2 = other.__verb, other.__host, other.__port, other.__path
         return request1 == request2

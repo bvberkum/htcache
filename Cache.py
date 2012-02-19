@@ -55,10 +55,6 @@ class File(object):
     def init(self, path):
         assert not path.startswith(os.sep), \
             "FIXME: implement saving in other roots"
-        # TODO: sort
-        #for tag, pattern in Params.SORT.items():
-        #    if pattern.match(path):
-        #        path = os.path.join(tag, path)
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path

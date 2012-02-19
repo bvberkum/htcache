@@ -42,8 +42,6 @@ PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 RESOURCES = '/var/lib/htcache/resource.db'
 SHA1SUM = '/var/cache/sha1sum/'
-#TODO CRC, par2?
-#PAR2 = '/var/cache/par2/'
 # query params
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
@@ -53,8 +51,6 @@ PRINT_MEDIA = []
 
 # maintenance params
 CHECK_DESCRIPTOR = []
-
-#     --flat          flat mode; cache all files in root directory (dangerous!)
 
 USAGE = '''usage: %(PROG)s [options]
 
@@ -70,19 +66,19 @@ Proxy:
      --debug         switch from gather to debug output module
 
 Plugins:
-  -c --cache TYPE    use module for caching, default %(CACHE)s. 
+  -c --cache TYPE    use module for caching, default %(CACHE)s.
 
 Cache:
-  -f RESOURCES       
-  -a --archive FMT   prefix cache location by a formatted datetime. 
-                     ie. store a new copy every hour, day, etc. 
+  -f RESOURCES
+  -a --archive FMT   prefix cache location by a formatted datetime.
+                     ie. store a new copy every hour, day, etc.
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
                      tree. does not encode `archive` prefix.
-  --encode           TODO: query sep                   
+  --encode           TODO: query sep
   -H --hash          TODO: cache location by URL checksum
 
 Rules:
-  -d --drop FILE     filter requests for URI's based on regex patterns. 
+  -d --drop FILE     filter requests for URI's based on regex patterns.
                      read line for line from file, default %(DROP)s.
   -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
   -s --sort SORT     sort requests based on regex, directory-name pairs from file.
@@ -103,7 +99,7 @@ Resources:
      --print-info FILE
      --print-all-info
                      Print the resource record(s) for (each) cache location,
-                     then exit. 
+                     then exit.
      --print-record
                      Print all record info; tab separated, one per line.
                      This is the default.
@@ -118,11 +114,11 @@ Resources:
      --print-audio
      --print-images
                      Search through predefined list of content-types.
-     
-resource maintenance:     
+
+resource maintenance:
      TODO --check-exists
                      Prune outdated resources or resources that are no longer online.
-                     
+
      TODO --check-encodings
      TODO --check-languages
      TODO --check-mediatypes
@@ -220,13 +216,13 @@ for _arg in _args:
 # resource queries
     elif _arg == '--print-info':
         PRINT_RECORD.append(_args.next())
-    elif _arg == '--print-all-info':  
-        PRINT_ALLRECORDS = True  
-    #elif '--print-record'  
-    #elif '--print-mode'  
-    #elif '--print-path'  
-    #elif '--print-url'  
-    elif _arg == '--find-info':  
+    elif _arg == '--print-all-info':
+        PRINT_ALLRECORDS = True
+    #elif '--print-record'
+    #elif '--print-mode'
+    #elif '--print-path'
+    #elif '--print-url'
+    elif _arg == '--find-info':
         args = _args.next()
         _find={}
         for a in args.split(','):
@@ -275,18 +271,19 @@ def log(msg, threshold=0):
   if VERBOSE > threshold:
     print msg
 
+
 def parse_droplist(fpath=DROP_FILE):
     global DROP
     DROP = []
     if os.path.isfile(fpath):
-        DROP.extend([(p.strip(),re.compile(p.strip())) for p in
+        DROP.extend([(p.strip(), re.compile(p.strip())) for p in
             open(fpath).readlines() if not p.startswith('#')])
 
 def parse_nocache(fpath=NOCACHE_FILE):
     global NOCACHE
     NOCACHE = []
     if os.path.isfile(fpath):
-        NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
+        NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
             open(fpath).readlines() if not p.startswith('#')])
 
 #def parse_proclist(fpath=PROC_FILE):
@@ -310,7 +307,7 @@ def parse_joinlist(fpath=JOIN_FILE):
     global JOIN
     JOIN = []
     if os.path.isfile(fpath):
-        JOIN.extend([(p.strip(),re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
+        JOIN.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
             for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
 
 
@@ -345,6 +342,6 @@ def parse_sort(fpath=SORT_FILE):
     global SORT
     SORT = {}
     if os.path.isfile(fpath):
-        SORT.update([(p[1],re.compile(p[0])) for p in
+        SORT.update([(p[1], re.compile(p[0])) for p in
             map(split_csv, open(fpath).readlines()) if p])
 

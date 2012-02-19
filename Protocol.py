@@ -1,6 +1,6 @@
-import time, socket, os, sys, calendar, re
+import calendar, os, time, socket, re
+
 import Params, Response, Resource, Cache
-from Params import log
 
 
 
@@ -48,7 +48,6 @@ class BlindProtocol:
         pass
 
 
-#Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
 
 class ProxyProtocol(object):
     """
@@ -90,14 +89,15 @@ class ProxyProtocol(object):
         Returns true on direct-response ready.
         """
         host, port, path = request.url()
-        if port == 8080 and host in LOCALHOSTS:
+        if port == 8080:
+            assert host in LOCALHOSTS, "Cannot service for %s" % host
+            Params.log("Direct request: %s" % path)
             self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.DirectResponse
         # Filter request by regex from patterns.drop
         filtered_path = "%s/%s" % (host, path)
-        #print len(DROP), 'drop patterns,', filtered_path
         for pattern, compiled in Params.DROP:
             if compiled.match(filtered_path):
                 self.set_blocked_response(path)
@@ -232,7 +232,7 @@ class HttpProtocol(ProxyProtocol):
         return bool( self.__sendbuf )
 
     def send( self, sock ):
-        assert self.hasdata()
+        assert self.hasdata(), "no data"
 
         bytes = sock.send( self.__sendbuf )
         self.__sendbuf = self.__sendbuf[ bytes: ]
@@ -264,6 +264,7 @@ class HttpProtocol(ProxyProtocol):
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
+            # TODO: store in headerdict
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
             else:
@@ -277,7 +278,7 @@ class HttpProtocol(ProxyProtocol):
 
     def recv( self, sock ):
         " Read until header can be parsed, then determine Response type. "
-        assert not self.hasdata()
+        assert not self.hasdata(), "has data"
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
         assert chunk, 'server closed connection before sending '\
@@ -330,7 +331,7 @@ class HttpProtocol(ProxyProtocol):
             byterange, size = byterange[ 6: ].split( '/' )
             beg, end = byterange.split( '-' )
             self.size = int( size )
-            assert self.size == int( end ) + 1
+            assert self.size == int( end ) + 1, (self.size, end)
             self.cache.open_partial( int( beg ) )
             if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
               self.Response = Response.ChunkedDataResponse
@@ -343,8 +344,8 @@ class HttpProtocol(ProxyProtocol):
             self.Response = Response.DataResponse
 
         elif self.__status in ( HTTP.FORBIDDEN, \
-                HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) and self.cache.partial():
-
+                    HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) \
+                    and self.cache.partial():
             self.cache.remove_partial()
             self.Response = Response.BlindResponse
 
