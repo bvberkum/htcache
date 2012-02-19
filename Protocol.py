@@ -24,7 +24,7 @@ class BlindProtocol:
     Response = None
 
     def __init__( self, request ):
-        self.__socket = connect( request.url()[ :2 ] )
+        self.__socket = connect( request.hostinfo )
         self.__sendbuf = request.recvbuf()
 
     def socket( self ):
@@ -133,7 +133,9 @@ class ProxyProtocol(object):
         """
         host, port, path = request.url()
         print 'prepare_direct_response', host, port, path
-        if port == 8080 and host in ('localhost', socket.gethostname(), '127.0.0.1'):
+        if port == 8080:
+            Params.log("Direct request")
+            #and host in ('localhost', socket.gethostname(), '127.0.0.1'):
             self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
@@ -249,9 +251,8 @@ class HttpProtocol(ProxyProtocol):
                 Params.log('Checking complete file in cache: %i bytes, %s' % 
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
-        hostinfo = request.url()[ :2 ]
-        print "Connecting to %s:%s" % hostinfo
-        self.__socket = connect(hostinfo)
+        print "Connecting to %s:%s" % request.hostinfo
+        self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join( 
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
@@ -261,7 +262,7 @@ class HttpProtocol(ProxyProtocol):
         return bool( self.__sendbuf )
 
     def send( self, sock ):
-        assert self.hasdata()
+        assert self.hasdata(), "no data"
 
         bytes = sock.send( self.__sendbuf )
         self.__sendbuf = self.__sendbuf[ bytes: ]
@@ -308,7 +309,7 @@ class HttpProtocol(ProxyProtocol):
 
     def recv( self, sock ):
         " Read until header can be parsed, then determine Response type. "
-        assert not self.hasdata()
+        assert not self.hasdata(), "has data"
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
         assert chunk, \

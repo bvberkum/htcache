@@ -20,7 +20,7 @@ class HttpRequest:
         Params.log('Client sends '+ line.rstrip())
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
-        self.__cmd, self.__url, dummy = fields
+        self.__cmd, self.__url, self.__prototag = fields
         self.__args = {}
         self.__parse = self.__parse_args
 
@@ -66,15 +66,19 @@ class HttpRequest:
         return len( chunk )
 
     def recv( self, sock ):
+        """
+        Receive request, parsing header and option body, then determine
+        Resource, and prepare Protocol for relaying the request to the content
+        origin server. 
+        """
 
-        assert not self.Protocol
+        assert not self.Protocol, "Cant have protocol"
 
         chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, 'client closed connection before sending a complete message header'
         self.__recvbuf += chunk
         while self.__parse:
             bytecnt = self.__parse( self.__recvbuf )
-            #print 'recv', repr(bytes)
             if not bytecnt:
                 return
             self.__recvbuf = self.__recvbuf[ bytecnt: ]
@@ -108,22 +112,27 @@ class HttpRequest:
         self.__path = path
         self.__args[ 'Host' ] = host
         self.__args[ 'Connection' ] = 'close'
+
         self.__args.pop( 'Keep-Alive', None )
         self.__args.pop( 'Proxy-Connection', None )
         self.__args.pop( 'Proxy-Authorization', None )
 
-        # Add Date (as per HTTP/1.1 14.18)
+        # Add Date (as per HTTP/1.1 [RFC 2616] 14.18)
         if 'Date' not in self.__args:
             self.__args[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
 
-        # Add proxy Via header (per HTTP/1.1 14.45)
+        # Add proxy Via header (per HTTP1.1 [RFC 2616] 14.45)
         via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
         if self.__args.setdefault('Via', via) != via:
             self.__args['Via'] += ', '+ via
 
+    @property
+    def hostinfo(self):
+        return self.__host, self.__port
+
     def recvbuf( self ):
-        assert self.Protocol
+        assert self.Protocol, "No protocol yet"
         lines = [ '%s /%s HTTP/1.1' % ( self.__cmd, self.__path ) ]
         lines.extend( map( ': '.join, self.__args.items() ) )
         lines.append( '' )

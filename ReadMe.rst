@@ -4,6 +4,11 @@
 **htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
+branches
+    new_development (current)
+    development
+        - trying to incoorporate gate.Resource, impl. htache.Resource
+
 .. contents::
 
 Status
