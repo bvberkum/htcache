@@ -41,17 +41,7 @@ TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
-#BACKEND = '/var/lib/htcache/resource.db'
 BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
-#BACKEND = 'mysql://rsr:rAz0r1@dm/rsr_o'
-#BACKEND = 'mysql://root:MassRootSql@dm/taxus_o'
-#BACKEND = 'mysql://root:MassRootSql@dm/taxus_t'
-#BACKEND = 'mysql://root:MassRootSql@dm/taxus_p'
-
-BACKENDS = {
-        # name: test, type
-    }
-
 SHA1SUM = '/var/cache/sha1sum/'
 # query params
 PRINT_RECORD = []
@@ -232,8 +222,6 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
     elif _arg in ( '-6', '--ipv6' ):
         FAMILY = socket.AF_UNSPEC
-#  elif _arg == '--flat':
-#    FLAT = True
     elif _arg == '--static':
         STATIC = True
     elif _arg == '--offline':

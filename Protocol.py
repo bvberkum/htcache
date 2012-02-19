@@ -82,7 +82,6 @@ class ProxyProtocol(object):
         cache_be = Cache.load_backend_type(Params.CACHE)
         # 
         #self.cache = request.resource.init(self.descriptors, cache_be)
-        print resource, resource.location, resource.location.__class__
         cache_location = '%s:%i%s' % (resource.location.host, resource.location.port, resource.path)
         self.cache = cache_be(cache_location)
         Params.log('Cache locator: %s' % self.cache.path)
