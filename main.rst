@@ -8,16 +8,20 @@ branches
     stable
         - FIXME: Not working!
         - TODO: conains unused? CachedResource code , integrate or  remove
+        - Proxy restart command
     new_stable
         - Tests pass up to FTP tests.
         - Sort, Join and Proc rules in addition to NoCache and Drop.
     master
         - FIXME: Not working!
         - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
+        - Proxy restart command
     development
+        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - trying to incoorporate gate.Resource, impl. htache.Resource
     new_development (current)
         - Running.
+        - Proxy restart command
 
 .. contents::
 

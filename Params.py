@@ -1,4 +1,4 @@
-import sys, os, re, socket
+import os, re, sys, socket
 
 
 _args = iter( sys.argv )
@@ -273,17 +273,19 @@ def log(msg, threshold=0):
   if VERBOSE > threshold:
     print msg
 
+def parse_droplist(fpath=DROP_FILE):
+    global DROP
+    DROP = []
+    if os.path.isfile(fpath):
+        DROP.extend([(p.strip(),re.compile(p.strip())) for p in
+            open(fpath).readlines() if not p.startswith('#')])
 
-# Compile drop rules from file upon startup
-DROP = []
-if os.path.isfile(DROP_FILE):
-    DROP.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(DROP_FILE).readlines() if not p.startswith('#')])
-
-NOCACHE = []
-if os.path.isfile(NOCACHE_FILE):
-    NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(NOCACHE_FILE).readlines() if not p.startswith('#')])
+def parse_nocache(fpath=NOCACHE_FILE):
+    global NOCACHE
+    NOCACHE = []
+    if os.path.isfile(fpath):
+        NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
+            open(fpath).readlines() if not p.startswith('#')])
 
 def split_csv(line):
     line = line.strip()
@@ -312,10 +314,12 @@ def split_csv(line):
         vbuf = ''
     return values
 
-SORT = {}
-if os.path.isfile(SORT_FILE):
-    SORT.update([(p[1],re.compile(p[0])) for p in
-        map(split_csv, open(SORT_FILE).readlines()) if p])
+def parse_sort(fpath=SORT_FILE):
+    global SORT
+    SORT = {}
+    if os.path.isfile(fpath):
+        SORT.update([(p[1],re.compile(p[0])) for p in
+            map(split_csv, open(fpath).readlines()) if p])
 
 
 #Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
