@@ -51,7 +51,6 @@ BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
 BACKENDS = {
         # name: test, type
     }
-BD_IDX_TEST, BD_IDX_TYPE = 0, 1
 
 SHA1SUM = '/var/cache/sha1sum/'
 # query params
@@ -91,11 +90,7 @@ Cache:
 
 Rules:
   -d --drop FILE     filter requests for URI's based on regex patterns.
-=======
-     --limit RATE    limit download rate at a fixed K/s
-=======
      --limit RATE    FIXME: limit download rate at a fixed K/s
->>>>>>> Syncing trees.
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
@@ -105,7 +100,6 @@ Plugins:
                      %(BACKEND)s.
 
 Cache:
-
   -a --archive FMT   prefix cache location by a formatted datetime.
                      ie. store a new copy every hour, day, etc.
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
@@ -113,7 +107,6 @@ Cache:
   --encode           TODO: query sep
 
 Rules:
-
   -d --drop FILE     filter requests for URI's based on regex patterns. 
                      read line for line from file, default %(DROP)s.
   -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
@@ -126,6 +119,9 @@ Misc.:
   -6 --ipv6          try ipv6 addresses if available
   -s --sha1sum DIR   TODO: maintain an index with the SHA1 checksum for each resource
   -v --verbose       increase output, use twice to show http headers
+
+See the documentation in ReadMe regarding configuration of the proxy. The
+following options don't run the proxy but access the cache and descriptor backend::
 
 Maintenance:
      --prune-stale   TODO: Delete outdated cached resources.
@@ -151,7 +147,7 @@ Resources:
      --print-images
                      Search through predefined list of content-types.
 
-resource maintenance:
+Maintenance:
      TODO --check-exists
                      Prune outdated resources or resources that are no longer online.
 
