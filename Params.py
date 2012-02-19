@@ -37,6 +37,15 @@ ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
+#BACKEND = 'mysql://rsr:rAz0r1@dm/rsr_o'
+#BACKEND = 'mysql://root:MassRootSql@dm/taxus_o'
+#BACKEND = 'mysql://root:MassRootSql@dm/taxus_t'
+#BACKEND = 'mysql://root:MassRootSql@dm/taxus_p'
+
+BACKENDS = {
+        # name: test, type
+    }
+
 SHA1SUM = '/var/cache/sha1sum/'
 # query params
 PRINT_RECORD = []
@@ -349,4 +358,10 @@ def split_csv(line):
         vbuf = ''
     return values
 
+def parse_sort(fpath=SORT_FILE):
+    global SORT
+    SORT = {}
+    if os.path.isfile(fpath):
+        SORT.update([(p[1], re.compile(p[0])) for p in
+            map(split_csv, open(fpath).readlines()) if p])
 
