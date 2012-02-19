@@ -14,6 +14,7 @@ branches
     master
         - FIXME: Not working!
         - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
+        - Proxy restart command
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - trying to incoorporate gate.Resource, impl. htache.Resource
