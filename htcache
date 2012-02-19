@@ -7,7 +7,7 @@ import Resource
 
 DOWNLOADS = weakref.WeakValueDictionary()
 
-Params.parse_joinlist()
+# XXX:Params.parse_joinlist()
 # XXX:Params.parse_proclist()
 Params.parse_droplist()
 Params.parse_nocache()

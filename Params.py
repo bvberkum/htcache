@@ -42,11 +42,11 @@ ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 #BACKEND = '/var/lib/htcache/resource.db'
-#BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
-#BACKEND = 'mysql://rsr:rAz0r1@robin/rsr_o'
-BACKEND = 'mysql://root:MassRootSql@robin/taxus_o'
-#BACKEND = 'mysql://root:MassRootSql@robin/taxus_t'
-#BACKEND = 'mysql://root:MassRootSql@robin/taxus_p'
+BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
+#BACKEND = 'mysql://rsr:rAz0r1@dm/rsr_o'
+#BACKEND = 'mysql://root:MassRootSql@dm/taxus_o'
+#BACKEND = 'mysql://root:MassRootSql@dm/taxus_t'
+#BACKEND = 'mysql://root:MassRootSql@dm/taxus_p'
 
 BACKENDS = {
         # name: test, type
