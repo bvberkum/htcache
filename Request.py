@@ -22,7 +22,7 @@ class HttpRequest:
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
-        self.__args = {}
+        self.__headers = {}
         self.__parse = self.__parse_args
 
         return eol
@@ -38,10 +38,10 @@ class HttpRequest:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
             key = key.title()
-            assert key not in self.__args, 'duplicate key: %s' % key
-            self.__args[ key ] = value.strip()
+            assert key not in self.__headers, 'duplicate key: %s' % key
+            self.__headers[ key ] = value.strip()
         elif line in ( '\r\n', '\n' ):
-            self.__size = int( self.__args.get( 'Content-Length', 0 ) )
+            self.__size = int( self.__headers.get( 'Content-Length', 0 ) )
             if self.__size:
                 assert self.__verb == 'POST', \
                         '%s request conflicts with message body' % self.__verb
@@ -86,6 +86,14 @@ class HttpRequest:
             self.__recvbuf = self.__recvbuf[ bytecnt: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
+        # Headers are parsed, determine target server and resource
+        verb, proxied_url, proto = self.envelope
+
+        # TODO: keep entity headers, strip other message headers from args
+        #Params.log('href %s'% proxied_url)
+        #self.Resource = Resource.Resource(proxied_url, self.args())
+
+        # Accept http and ftp proxy requests
         if self.__reqpath.startswith( 'http://' ):
             host = self.__reqpath[ 7: ]
             port = 80
@@ -94,10 +102,12 @@ class HttpRequest:
             else:
                 self.Protocol = Protocol.BlindProtocol
         elif self.__reqpath.startswith( 'ftp://' ):
-            assert self.__verb == 'GET', '%s request unsupported for ftp' % self.__verb
+            assert self.__verb == 'GET', \
+                    '%s request unsupported for ftp' % self.__verb
             self.Protocol = Protocol.FtpProtocol
             host = self.__reqpath[ 6: ]
             port = 21
+        # Accept static requests, and further parse host
         else:
             host = self.__reqpath
             port = 8080
@@ -111,32 +121,28 @@ class HttpRequest:
 
         self.__host = host
         self.__port = port
-        self.__path = path
-        self.__args[ 'Host' ] = host
-        self.__args[ 'Connection' ] = 'close'
+        self.__reqpath = path
+        self.__headers[ 'Host' ] = host
+        self.__headers[ 'Connection' ] = 'close'
 
-        self.__args.pop( 'Keep-Alive', None )
-        self.__args.pop( 'Proxy-Connection', None )
-        self.__args.pop( 'Proxy-Authorization', None )
+        self.__headers.pop( 'Keep-Alive', None )
+        self.__headers.pop( 'Proxy-Connection', None )
+        self.__headers.pop( 'Proxy-Authorization', None )
 
         # Add Date (as per HTTP/1.1 [RFC 2616] 14.18)
-        if 'Date' not in self.__args:
-            self.__args[ 'Date' ] = time.strftime(
+        if 'Date' not in self.__headers:
+            self.__headers[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
 
-        # Add proxy Via header (per HTTP1.1 [RFC 2616] 14.45)
+        # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
         via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
-        if self.__args.setdefault('Via', via) != via:
-            self.__args['Via'] += ', '+ via
-
-    @property
-    def hostinfo(self):
-        return self.__host, self.__port
+        if self.__headers.setdefault('Via', via) != via:
+            self.__headers['Via'] += ', '+ via
 
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
-        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__path ) ]
-        lines.extend( map( ': '.join, self.__args.items() ) )
+        lines = [ '%s /%s HTTP/1.1' % ( self.__verb, self.__reqpath ) ]
+        lines.extend( map( ': '.join, self.__headers.items() ) )
         lines.append( '' )
         if self.__body:
             self.__body.seek( 0 )
@@ -145,16 +151,22 @@ class HttpRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
-    def url( self ):
-        assert self.Protocol, "no protocol"
-        return self.__host, self.__port, self.__path
+    @property
+    def hostinfo(self):
+        return self.__host, self.__port
 
-    def args( self ):
-        assert self.Protocol
-        return self.__args.copy()
+    @property
+    def envelope(self):
+        # XXX: used before protocol is determined,  assert self.Protocol
+        return self.__verb, self.__reqpath, self.__prototag
+
+    @property
+    def headers( self ):
+        assert self.Protocol, "Request has no protocol"
+        return self.__headers.copy()
 
     def range( self ):
-        byterange = self.__args.get( 'Range' )
+        byterange = self.__headers.get( 'Range' )
         if not byterange:
             return 0, -1
         try:
@@ -172,11 +184,11 @@ class HttpRequest:
 
     def __hash__( self ):
         assert self.Protocol, "no protocol"
-        return hash(( self.__host, self.__port, self.__path ))
+        return hash(( self.__host, self.__port, self.__reqpath ))
 
     def __eq__( self, other ):
         assert self.Protocol
-        request1 = self.__verb,  self.__host,  self.__port,  self.__path
-        request2 = other.__verb, other.__host, other.__port, other.__path
+        request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
+        request2 = other.__verb, other.__host, other.__port, other.__reqpath
         return request1 == request2
 

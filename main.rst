@@ -6,9 +6,7 @@ in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
     master
-        - FIXME: Not working!
-        - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
-        - Proxy restart command
+        - Follows new_stable
     stable
         - FIXME: Not working!
         - SQL version
@@ -18,19 +16,19 @@ branches
         - Tests pass up to FTP tests.
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - No restart command  
+        - No restart command
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
         - trying to incoorporate gate.Resource, impl. htache.Resource
-        - started Resource  
-        - started fiber.protocol  
-        - request.hostinfo()  
+        - started Resource
+        - started fiber.protocol
+        - request.hostinfo()
         - request.envelope instead of reparsing req
     new_development (current)
-        - Running.
+        - Running
         - Proxy restart command
-        - request.url()  
+        - request.url()
 
 .. contents::
 

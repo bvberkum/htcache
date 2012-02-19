@@ -1,4 +1,4 @@
-import os, re, sys, socket
+import os, re, socket, sys
 
 
 _args = iter( sys.argv )
@@ -17,6 +17,10 @@ LOG = False
 DEBUG = False
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
+#PROC = []
+#PROC_FILE = '/etc/htcache/rules.proc'
+JOIN = []
+JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 SORT = {}
@@ -37,15 +41,16 @@ ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 RESOURCES = '/var/lib/htcache/resource.db'
+BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
 SHA1SUM = '/var/cache/sha1sum/'
 #TODO CRC, par2?
 #PAR2 = '/var/cache/par2/'
 # query params
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
-FIND_RECORDS = {}
 PRINT_MEDIA = []
-DHTML_CLIENT = True
+FIND_RECORDS = {}
+#DHTML_CLIENT = True
 # XXX: cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
 
 # maintenance params
@@ -67,12 +72,15 @@ Proxy:
 Cache:
   -f RESOURCES
   -c --cache TYPE    use module for caching, default %(CACHE)s.
+  -b --backend REF   initialize metadata backend from reference, default
+                     %(BACKEND)s.
   -a --archive FMT   prefix cache location by a formatted datetime.
                      ie. store a new copy every hour, day, etc.
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
                      tree. does not encode `archive` prefix.
   -s --sha1sum DIR   TODO: maintain an index with the SHA1 checksum for each resource
   --encode           TODO: query sep
+  -H --hash          TODO: cache location by URL checksum
 
 Rules:
   -d --drop FILE     filter requests for URI's based on regex patterns.
@@ -90,10 +98,6 @@ Misc.:
 
 See the documentation in ReadMe regarding configuration of the proxy. The
 following options don't run the proxy but access the cache and descriptor backend::
-
-Maintenance:
-     --prune-stale   TODO: Delete outdated cached resources.
-     --prune-gone    TODO: Remove resources no longer online.
 
 Resources:
      --print-info FILE
@@ -116,6 +120,8 @@ Resources:
                      Search through predefined list of content-types.
 
 Maintenance:
+     --prune-stale   TODO: Delete outdated cached resources.
+     --prune-gone    TODO: Remove resources no longer online.
      TODO --check-exists
                      Prune outdated resources or resources that are no longer online.
 
@@ -143,6 +149,11 @@ for _arg in _args:
             assert PORT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
+    elif _arg in ( '-b', '--backend' ):
+        try:
+            BACKEND = _args.next()
+        except:
+            sys.exit( 'Error: %s requires an backend-reference for argument' % _arg )
     elif _arg in ( '-c', '--cache' ):
         try:
             CACHE = _args.next()
@@ -150,12 +161,12 @@ for _arg in _args:
             sys.exit( 'Error: %s requires an cache type argument' % _arg )
     elif _arg in ( '-d', '--drop' ):
         try:
-            DROP_FILE = os.path.realpath( _args.next() )
+            DROP_FILE = os.path.realpath(_args.next())
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-n', '--nocache' ):
         try:
-            NOCACHE_FILE = os.path.realpath( _args.next() )
+            NOCACHE_FILE = os.path.realpath(_args.next())
             #assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
@@ -195,8 +206,6 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
     elif _arg in ( '-6', '--ipv6' ):
         FAMILY = socket.AF_UNSPEC
-#  elif _arg == '--flat':
-#    FLAT = True
     elif _arg == '--static':
         STATIC = True
     elif _arg == '--offline':

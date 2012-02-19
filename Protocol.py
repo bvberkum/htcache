@@ -6,7 +6,6 @@ import Params, Response, Resource, Cache
 
 
 
-
 LOCALHOSTS = ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1')
 DNSCache = {}
 
@@ -29,7 +28,7 @@ class BlindProtocol:
     Response = None
 
     def __init__( self, request ):
-        self.__socket = connect( request.hostinfo )
+        self.__socket = connect(request.hostinfo)
         self.__sendbuf = request.recvbuf()
 
     def socket( self ):
@@ -72,18 +71,14 @@ class ProxyProtocol(object):
     def __init__(self, request):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
-        cache_location = '%s:%i/%s' % request.url()
+        url = request.hostinfo + (request.envelope[1],)
+        cache_location = '%s:%i/%s' % url
         for tag, pattern in Params.SORT.items():
             if pattern.match(cache_location):
                 cache_location=os.path.join(tag,cache_location)
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()
-
-    def rewrite_response(self, request):
-        host, port, path = request.url()
-        args = request.args()
-        return host, port, path, args
 
     def prepare_direct_response(self, request):
         """
@@ -92,10 +87,11 @@ class ProxyProtocol(object):
 
         Returns true on direct-response ready.
         """
-        host, port, path = request.url()
+        host, port = request.hostinfo
+        verb, path, proto = request.envelope
         if port == 8080:
-            Params.log("Direct request")
-            assert host in LOCALHOSTS, "Cannot serve %s" % host
+            Params.log("Direct request: %s" % path)
+            assert host in LOCALHOSTS, "Cannot service for %s" % host
             self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
@@ -183,17 +179,19 @@ class HttpProtocol(ProxyProtocol):
 
     def __init__( self, request ):
         super(HttpProtocol, self).__init__(request)
-        host, port, path, args = self.rewrite_response(request)
+    
         # Prepare requri to identify request
-        if port != 80:
-            hostinfo = "%s:%s" % (host, port)
-        else:
-            hostinfo = host
-        self.requri = "http://%s/%s" %  (hostinfo, path)
+        #if port != 80:
+        #    hostinfo = "%s:%s" % (host, port)
+        #else:
+        #    hostinfo = host
+        #self.requri = "http://%s/%s" %  (hostinfo, path)
 
         if self.prepare_direct_response(request):
             self.__socket = None
             return
+
+        path = request.Resource.ref.path
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
         args.pop( 'Accept-Encoding', None )
@@ -349,7 +347,8 @@ class HttpProtocol(ProxyProtocol):
 
         # Update descriptor
         if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
-            self.descriptors[self.cache.path] = [self.requri], self.__args
+            pass # TODO: srcrefs, mediatype, charset, language, 
+            #self.descriptors[self.cache.path] = [self.requri], self.__args
 
     def recvbuf( self ):
         return '\r\n'.join(
@@ -376,9 +375,8 @@ class FtpProtocol( ProxyProtocol ):
           self.Response = Response.DataResponse
           return
 
-        host, port, path = request.url()
-        self.__socket = connect(( host, port ))
-        self.__path = path
+        self.__socket = connect(request.hostinfo)
+        self.__path = request.Resource.ref.path
         self.__sendbuf = ''
         self.__recvbuf = ''
         self.__handle = FtpProtocol.__handle_serviceready

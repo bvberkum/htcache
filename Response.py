@@ -61,8 +61,8 @@ class DataResponse:
         #if protocol.has_descriptor():
           descr = protocol.descriptors[protocol.cache.path]
           #descr = protocol.get_descriptor()
-          srcrefs, mediatype, charset, languages, features = descr
           Params.log("Descriptor: %s" % pformat(descr))
+          srcrefs, mediatype, charset, languages, headers, features = descr
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
           if descr[-1]:
@@ -70,7 +70,7 @@ class DataResponse:
               #if 'encoding' in k.lower(): continue
               args[k] = v
         else:
-          Params.log("No descriptor for %s" % protocol.path)
+          Params.log("No descriptor for %s" % protocol.cache.path)
 
         via = "%s:%i" % (socket.gethostname(), Params.PORT)
         if args.setdefault('Via', via) != via:
@@ -196,11 +196,12 @@ class BlockedContentResponse:
     Done = False
 
     def __init__(self, status, request):
+        url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
                 open(Params.HTML_PLACEHOLDER).read() % { 
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
-                        'location': '%s:%i/%s' % request.url(),
+                        'location': '%s:%i/%s' % url,
                         'software': 'htcache/0.1' }
 
     def hasdata( self ):
@@ -265,7 +266,7 @@ class DirectResponse:
     }
 
     def __init__( self, protocol, request ):
-        path = request.url()[2]
+        path = request.envelope[1]
         self.action = None
 
         if path in self.urlmap:
@@ -280,7 +281,7 @@ class DirectResponse:
                 lines.append( '+ Body: %i bytes' % len( body ) )
 
             lines.append( pformat(sys.exc_info()) )
-            lines.append( pformat(request.url()) )
+            lines.append( pformat(request.url) )
 
             #if sys.exc_info() != None, None, None:
             #    lines.append( 'Exception:' )
