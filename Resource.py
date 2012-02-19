@@ -7,7 +7,16 @@ try:
 except AssertionError:
     from sets import Set as set
 
-import Params
+import Params, Protocol
+from error import *
+
+#from gate.util import HeaderDict
+#from sqlalchemy import create_engine
+#from sqlalchemy.orm import sessionmaker
+#from taxus.data import initialize, Resource, Locator, \
+#        Variant, Invariant, Relocated
+#
+#import uriref
 
 # XXX dont use cjson, its buggy, see comments at
 # http://pypi.python.org/pypi/python-cjson

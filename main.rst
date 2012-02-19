@@ -6,7 +6,7 @@ in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
     master (current)
-        - Follows new_stable
+        - XXX:Follows new_stable?
     stable
         - FIXME: Not working!
         - SQL version

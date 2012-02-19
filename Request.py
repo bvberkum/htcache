@@ -169,15 +169,31 @@ class HttpRequest:
         return self.__verb, self.__reqpath, self.__prototag
         # XXX: return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
-    def args( self ):
-        # XXX: used before protocol is determined,  assert self.Protocol
+    def url( self ):
         assert self.Protocol, "Request has no protocol"
         assert self.resource.location.port, self.resource.href
         return self.resource.location.host, self.resource.location.port, self.resource.path
 
     def args( self ):
-        assert self.Protocol, "no protocol"
-        return hash(( self.__host, self.__port, self.__reqpath ))
+        assert self.Protocol, "Request has no protocol"
+        return self.__args.copy()
+
+    def range( self ):
+        byterange = self.__args.get( 'Range' )
+        if not byterange:
+            return 0, -1
+        try:
+            assert byterange.startswith( 'bytes=' )
+            beg, end = byterange[ 6: ].split( '-' )
+            if not beg:
+                return int( end ), -1
+            elif not end:
+                return int( beg ), -1
+            else:
+                return int( beg ), int( end ) + 1
+        except:
+            raise AssertionError, \
+                'invalid byterange specification: %s' % byterange
 
     def __hash__( self ):
         assert self.Protocol, "no protocol"
