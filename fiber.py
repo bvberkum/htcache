@@ -249,6 +249,7 @@ def spawn( generator, port, debug, log ):
         print '[ DONE ]', generator.__name__, 'terminated'
         sys.exit( 0 )
     except Restart:
+        print '[ RESTART ]', generator.__name__, 'will now respawn'
         listener.close()
         raise
     except:

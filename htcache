@@ -73,12 +73,12 @@ def HTCache( client, address ):
         #protocol.descriptors.close()
 
 while True:
-        try:
-                fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
-        except fiber.Restart, e:
-                Resource.get_backend().close()
-                for mod in (Params, Protocol, Request, Response, Resource, fiber):
-                        mod = reload(mod)
-        except Exception, e:
-                break
+    try:
+        fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
+    except fiber.Restart, e:
+        Resource.get_backend().close()
+        for mod in (Params, Protocol, Request, Response, Resource, fiber):
+            mod = reload(mod)
+    except Exception, e:
+        break
 
