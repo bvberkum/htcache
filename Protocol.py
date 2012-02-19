@@ -48,6 +48,7 @@ class BlindProtocol:
         pass
 
 
+
 class ProxyProtocol(object):
     """
     Open cache and descriptor index for requested resources.

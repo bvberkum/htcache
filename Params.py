@@ -1,4 +1,4 @@
-import re, sys, os, socket
+import os, re, sys, socket
 
 
 _args = iter( sys.argv )

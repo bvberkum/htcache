@@ -70,7 +70,6 @@ def HTCache( client, address ):
     if protocol:
         if response:
             response.finalize(client)
-        #protocol.descriptors.close()
 
 while True:
     try:

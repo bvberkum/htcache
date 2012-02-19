@@ -5,7 +5,7 @@
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
-    master
+    master (current)
         - SQL version
         - FIXME: Not working!
         - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
