@@ -63,6 +63,7 @@ proxy options:
   -c --cache TYPE    use module for caching, default %(CACHE)s. 
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
                      tree. does not encode `archive` prefix.
+  -f RESOURCES       
   TODO --encode query sep                   
   -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
   -d --drop FILE     filter requests for URI's based on regex patterns. 
@@ -201,7 +202,8 @@ for _arg in _args:
         LOG = _args.next()
     elif _arg == '--debug':
         DEBUG = True
-
+    elif _arg == '-f':
+        RESOURCES = _args.next()
 # resource queries
     elif _arg == '--print-info':
         PRINT_RECORD.append(_args.next())
