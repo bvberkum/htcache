@@ -43,7 +43,8 @@ class HttpRequest:
         elif line in ( '\r\n', '\n' ):
             self.__size = int( self.__args.get( 'Content-Length', 0 ) )
             if self.__size:
-                assert self.__verb == 'POST', '%s request conflicts with message body' % self.__verb
+                assert self.__verb == 'POST', \
+                        '%s request conflicts with message body' % self.__verb
                 Params.log('Opening temporary file for POST upload', 1)
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
@@ -58,7 +59,8 @@ class HttpRequest:
     def __parse_body( self, chunk ):
 
         self.__body.write( chunk )
-        assert self.__body.tell() <= self.__size, 'message body exceeds content-length'
+        assert self.__body.tell() <= self.__size, \
+                 'message body exceeds content-length'
         if self.__body.tell() == self.__size:
             self.__parse = None
 
@@ -68,13 +70,14 @@ class HttpRequest:
         """
         Receive request, parsing header and option body, then determine
         Resource, and prepare Protocol for relaying the request to the content
-        origin server. 
+        origin server.
         """
 
         assert not self.Protocol, "Cant have protocol"
 
         chunk = sock.recv( Params.MAXCHUNK )
-        assert chunk, 'client closed connection before sending a complete message header'
+        assert chunk, \
+                'client closed connection before sending a complete message header'
         self.__recvbuf += chunk
         while self.__parse:
             bytecnt = self.__parse( self.__recvbuf )
@@ -143,7 +146,7 @@ class HttpRequest:
         return '\r\n'.join( lines )
 
     def url( self ):
-        assert self.Protocol
+        assert self.Protocol, "no protocol"
         return self.__host, self.__port, self.__path
 
     def args( self ):
@@ -168,7 +171,7 @@ class HttpRequest:
                 'invalid byterange specification: %s' % byterange
 
     def __hash__( self ):
-        assert self.Protocol
+        assert self.Protocol, "no protocol"
         return hash(( self.__host, self.__port, self.__path ))
 
     def __eq__( self, other ):

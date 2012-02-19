@@ -5,19 +5,26 @@
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
 branches
-    stable
-        - FIXME: Not working!
-        - TODO: conains unused? CachedResource code , integrate or  remove
-    new_stable
-        - Tests pass up to FTP tests.
-        - Sort, Join and Proc rules in addition to NoCache and Drop.
     master
         - FIXME: Not working!
         - sqlalchemy integration, trying to use CachedResource (uriref, taxus facade)
+        - Proxy restart command
+    stable
+        - FIXME: Not working!
+        - SQL version
+        - TODO: conains unused? CachedResource code , integrate or  remove
+        - Proxy restart command
+    new_stable
+        - Tests pass up to FTP tests.
+        - Sort, Join and Proc rules in addition to NoCache and Drop.
+        - No restart command  
     development
+        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
+        - anydbm storage
         - trying to incoorporate gate.Resource, impl. htache.Resource
     new_development (current)
         - Running.
+        - Proxy restart command
 
 .. contents::
 
@@ -176,7 +183,7 @@ that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
 This can create problems with long filenames and the characters that appear
 in the various URL parts.
 
-Additional backends can deal with this issue ``--cache TYPE``).
+Additional backends can deal with this issue (``--cache TYPE``).
 The default backend was Cache.File which is compatible with ``wget -r`` but
 is inadequate for general use as web proxy. The new default caches.FileTreeQ
 combines some aspects desirable to deal with a wider range of resources.
@@ -190,7 +197,7 @@ combines some aspects desirable to deal with a wider range of resources.
   being hardcoded to 256 characters.
 - caches.FileTree - combines above three methods.
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
-  filename.
+  filename. Simple and effective.
 
 Cache options
 _______________

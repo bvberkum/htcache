@@ -1,6 +1,9 @@
-import time, socket, os, sys, calendar, re
+import calendar, os, time, socket, re
+
+#import uriref
+
 import Params, Response, Resource, Cache
-from Params import log
+
 
 
 

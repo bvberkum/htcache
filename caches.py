@@ -57,7 +57,6 @@ class FileTreeQ(Cache.File):
         if Params.ARCHIVE:
             path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
         self.path = os.path.join(Params.ROOT, path)
-        #assert not Params.FLAT
         self.file = None
 
 
@@ -88,7 +87,6 @@ class FileTreeQH(Cache.File):
       psep = Params.ENCODE_PATHSEP
       if psep:
           path = path.replace( '/', psep)
-      #assert not Params.FLAT
       # make archive path    
       if Params.ARCHIVE:
           path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 

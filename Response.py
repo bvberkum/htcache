@@ -57,13 +57,12 @@ class DataResponse:
         except:
             args = {}
 
-        #print pformat(args) 
         if protocol.cache.path in protocol.descriptors:
         #if protocol.has_descriptor():
           descr = protocol.descriptors[protocol.cache.path]
           #descr = protocol.get_descriptor()
           srcrefs, mediatype, charset, languages, features = descr
-          Params.log(descr)
+          Params.log("Descriptor: %s" % pformat(descr))
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
           if descr[-1]:

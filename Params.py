@@ -1,4 +1,4 @@
-import sys, os, re, socket
+import os, re, sys, socket
 
 
 _args = iter( sys.argv )
@@ -46,13 +46,10 @@ PRINT_ALLRECORDS = False
 FIND_RECORDS = {}
 PRINT_MEDIA = []
 DHTML_CLIENT = True
-
-cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
+# XXX: cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
 
 # maintenance params
 CHECK_DESCRIPTOR = []
-
-#     --flat          flat mode; cache all files in root directory (dangerous!)
 
 USAGE = '''usage: %(PROG)s [options]
 
@@ -74,19 +71,20 @@ Cache:
                      ie. store a new copy every hour, day, etc.
   -D --nodir SEP     replace unix path separator, ie. don't create a directory
                      tree. does not encode `archive` prefix.
+  -s --sha1sum DIR   TODO: maintain an index with the SHA1 checksum for each resource
   --encode           TODO: query sep
 
 Rules:
   -d --drop FILE     filter requests for URI's based on regex patterns.
-                     read line for line from file, default %(DROP)s.
+                     read line for line from file, default %(DROP_FILE)s.
   -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
   -s --sort SORT     sort requests based on regex, directory-name pairs from file.
                      unmatched requests are cached normally.
 
 Misc.:
-  -t --timeout SEC   break connection after so many seconds of inactivity, default %(TIMEOUT)i
+  -t --timeout SEC   break connection after so many seconds of inactivity,
+                     default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
-  -s --sha1sum DIR   TODO: maintain an index with the SHA1 checksum for each resource
   -v --verbose       increase output, use twice to show http headers
 
 
@@ -152,18 +150,18 @@ for _arg in _args:
             sys.exit( 'Error: %s requires an cache type argument' % _arg )
     elif _arg in ( '-d', '--drop' ):
         try:
-            DROP = os.path.realpath( _args.next() )
+            DROP_FILE = os.path.realpath( _args.next() )
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-n', '--nocache' ):
         try:
-            NOCACHE = os.path.realpath( _args.next() )
-            #assert os.path.exists(NOCACHE)
+            NOCACHE_FILE = os.path.realpath( _args.next() )
+            #assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-s', '--sort' ):
         try:
-            SORT = os.path.realpath( _args.next() )
+            SORT_FILE = os.path.realpath( _args.next() )
             #assert os.path.exists(SORT)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
@@ -273,17 +271,46 @@ def log(msg, threshold=0):
   if VERBOSE > threshold:
     print msg
 
+def parse_droplist(fpath=DROP_FILE):
+    global DROP
+    DROP = []
+    if os.path.isfile(fpath):
+        DROP.extend([(p.strip(), re.compile(p.strip())) for p in
+            open(fpath).readlines() if not p.startswith('#')])
+    # XXX: log('Drop: Loaded %i rules from %s' % (len(DROP), DROP_FILE))
 
-# Compile drop rules from file upon startup
-DROP = []
-if os.path.isfile(DROP_FILE):
-    DROP.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(DROP_FILE).readlines() if not p.startswith('#')])
+def parse_nocache(fpath=NOCACHE_FILE):
+    global NOCACHE
+    NOCACHE = []
+    if os.path.isfile(fpath):
+        NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
+            open(fpath).readlines() if not p.startswith('#')])
+    # XXX: log('NoCache: Loaded %i rules from %s' % (len(NOCACHE), NOCACHE_FILE))
 
-NOCACHE = []
-if os.path.isfile(NOCACHE_FILE):
-    NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
-        open(NOCACHE_FILE).readlines() if not p.startswith('#')])
+#def parse_proclist(fpath=PROC_FILE):
+#    global PROC
+#    PROC = []
+#    if os.path.isfile(fpath):
+#        lines = open(fpath).readlines()
+#        for l in lines:
+#            if not l.strip() or l.startswith('#'):
+#                continue
+#            p = l.find(' ')
+#            if not p:
+#                print "Skipped procline", l
+#                continue
+#            pattern, cmdline = l[:p], l[p+1:]
+#            PROC.append((re.compile("^"+pattern.strip()+"$"),cmdline))
+#        PROC.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
+#            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
+
+def parse_joinlist(fpath=JOIN_FILE):
+    global JOIN
+    JOIN = []
+    if os.path.isfile(fpath):
+        JOIN.extend([(p.strip(),re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
+            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
+
 
 def split_csv(line):
     line = line.strip()
@@ -312,11 +339,11 @@ def split_csv(line):
         vbuf = ''
     return values
 
-SORT = {}
-if os.path.isfile(SORT_FILE):
-    SORT.update([(p[1],re.compile(p[0])) for p in
-        map(split_csv, open(SORT_FILE).readlines()) if p])
-
-
-#Params.log('Loaded %i lines from %s' % (len(DROP), Params.DROP))
+def parse_sort(fpath=SORT_FILE):
+    global SORT
+    SORT = {}
+    if os.path.isfile(fpath):
+        SORT.update([(p[1], re.compile(p[0])) for p in
+            map(split_csv, open(fpath).readlines()) if p])
+    # XXX: output interferes with init.sh log('Sort: Loaded %i rules from %s' % (len(SORT), SORT_FILE))
 

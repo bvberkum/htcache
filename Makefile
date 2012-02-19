@@ -15,7 +15,7 @@ test::
 
 debug::
 	-mkdir debug-root
-	htcache -v -r debug-root -f debug-root/resources.db
+	htcache -v -v -r debug-root -f debug-root/resources.db
 
 TODO.list: ./
 	rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@

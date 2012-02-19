@@ -95,18 +95,18 @@ class AnyDBStorage(object):
                   cs = match.group(1).strip()
         ln = headers.get('Content-Language',[])
         if ln: ln = ln.split(',')
-        srcref = headers.get('Content-Location',None)
+        srcref = headers.get('Content-Location', None)
         #if srcref and srcref not in srcrefs:
         #      srcrefs += [srcref]
-        # XXX: safe headers as features for now..    
         features = {}
+        metadata = {}
         for hd in ('Content-Type', 'Content-Language', 'Content-MD5',
               'Content-Location', 'Content-Length', 'Content-Encoding',
               'ETag', 'Last-Modified', 'Date', 'Vary', 'TCN',
               'Cache', 'Expires'):
             if hd in headers:
-                features[hd] = headers[hd]
-        self.__be[path] = json_write((srcrefs, mt, cs, ln, features))
+                metadata[hd] = headers[hd]
+        self.__be[path] = json_write((srcrefs, mt, cs, ln, metadata, features))
         self.__be.sync()
 
     def update(self, path, srcrefs, headers):
