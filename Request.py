@@ -73,11 +73,11 @@ class HttpRequest:
         assert chunk, 'client closed connection before sending a complete message header'
         self.__recvbuf += chunk
         while self.__parse:
-            bytes = self.__parse( self.__recvbuf )
-            print 'recv', repr(bytes)
-            if not bytes:
+            bytecnt = self.__parse( self.__recvbuf )
+            #print 'recv', repr(bytes)
+            if not bytecnt:
                 return
-            self.__recvbuf = self.__recvbuf[ bytes: ]
+            self.__recvbuf = self.__recvbuf[ bytecnt: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
         if self.__url.startswith( 'http://' ):

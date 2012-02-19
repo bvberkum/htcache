@@ -249,7 +249,9 @@ class HttpProtocol(ProxyProtocol):
                 Params.log('Checking complete file in cache: %i bytes, %s' % 
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
-        self.__socket = connect( request.url()[ :2 ] )
+        hostinfo = request.url()[ :2 ]
+        print "Connecting to %s:%s" % hostinfo
+        self.__socket = connect(hostinfo)
         self.__sendbuf = '\r\n'.join( 
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
@@ -359,7 +361,7 @@ class HttpProtocol(ProxyProtocol):
             byterange, size = byterange[ 6: ].split( '/' )
             beg, end = byterange.split( '-' )
             self.size = int( size )
-            assert self.size == int( end ) + 1
+            assert self.size == int( end ) + 1, (self.size, end)
             self.cache.open_partial( int( beg ) )
             if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
               self.Response = Response.ChunkedDataResponse
