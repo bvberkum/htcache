@@ -1,7 +1,6 @@
 """ """
 import os, re, anydbm
 
-
 try:
     # Py >= 2.4
     assert set
