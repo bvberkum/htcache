@@ -6,6 +6,7 @@ try:
     assert set
 except AssertionError:
     from sets import Set as set
+
 import Params
 
 # XXX dont use cjson, its buggy, see comments at

@@ -20,7 +20,7 @@ class HttpRequest:
         Params.log('Client sends '+ line.rstrip())
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
-        self.__verb, self.__url, self.__prototag = fields
+        self.__verb, self.__reqpath, self.__prototag = fields
         self.__args = {}
         self.__parse = self.__parse_args
 
@@ -66,8 +66,13 @@ class HttpRequest:
         return len( chunk )
 
     def recv( self, sock ):
+        """
+        Receive request, parsing header and option body, then determine
+        Resource, and prepare Protocol for relaying the request to the content
+        origin server.
+        """
 
-        assert not self.Protocol
+        assert not self.Protocol, "Cant have protocol"
 
         chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, \
@@ -81,22 +86,22 @@ class HttpRequest:
         assert not self.__recvbuf, 'client sends junk data after message header'
 
         # Accept http and ftp proxy requests
-        if self.__url.startswith( 'http://' ):
-            host = self.__url[ 7: ]
+        if self.__reqpath.startswith( 'http://' ):
+            host = self.__reqpath[ 7: ]
             port = 80
             if self.__verb == 'GET':
                 self.Protocol = Protocol.HttpProtocol
             else:
                 self.Protocol = Protocol.BlindProtocol
-        elif self.__url.startswith( 'ftp://' ):
+        elif self.__reqpath.startswith( 'ftp://' ):
             assert self.__verb == 'GET', \
                     '%s request unsupported for ftp' % self.__verb
             self.Protocol = Protocol.FtpProtocol
-            host = self.__url[ 6: ]
+            host = self.__reqpath[ 6: ]
             port = 21
         # Accept static requests, and further parse host
         else:
-            host = self.__url
+            host = self.__reqpath
             port = 80
         if '/' in host:
             host, path = host.split( '/', 1 )
@@ -115,12 +120,12 @@ class HttpRequest:
         self.__args.pop( 'Proxy-Connection', None )
         self.__args.pop( 'Proxy-Authorization', None )
 
-        # Add Date (as per HTTP/1.1 14.18)
+        # Add Date (as per HTTP/1.1 [RFC 2616] 14.18)
         if 'Date' not in self.__args:
             self.__args[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
 
-        # Add proxy Via header (per HTTP/1.1 14.45)
+        # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
         via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
         if self.__args.setdefault('Via', via) != via:
             self.__args['Via'] += ', '+ via

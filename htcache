@@ -11,55 +11,55 @@ Params.parse_joinlist()
 
 def HTCache( client, address ):
 
-  print 'Accepted request from %s:%i' % address
+    print 'Accepted request from %s:%i' % address
 
-  request = Request.HttpRequest()
-  while not request.Protocol:
-    yield fiber.RECV( client, Params.TIMEOUT )
-    request.recv( client )
+    request = Request.HttpRequest()
+    while not request.Protocol:
+        yield fiber.RECV( client, Params.TIMEOUT )
+        request.recv( client )
 
-  try:
-    while request in DOWNLOADS:
-      protocol = DOWNLOADS[ request ]
-      if protocol.Response:
-        if issubclass( protocol.Response, Response.DataResponse ):
-          print 'Joined running download'
-          break
-        del DOWNLOADS[ request ]
-      else:
-        yield fiber.WAIT()
-    else:
-      if Params.VERBOSE:
-        print 'Switching to', request.Protocol.__name__
-      protocol = DOWNLOADS[ request ] = request.Protocol( request )
-      server = protocol.socket()
-      while not protocol.Response:
-        if protocol.hasdata():
-          yield fiber.SEND( server, Params.TIMEOUT )
-          protocol.send( server )
+    try:
+        while request in DOWNLOADS:
+            protocol = DOWNLOADS[ request ]
+            if protocol.Response:
+                if issubclass( protocol.Response, Response.DataResponse ):
+                    print 'Joined running download'
+                    break
+                del DOWNLOADS[ request ]
+            else:
+                yield fiber.WAIT()
         else:
-          yield fiber.RECV( server, Params.TIMEOUT )
-          protocol.recv( server )
-    if Params.VERBOSE:
-      print 'Switching to', protocol.Response.__name__
-    response = protocol.Response( protocol, request )
-    server = protocol.socket()
-  except Exception:
-    if Params.VERBOSE:
-      print 'Switching to ExceptionResponse'
-    response = Response.ExceptionResponse( request )
+            if Params.VERBOSE:
+                print 'Switching to', request.Protocol.__name__
+            protocol = DOWNLOADS[ request ] = request.Protocol( request )
+            server = protocol.socket()
+            while not protocol.Response:
+                if protocol.hasdata():
+                    yield fiber.SEND( server, Params.TIMEOUT )
+                    protocol.send( server )
+                else:
+                    yield fiber.RECV( server, Params.TIMEOUT )
+                    protocol.recv( server )
+        if Params.VERBOSE:
+            print 'Switching to', protocol.Response.__name__
+        response = protocol.Response( protocol, request )
+        server = protocol.socket()
+    except Exception:
+        if Params.VERBOSE:
+            print 'Switching to ExceptionResponse'
+        response = Response.ExceptionResponse( request )
 
-  while not response.Done:
-    if response.hasdata():
-      yield fiber.SEND( client, Params.TIMEOUT )
-      response.send( client )
-    elif response.needwait():
-      yield fiber.WAIT( response.needwait() )
-    else:
-      yield fiber.RECV( server, Params.TIMEOUT )
-      response.recv( server )
+    while not response.Done:
+        if response.hasdata():
+            yield fiber.SEND( client, Params.TIMEOUT )
+            response.send( client )
+        elif response.needwait():
+            yield fiber.WAIT( response.needwait() )
+        else:
+            yield fiber.RECV( server, Params.TIMEOUT )
+            response.recv( server )
 
-  print 'Transaction successfully completed'
+    print 'Transaction successfully completed'
 
 
 fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
