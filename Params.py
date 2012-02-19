@@ -24,7 +24,6 @@ JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 SORT = {}
-SORT = []
 SORT_FILE = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
