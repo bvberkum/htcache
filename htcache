@@ -1,8 +1,13 @@
 #! /usr/bin/env python
-import sys, time, weakref
+import os
+import coverage
+import sys
+import time
+import weakref
 
-import Params, Protocol, Request, Response, fiber
+coverage.process_startup()
 
+import Params, Protocol, Request, Response, Resource, fiber
 
 DOWNLOADS = weakref.WeakValueDictionary()
 
@@ -62,7 +67,22 @@ def HTCache( client, address ):
 
     print 'Transaction successfully completed'
 
+    #if protocol:
+    #    if response.Done:
+    response.finalize(client)
+    #protocol.descriptors.close()
 
-fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
+
+# XXX: more neat in fiber than here, move.
+while True:
+    try:
+        fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
+    except fiber.Restart, e:
+        Resource.get_backend().close()
+        for mod in (Params, Protocol, Request, Response, Resource, fiber):
+            mod = reload(mod)
+    except Exception, e:
+        break
+
 Resource.get_backend().close()
 

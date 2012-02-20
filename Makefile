@@ -10,7 +10,18 @@ SRC:=$(PACK) init.sh $(wildcard *.py) $(wildcard *.rst) \
 default:
 
 test::
-	@COVERAGE=0 ./unit-test
+	@COVERAGE_PROCESS_START=.coveragerc ./unit-test
+
+clean::
+	@find ./ \
+	    -name '*.pyc' \
+	    -exec rm -rvf {} +
+	@find ./ \
+	    -name '.coverage' \
+	    -exec rm -rvf {} +
+	@find ./ \
+	    -name '.coverage-*' \
+	    -exec rm -rvf {} +
 
 debug::
 	-mkdir debug-root

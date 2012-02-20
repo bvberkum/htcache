@@ -1,6 +1,6 @@
 import hashlib, socket, time, traceback
 
-import Params
+import Params, fiber
 
 
 class BlindResponse:
@@ -33,6 +33,9 @@ class BlindResponse:
           self.__sendbuf += chunk
         elif not self.__sendbuf:
           self.Done = True
+
+    def finalize(self, client):
+        pass
 
 
 class DataResponse:
@@ -154,6 +157,9 @@ class DataResponse:
                 Params.log('Connection closed at byte %i' % self.__protocol.size)
             self.Done = not self.hasdata()
 
+    def finalize(self, client):
+        pass
+
 
 class ChunkedDataResponse( DataResponse ):
 
@@ -211,6 +217,9 @@ class BlockedContentResponse:
     def recv( self ):
         raise AssertionError
 
+    def finalize(self, client):
+        pass
+
 class BlockedImageContentResponse:
 
     Done = False
@@ -237,6 +246,9 @@ class BlockedImageContentResponse:
     def recv( self ):
         raise AssertionError
 
+    def finalize(self, client):
+        pass
+
 
 class DirectResponse:
 
@@ -246,17 +258,42 @@ class DirectResponse:
 
     Done = False
 
+    urlmap = {
+        'reload': 'reload_proxy',
+    }
+
     def __init__( self, status, request ):
-        lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
-        head, body = request.recvbuf().split( '\r\n\r\n', 1 )
-        for line in head.splitlines():
-            lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
-        if body:
-            lines.append( '+ Body: %i bytes' % len( body ) )
-        lines.append( '' )
-        lines.append( traceback.format_exc() )
-        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
+        path = request.envelope[1]
+        self.action = None
+
+        if path in self.urlmap:
+            self.action = self.urlmap[path]
+            getattr(self, self.action)()
+
+        else:
+            lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
+            head, body = request.recvbuf().split( '\r\n\r\n', 1 )
+            for line in head.splitlines():
+                lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
+            if body:
+                lines.append( '+ Body: %i bytes' % len( body ) )
+
+            lines.append( '' )
+            lines.append( traceback.format_exc() )
+
+            self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
       
+    def reload_proxy(self):
+        self.prepare_response("200 OK", "Restarting gateway")
+
+    def prepare_response(self, status, msg):
+        if isinstance(msg, list):
+            lines = msg
+        else:
+            lines = [msg]
+        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % (
+                status, '\n'.join( lines ) )
+
     def hasdata( self ):
         return bool( self.__sendbuf )
 
@@ -266,6 +303,11 @@ class DirectResponse:
         self.__sendbuf = self.__sendbuf[ bytes: ]
         if not self.__sendbuf:
             self.Done = True
+
+    def finalize(self, client):
+        if self.action == 'reload_proxy':
+            client.close()
+            raise fiber.Restart()
 
     def needwait( self ):
         return False

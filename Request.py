@@ -89,6 +89,10 @@ class HttpRequest:
         # Headers are parsed, determine target server and resource
         verb, proxied_url, proto = self.envelope
 
+        # TODO: keep entity headers, strip other message headers from args
+        #Params.log('href %s'% proxied_url)
+        #self.Resource = Resource.Resource(proxied_url, self.args())
+
         # Accept http and ftp proxy requests
         if self.__reqpath.startswith( 'http://' ):
             host = self.__reqpath[ 7: ]

@@ -170,10 +170,91 @@ class HTTP:
 
     OK = 200
     PARTIAL_CONTENT = 206
+    MULTIPLE_CHOICES = 300 # Variant resource, see alternatives list
+    MOVED_TEMPORARILY = 301 # Located elsewhere
+    FOUND = 302 # Moved permanently
+    SEE_OTHER = 303 # Resource for request located elsewhere using GET
     NOT_MODIFIED = 304
+    #USE_PROXY = 305
+    _ = 306 # Reserved
+    TEMPORARY_REDIRECT = 307 # Same as 302,
+    # added to explicitly contrast with 302 mistreated as 303
+
     FORBIDDEN = 403
     GONE = 410
     REQUEST_RANGE_NOT_STATISFIABLE = 416
+
+    Entity_Headers =  (
+        # RFC 2616
+        'Allow',
+        'Content-Encoding',
+        'Content-Language',
+        'Content-Length',
+        'Content-Location',
+        'Content-MD5',
+        'Content-Range',
+        'Content-Type',
+        'Expires',
+        'Last-Modified',
+    # extension-header
+    )
+    Request_Headers = (
+        # RFC 2616
+        'Accept',
+        'Accept-Charset',
+        'Accept-Encoding',
+        'Accept-Language',
+        'Authorization',
+        'Expect',
+        'From',
+        'Host',
+        'If-Match',
+        'If-Modified-Since',
+        'If-None-Match',
+        'If-Range',
+        'If-Unmodified-Since',
+        'Max-Forwards',
+        'Proxy-Authorization',
+        'Range',
+        'Referer',
+        'TE',
+        'User-Agent',
+        # RFC 2295
+        'Accept-Features',
+        'Negotiate',
+    )
+    Response_Headers = (
+        # RFC 2616
+        'Accept-Ranges',
+        'Age',
+        'ETag',
+        'Location',
+        'Proxy-Authenticate',
+        'Retry-After',
+        'Server',
+        'Vary',
+        'WWW-Authenticate',
+        # RFC 2295
+        'Alternates',
+        'TCN',
+        'Variant-Vary',
+    )
+    Cache_Headers = Entity_Headers + (
+            'ETag',
+            )
+
+
+    Message_Headers = Request_Headers + Response_Headers +\
+            Entity_Headers + (
+                    # Generic headers
+                    # RFC 2616
+                    'Date',
+                    'Cache-Control', # RFC 2616 14.9
+                    'Pragma', # RFC 2616 14.32
+                )
+    """
+    For information on other registered HTTP headers, see RFC 4229.
+    """
 
 
 class HttpProtocol(ProxyProtocol):
@@ -181,7 +262,6 @@ class HttpProtocol(ProxyProtocol):
     def __init__( self, request ):
         super(HttpProtocol, self).__init__(request)
     
-        # TODO: remove, keep in request?
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
@@ -344,6 +424,11 @@ class HttpProtocol(ProxyProtocol):
             self.cache.remove_partial()
             self.Response = Response.BlindResponse
 
+        elif self.__status in (HTTP.FOUND, HTTP.MOVED_TEMPORARILY,
+                    HTTP.TEMPORARY_REDIRECT):
+            location = self.__args['Location']
+            self.Response = Response.BlindResponse
+
         else:
             self.Response = Response.BlindResponse
 
@@ -378,7 +463,7 @@ class FtpProtocol( ProxyProtocol ):
           return
 
         self.__socket = connect(request.hostinfo)
-        self.__path = request.Resource.ref.path
+        self.__path = request.envelope[1]
         self.__sendbuf = ''
         self.__recvbuf = ''
         self.__handle = FtpProtocol.__handle_serviceready
