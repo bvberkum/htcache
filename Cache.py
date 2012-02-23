@@ -10,7 +10,7 @@ def load_backend_type(tp):
     return getattr( mod, name )
 
 
-def makedirs(path):
+def makedirs( path ):
     dirpath = os.path.dirname( path )
     if dirpath and not os.path.isdir( dirpath ):
         if os.path.isfile( dirpath ):

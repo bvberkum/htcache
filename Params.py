@@ -100,6 +100,17 @@ for _arg in _args:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
+    elif _arg in ( '--nodir' ):
+        pass # XXX
+        #try:
+        _args.next()
+        #except:
+        #    sys.exit( 'Error: %s requires argument' % _arg )
+    elif _arg in ( '--cache' ):
+        try:
+            CACHE = _args.next()
+        except:
+            sys.exit( 'Error: %s requires argument' % _arg )
     elif _arg in ( '-t', '--timeout' ):
         try:
             TIMEOUT = int( _args.next() )

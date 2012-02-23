@@ -151,7 +151,7 @@ def get_backend():
 
 
 
-# psuedo-Main: special command line options allow resource DB queries:
+# special command line options allow resource DB queries:
 
 def print_info(*paths):
     import sys

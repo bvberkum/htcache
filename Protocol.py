@@ -240,8 +240,8 @@ class HTTP:
         'Variant-Vary',
     )
     Cache_Headers = Entity_Headers + (
-            'ETag',
-            )
+        'ETag',
+    )
 
 
     Message_Headers = Request_Headers + Response_Headers +\
