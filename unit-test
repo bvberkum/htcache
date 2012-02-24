@@ -43,7 +43,7 @@ function stripheaders
             HEADERS_RECEIVED=1
         fi
         if [ -n "$HEADERS_RECEIVED" ]; then
-            echo $L | grep -v '^\(HTTP\|Connection\|Accept-\|P3P\|Via\|X-\|Date)'
+            echo $L | grep -v '^\(HTTP\|Connection\|Accept-\|P3P\|Via\|X-\|Date\)'
         else
             echo $L > $1
         fi
@@ -59,7 +59,7 @@ if which wget > /dev/null; then
     # XXX: if dumping headers, some script needs to make sure only entity
     # headers are saved. Non-entity headers must be tested for  --save-headers  
     wget -q -O $PREFIX.$2 $1 $WGETARGS 1>&2
-    stripheaders $1
+    #stripheaders $PREFIX.$2
   }
 elif which curl > /dev/null; then
   function download
@@ -69,7 +69,7 @@ elif which curl > /dev/null; then
     fi
     curl -o $PREFIX.$2 $CURLARGS $1 1>&2
     #-D  
-    stripheaders $1
+    #stripheaders $PREFIX.$1
   }
 else
   echo "error: no download tool available"
