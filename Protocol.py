@@ -111,11 +111,10 @@ class ProxyProtocol(object):
             self.Response = Response.DataResponse
             return True
 
-    def prepare_filtered_response(self):
-        "After parsing resheaders, return True "
+    def prepare_nocache_response(self):
+        "Blindly respond for NoCache rule matches. "
         # XXX: matches on path only
         for pattern, compiled in Params.NOCACHE:
-            #Params.log("nocache p %s" % pattern)
             if compiled.match(self.requri):
                 self.Response = Response.BlindResponse
                 Params.log('Not caching request, matches pattern: %r.' %
@@ -367,7 +366,7 @@ class HttpProtocol(ProxyProtocol):
             self.__recvbuf = self.__recvbuf[ bytes: ]
         sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
-        if self.prepare_filtered_response():
+        if self.prepare_nocache_response():
             return
 
         if self.__status == HTTP.OK:

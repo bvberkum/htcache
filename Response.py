@@ -194,7 +194,7 @@ class BlockedContentResponse:
 
     def __init__(self, status, request):
         url = request.hostinfo + (request.envelope[1],)
-        self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
+        self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\nContent-Type: text/html\r\n\r\n" +\
                 open(Params.HTML_PLACEHOLDER).read() % { 
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
@@ -226,7 +226,7 @@ class BlockedImageContentResponse:
 
     def __init__(self, status, request):
         data = open(Params.IMG_PLACEHOLDER).read()
-        self.__sendbuf = "HTTP/1.1 OK\r\nContent-Length: %i\r\n'\
+        self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\nContent-Length: %i\r\n'\
                 'Content-Type: image/png\r\n\r\n%s" % (
                 len(data), data)
 

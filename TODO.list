@@ -1,35 +1,27 @@
-./.git/logs/HEAD:14:9a411eb3a3780d7eddde55413b7d946ce94b57b5 33284a02ea31762412c57cbbfdff7a99bee37e5e Berend <berend@sam.laptop> 1284541615 +0200	commit: Added TODO and removed SHA1 for time being
-./.git/logs/HEAD:15:33284a02ea31762412c57cbbfdff7a99bee37e5e 1ecb0eb99ff12251eaeb76b1eeb6f8d476f16d16 B. van Berkum <dev@dotmpe.com> 1285618617 +0200	commit: Rename done. Added TODO's. Renamed back to , perhaps alias it. Minor init.sh changes.
-./.git/logs/refs/heads/master:14:9a411eb3a3780d7eddde55413b7d946ce94b57b5 33284a02ea31762412c57cbbfdff7a99bee37e5e Berend <berend@sam.laptop> 1284541615 +0200	commit: Added TODO and removed SHA1 for time being
-./.git/logs/refs/heads/master:15:33284a02ea31762412c57cbbfdff7a99bee37e5e 1ecb0eb99ff12251eaeb76b1eeb6f8d476f16d16 B. van Berkum <dev@dotmpe.com> 1285618617 +0200	commit: Rename done. Added TODO's. Renamed back to , perhaps alias it. Minor init.sh changes.
+./Protocol.py:116:        # XXX: matches on path only
+./Protocol.py:342:            # TODO: store in headerdict
+./Protocol.py:417:            # FIXME: update last-modified?
+./Protocol.py:437:            pass # TODO: srcrefs, mediatype, charset, language, 
+./Resource.py:12:# XXX dont use cjson, its buggy, see comments at
+./Resource.py:179:        # TODO: documents
 ./CHANGELOG.rst:1:TODO htcache version 1.0 (planned but non-committed)
-./Cache.py:57:            "FIXME: implement saving in other roots"
-./Params.py:14:ONLINE = True # XXX:bvb: useless..
-./Params.py:37:#TODO CRC, par2?
-./Params.py:64:  TODO --encode query sep                   
-./Params.py:68:  TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
-./Params.py:81:     TODO --prune-stale
-./Params.py:83:     TODO --prune-gone
-./Params.py:94:     FIXME --print-mode line|tree
-./Params.py:95:     TODO --print-url
-./Params.py:96:     TODO --print-path
-./Params.py:107:     TODO --check-exists
-./Params.py:110:     TODO --check-encodings
-./Params.py:111:     TODO --check-languages
-./Params.py:112:     TODO --check-mediatypes
-./Params.py:115:     TODO --x-force-fix
-./Params.py:118:     TODO --check-dupes
-./Protocol.py:150:        # XXX: match on path only
-./Protocol.py:286:            # XXX: title caps improper for acronyms
-./Protocol.py:361:            # FIXME: update last-modified? 
-./README.rst:111:  the first argument being prefixed with '?'. FIXME: does not solve anything?
-./README.rst:140:TODO: a file-based header storage or perhaps even an Apache mod_asis
-./Resource.py:10:# XXX dont use cjson, its buggy, see comments at
-./Resource.py:95:        # XXX: safe headers as features for now..    
-./Resource.py:173:        # TODO: documents 
-./Response.py:48:        # TODO: on/off: self.__hash = hashlib.sha1()
-./Response.py:59:          # TODO: parse mediatype, charset, language..
-./Response.py:132:        # XXX: store hash for new recv'd content
+./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
+./Cache.py:53:            "FIXME: implement saving in other roots"
 ./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
 ./init.sh:45:        # TODO: check htcache status before redirecting output to lock
-./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
+./Response.py:52:        # TODO: on/off: self.__hash = hashlib.sha1()
+./Response.py:63:          # TODO: parse mediatype, charset, language..
+./Response.py:136:        # XXX: store hash for new recv'd content
+./Request.py:92:        # TODO: keep entity headers, strip other message headers from args
+./Request.py:161:        # XXX: used before protocol is determined,  assert self.Protocol
+./htcache:76:# XXX: more neat in fiber than here, move.
+./Params.py:14:ONLINE = True # XXX:bvb: useless..
+./Params.py:52:     --limit RATE    FIXME: limit download rate at a fixed K/s
+./Params.py:62:  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+./Params.py:104:        pass # XXX
+./unit-test:59:    # XXX: if dumping headers, some script needs to make sure only entity
+./main.rst:11:        - FIXME: Not working!
+./main.rst:13:        - TODO: contains unused? CachedResource code , integrate or  remove
+./main.rst:21:        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
+./main.rst:144:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./main.rst:176:TODO: a file-based header storage or perhaps even an Apache mod_asis

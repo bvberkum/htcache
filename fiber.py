@@ -198,7 +198,7 @@ def spawn( generator, port, debug, log ):
             now = time.time()
 
             i = len( fibers )
-            print '[ STEP ]', i, 'fiber(s)'
+            #print '[ STEP ]', i, 'fiber(s)'
             while i:
                 i -= 1
                 state = fibers[ i ].state
@@ -234,7 +234,6 @@ def spawn( generator, port, debug, log ):
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
 
             #print '[ IO ] Data on', len(canrecv), "inputs,", len(cansend), "outputs"
-
             for fileno in canrecv:
                 #print '[ IO ] Receiving from', tryrecv[fileno]
                 if fileno is listener.fileno():
