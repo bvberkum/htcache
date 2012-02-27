@@ -33,6 +33,7 @@ TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
+DBDIR = '/var/lib/htcache/'
 RESOURCES = '/var/lib/htcache/resource.db'
 # query params
 PRINT_RECORD = []

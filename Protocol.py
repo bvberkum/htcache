@@ -69,17 +69,17 @@ class ProxyProtocol(object):
     def __init__(self, request):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
-        url = request.hostinfo + (request.envelope[1],)
-        cache_location = '%s:%i/%s' % url
+        cache_location = '%s:%i/%s' % (request.hostinfo +
+                (request.envelope[1],))
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
         self.descriptors = Resource.get_backend()
 
-#    def has_descriptor(self):
-#        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
-#
-#    def get_descriptor(self):
-#        return self.descriptors[self.cache.path]
+    def has_descriptor(self):
+        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
+
+    def get_descriptor(self):
+        return self.descriptors[self.cache.path]
 
     def prepare_direct_response(self, request):
         """
@@ -113,9 +113,9 @@ class ProxyProtocol(object):
 
     def prepare_nocache_response(self):
         "Blindly respond for NoCache rule matches. "
-        # XXX: matches on path only
         for pattern, compiled in Params.NOCACHE:
-            if compiled.match(self.requri):
+            p = self.requri.find(':') # split scheme
+            if compiled.match(self.requri[p+3:]):
                 self.Response = Response.BlindResponse
                 Params.log('Not caching request, matches pattern: %r.' %
                     pattern)
@@ -302,6 +302,11 @@ class HttpProtocol(ProxyProtocol):
         self.__recvbuf = ''
         self.__parse = HttpProtocol.__parse_head
 
+        # TODO: Store relationship with referer
+        #referer = args.pop('Referer', None)
+        #relationtype = args.pop('X-Relationship', None)
+        #self.descriptors.relate(relationtype, self.requri, referer)
+
     def hasdata( self ):
         return bool( self.__sendbuf )
 
@@ -369,8 +374,14 @@ class HttpProtocol(ProxyProtocol):
         if self.prepare_nocache_response():
             return
 
+        # Process and update headers before deferring to response class
         if self.__status == HTTP.OK:
             self.cache.open_new()
+            # FIXME: load http entity, perhaps response headers from shelve
+            #self.descriptors.map_path(self.cache.path, uriref)
+            #self.descriptors.put(uriref, 
+            #descr = self.get_descriptor()
+            #self.mtime, self.size = scriptor.last_modified, descr.
             if 'Last-Modified' in self.__args:
                 try:
                     self.mtime = calendar.timegm( time.strptime(
@@ -378,7 +389,7 @@ class HttpProtocol(ProxyProtocol):
                 except:
                     Params.log('Illegal time format in Last-Modified: %s.' %
                         self.__args[ 'Last-Modified' ])
-                    # Try again:
+                    # XXX: Try again, should make a list of alternate (but invalid) date formats
                     try:
                         tmhdr = re.sub('\ [GMT0\+-]+$', '',
                             self.__args[ 'Last-Modified' ])
@@ -431,9 +442,11 @@ class HttpProtocol(ProxyProtocol):
         else:
             self.Response = Response.BlindResponse
 
-        # Update descriptor
+        # Cache headers
         if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
-            pass # TODO: srcrefs, mediatype, charset, language, 
+            pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
+            #httpentityspec = Resource.HTTPEntity(self.__args)
+            #self.descriptors.put(uriref, httpentityspec.toMetalink())
             self.descriptors[self.cache.path] = [self.requri], self.__args
 
     def recvbuf( self ):

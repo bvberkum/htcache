@@ -56,9 +56,13 @@ class DataResponse:
         except:
             args = {}
 
-        #if protocol.has_descriptor():
-        #  descr = protocol.get_descriptor()
-          #Params.log(descr)
+        cached_headers = {}
+        if protocol.has_descriptor():
+            #Params.log(protocol.get_descriptor())
+            urls, mediatype, charset, languages, metadata, features = protocol.get_descriptor()
+            cached_headers = metadata
+            #urirefs, cached_args = protocol.get_descriptor()
+            #Params.log(descr)
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
           #if descr[-1]:
@@ -75,10 +79,13 @@ class DataResponse:
         args[ 'Connection' ] = 'close'
         if self.__protocol.mtime >= 0:
             args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, time.gmtime( self.__protocol.mtime ) )
+
         if self.__pos == 0 and self.__end == self.__protocol.size:
             head = 'HTTP/1.1 200 OK'
             if self.__protocol.size >= 0:
                 args[ 'Content-Length' ] = str( self.__protocol.size )
+            if 'Content-Type' in cached_headers:
+                args['Content-Type'] = cached_headers['Content-Type']
         elif self.__end >= 0:
             head = 'HTTP/1.1 206 Partial Content'
             args[ 'Content-Length' ] = str( self.__end - self.__pos )
@@ -95,6 +102,7 @@ class DataResponse:
         if Params.VERBOSE > 1:
             for key in args:
                 Params.log('> %s: %s' % ( key, args[ key ].replace( '\r\n', ' > ' ) ))
+
         # Prepare response for client
         self.__sendbuf = '\r\n'.join( [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         if Params.LIMIT:

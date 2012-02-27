@@ -1,6 +1,7 @@
 """ """
 import os, re, anydbm
 
+
 try:
     # Py >= 2.4
     assert set
@@ -8,24 +9,82 @@ except AssertionError:
     from sets import Set as set
 
 import Params
+from script_mpe import res
+from script_mpe.res import PersistedMetaObject
 
-# XXX dont use cjson, its buggy, see comments at
+# XXX: Dont use cjson, its buggy, see comments at
 # http://pypi.python.org/pypi/python-cjson
 # use jsonlib or simplejson
 try:
-    #import cjson as json
-    #json_read = json.decode
-    #json_write = json.encode
     import simplejson as _json
 except:
     import json as _json
 
-
 json_read = _json.loads
 json_write = _json.dumps
 
-class Descriptor(object):
+
+class DescriptorStorage(object):
+
+    shelve = None
+    "Shelved descriptor objects"
+    cachemap = None
+    "Map of uriref to cache locations (forward)"
+    resourcemap = None
+    "Map of cache location to uriref (reverse)"
+
+    def __init__(self, path):
+        self.objdb = join(path, 'resources.db')
+        self.cachemapdb = join(path, 'cache_map.db')
+        self.resourcemapdb = join(path, 'resource_map.db')
+
+        self.shelve = dbshelve.open(objdb)
+
+        self.cachemap = bsddb.hashopen(cachemapdb)
+        self.resourcemap = bsddb.hashopen(resourcemapdb)
+        #chksmdb = join(path, '.cllct/sha1sum.db')
+        #self.sha1sum = dbshelve.open(chksmdb)
+
+    def put(self, uriref, metalink):
+        """
+        Store or update the descriptor.
+        """
+        self.shelve[uriref]
+        if uriref in self.cachemap:
+            self.cache[uriref]
+
+        pass
+
+    def map_path(self, path, uriref):
+        pass
+
+    def set(self, uriref, descriptor):
+        pass
+
+    def __setitem__(self, path, value):
+        self.shelve
+
+class HTTPEntityHeaders(PersistedMetaObject):
     pass
+
+class Metalink(PersistedMetaObject):
+    pass
+
+            # TODO: srcrefs, mediatype, charset, language, 
+            #if self.has_descriptor():
+            #    urirefs, args = self.get_descriptor()
+            #else:
+            #    urirefs = []
+            #if self.requri not in urirefs:
+            #    urirefs.append(self.requri)
+            #self.descriptors[self.cache.path] = urirefs, self.__args
+            #Params.log(self.descriptors[self.cache.path])
+            #Params.log("Updated descriptor: %s, %s" %
+            #        self.descriptors[self.cache.path])
+
+class Descriptor(PersistedMetaObject): pass
+    
+#            db = dbshelve.open(filename)
 
 
 # descriptor storages:
@@ -230,4 +289,4 @@ elif Params.FIND_RECORDS:
 elif Params.PRINT_MEDIA:
     print_media_list(*Params.PRINT_MEDIA)
 
-
+#DescriptorStorage(Params.DBDIR)
