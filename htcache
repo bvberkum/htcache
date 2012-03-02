@@ -1,11 +1,14 @@
 #! /usr/bin/env python
 import os
-import coverage
 import sys
 import time
 import weakref
 
-coverage.process_startup()
+try:
+    import coverage
+    coverage.process_startup()
+except ImportError, e:
+    pass
 
 import Params, Protocol, Request, Response, Resource, fiber
 
