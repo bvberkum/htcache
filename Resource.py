@@ -36,7 +36,7 @@ json_write = _json.dumps
 #URL_SCHEMES = ['ftp', 'http']
 
 
-class CachedResource(object):
+#class CachedResource(object):
 
 def strip_root(path):
     if path.startswith(Params.ROOT):
