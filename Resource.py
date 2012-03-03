@@ -9,8 +9,8 @@ except AssertionError:
     from sets import Set as set
 
 import Params
-from script_mpe import res
-from script_mpe.res import PersistedMetaObject
+#from script_mpe import res
+#from script_mpe.res import PersistedMetaObject
 
 # XXX: Dont use cjson, its buggy, see comments at
 # http://pypi.python.org/pypi/python-cjson
@@ -64,11 +64,11 @@ class DescriptorStorage(object):
     def __setitem__(self, path, value):
         self.shelve
 
-class HTTPEntityHeaders(PersistedMetaObject):
-    pass
-
-class Metalink(PersistedMetaObject):
-    pass
+#class HTTPEntityHeaders(PersistedMetaObject):
+#    pass
+#
+#class Metalink(PersistedMetaObject):
+#    pass
 
             # TODO: srcrefs, mediatype, charset, language, 
             #if self.has_descriptor():
@@ -82,7 +82,7 @@ class Metalink(PersistedMetaObject):
             #Params.log("Updated descriptor: %s, %s" %
             #        self.descriptors[self.cache.path])
 
-class Descriptor(PersistedMetaObject): pass
+#class Descriptor(PersistedMetaObject): pass
     
 #            db = dbshelve.open(filename)
 
