@@ -13,6 +13,7 @@ DOWNLOADS = weakref.WeakValueDictionary()
 
 Params.parse_droplist()
 Params.parse_nocache()
+Params.parse_joinlist()
 
 
 def HTCache( client, address ):

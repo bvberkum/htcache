@@ -73,6 +73,14 @@ class ProxyProtocol(object):
                 (request.envelope[1],))
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
+        Params.log("%i joins"%len(Params.JOIN));
+        for line, regex in Params.JOIN:
+            url = request.hostinfo[0] +'/'+ request.envelope[1]
+            m = regex.match(url)
+            if m:
+                Params.log("Rewritten to: %s" % (m.groups(),))
+            #else:
+            #    Params.log("No match on %s for %s" % (url, line))
         self.descriptors = Resource.get_backend()
 
     def has_descriptor(self):
