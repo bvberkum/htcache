@@ -21,6 +21,7 @@ def HTCache( client, address ):
     print 'Accepted request from %s:%i' % address
 
     request = Request.HttpRequest()
+    protocol = None
     while not request.Protocol:
         yield fiber.RECV( client, Params.TIMEOUT )
         request.recv( client )
@@ -54,7 +55,7 @@ def HTCache( client, address ):
     except Exception:
         if Params.VERBOSE:
             print 'Switching to ExceptionResponse'
-        response = Response.ExceptionResponse( request )
+        response = Response.ExceptionResponse( request, protocol )
 
     while not response.Done:
         if response.hasdata():
@@ -83,6 +84,7 @@ while True:
         for mod in (Params, Protocol, Request, Response, Resource, fiber):
             mod = reload(mod)
     except Exception, e:
+        Params.log(e)
         break
 
 Resource.get_backend().close()

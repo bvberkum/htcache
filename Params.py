@@ -3,6 +3,8 @@ import os, re, socket, sys
 
 _args = iter( sys.argv )
 
+VERSION = 0.3
+
 # proxy params
 PROG = _args.next()
 PORT = 8080

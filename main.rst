@@ -4,6 +4,10 @@
 **htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
+It is developed for single user use but with certain acknowledgements works fine 
+for real networked use. Notably there is no proxy authentication planned so all 
+functions are user available.
+
 branches
     master
         - Follows new_stable
@@ -37,9 +41,24 @@ Todo
    - don't cache Authorization response [14.8]
    - Cache-Control [14.9]
 
- - rules.sort prefixes paths
- - would be nice to let addon's provide new rules.
-   Ex: user- or community provided favicons.
+ - rules.join rewrites paths (to simplify, remove session id and other query meta vars)
+ - rules.proc defers to external script.. or fifo? How to pass message: parsing should be easy enough to write ie. bash script.
+ - javascript bookmarklet alike link for (x)HTML: enable in browser functions.
+
+   - work on current or pointer selected resource
+
+     - add new drop/nocache/capture/join rule
+     - view version history
+     - view navigation history
+     - set favicon  
+     - tag/annotation possible; see proc rules
+     - set title based on pattern, format?
+
+   - display hidden features in select mode  
+   - browse static page
+   - proxy config?
+   - reload proxy
+    
 
 Issues
  1. Writing to client fails randomly, probably dropped connection

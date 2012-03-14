@@ -258,10 +258,10 @@ class BlockedImageContentResponse:
         pass
 
 
-class DirectResponse:
+class ErrorReportResponse:
 
     """
-    Echo request header in response body.
+    Echo request header in response body
     """
 
     Done = False
@@ -270,16 +270,21 @@ class DirectResponse:
         'reload': 'reload_proxy',
     }
 
-    def __init__( self, status, request ):
+    def __init__( self, status, request, protocol ):
         path = request.envelope[1]
         self.action = None
 
         if path in self.urlmap:
+            # XXX: move this to real direct protocol
             self.action = self.urlmap[path]
             getattr(self, self.action)()
 
         else:
-            lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
+            lines = [ 'HTCache: %s' % status, '' ]
+            
+            lines.append( 'Requesting:' )
+            lines.append( '' )
+
             head, body = request.recvbuf().split( '\r\n\r\n', 1 )
             for line in head.splitlines():
                 lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
@@ -287,6 +292,13 @@ class DirectResponse:
                 lines.append( '+ Body: %i bytes' % len( body ) )
 
             lines.append( '' )
+            lines.append( '(Partial) Response:' )
+            lines.append( '' )
+            head, body = protocol.recvbuf().split( '\r\n\r\n', 1 )
+            for line in head.splitlines():
+                lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
+            lines.append( '' )
+
             lines.append( traceback.format_exc() )
 
             self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
@@ -324,15 +336,16 @@ class DirectResponse:
         raise AssertionError
 
 
-class NotFoundResponse( DirectResponse ):
+class NotFoundResponse( ErrorReportResponse ):
 
     def __init__( self, protocol, request ):
-        DirectResponse.__init__( self, '404 Not Found', request )
+        ErrorReportResponse.__init__( self, '404 Not Found', request )
 
 
-class ExceptionResponse( DirectResponse ):
+class ExceptionResponse( ErrorReportResponse ):
 
-    def __init__( self, request ):
+    def __init__( self, request, protocol ):
         traceback.print_exc()
-        DirectResponse.__init__( self, '500 Internal Server Error', request )
+        ErrorReportResponse.__init__( self, '500 Internal Server Error',
+                request, protocol )
 

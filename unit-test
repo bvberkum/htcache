@@ -349,7 +349,7 @@ case $1 in
     http_proxy=localhost:$PORT download http://$URL_HTTP out
     summary "BLIND PROXY RESPONSE"
     check_log "blocked request to server" "Switching to BlindResponse"
-    check_headers out "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    check_headers out "served HTTP v1.* OK" "HTTP/1.* 200 "
     stopserver
     rm $PREFIX-rules.drop
     ;;
