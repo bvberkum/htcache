@@ -322,17 +322,18 @@ class HttpProtocol(ProxyProtocol):
                 Params.log('Checking complete file in cache: %i bytes, %s' %
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
+
+        # TODO: Store relationship with referer
+        #referer = args.pop('Referer', None)
+        relationtype = args.pop('X-Relationship', None)
+        #self.descriptors.relate(relationtype, self.requri, referer)
+
         Params.log("Connecting to %s:%s" % request.hostinfo)
         self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
         self.__parse = HttpProtocol.__parse_head
-
-        # TODO: Store relationship with referer
-        #referer = args.pop('Referer', None)
-        #relationtype = args.pop('X-Relationship', None)
-        #self.descriptors.relate(relationtype, self.requri, referer)
 
     def hasdata( self ):
         return bool( self.__sendbuf )
