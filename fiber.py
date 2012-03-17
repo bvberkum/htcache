@@ -127,7 +127,7 @@ class DebugFiber( Fiber ):
         self.__newline = string.endswith( '\n' )
 
 
-def fork( output ):
+def fork( output, pid_file ):
 
     try:
         log = open( output, 'w' )
@@ -157,7 +157,8 @@ def fork( output ):
         sys.exit( 1 )
 
     if pid:
-        print pid
+        open(pid_file, 'wb').write(str(pid))
+        print 'Forked process, htcache now at PID', pid
         sys.exit( 0 )
 
     os.dup2( log.fileno(), sys.stdout.fileno() )
@@ -165,8 +166,9 @@ def fork( output ):
     os.dup2( nul.fileno(), sys.stdin.fileno()  )
 
 
-def spawn( generator, port, debug, log ):
+def spawn( generator, port, debug, log, pid_file ):
 
+    # set up listening socket
     try:
         listener = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
         listener.setblocking( 0 )
@@ -177,15 +179,18 @@ def spawn( generator, port, debug, log ):
         print 'error: failed to create socket:', e
         sys.exit( 1 )
 
+    # fork and exit for deamon mode
     if log:
-        fork( log )
+        fork( log, pid_file )
 
+    # stay attached to console
     if debug:
         myFiber = DebugFiber
     else:
         myFiber = GatherFiber
 
     print '[ INIT ]', generator.__name__, 'started at %s:%i' % ( socket.gethostname(), port )
+
     try:
 
         fibers = []
@@ -254,7 +259,7 @@ def spawn( generator, port, debug, log ):
         while i:
             i -= 1
             #state = fibers[ i ].state
-        
+        # close before sending response 
         listener.close()
         raise
 

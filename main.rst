@@ -39,7 +39,9 @@ Todo
 
    - calculate Age field [14.6]
    - don't cache Authorization response [14.8]
+   - Cacheability: expiration [13.2]  
    - Cache-Control [14.9]
+
 
  - rules.join rewrites paths (to simplify, remove session id and other query meta vars)
  - rules.proc defers to external script.. or fifo? How to pass message: parsing should be easy enough to write ie. bash script.

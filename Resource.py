@@ -12,17 +12,6 @@ import Params
 #from script_mpe import res
 #from script_mpe.res import PersistedMetaObject
 
-# XXX: Dont use cjson, its buggy, see comments at
-# http://pypi.python.org/pypi/python-cjson
-# use jsonlib or simplejson
-try:
-    import simplejson as _json
-except:
-    import json as _json
-
-json_read = _json.loads
-json_write = _json.dumps
-
 
 class DescriptorStorage(object):
 
@@ -134,7 +123,7 @@ class AnyDBStorage(object):
         return path in self.__be
 
     def get(self, path):
-        return tuple(json_read(self.__be[path]))
+        return tuple(Params.json_read(self.__be[path]))
 
     def set(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
@@ -164,7 +153,7 @@ class AnyDBStorage(object):
               'Cache', 'Expires'):
             if hd in headers:
                 metadata[hd] = headers[hd]
-        self.__be[path] = json_write((srcrefs, mt, cs, ln, metadata, features))
+        self.__be[path] = Params.json_write((srcrefs, mt, cs, ln, metadata, features))
         self.__be.sync()
 
     def update(self, path, srcrefs, headers):
@@ -289,4 +278,4 @@ elif Params.FIND_RECORDS:
 elif Params.PRINT_MEDIA:
     print_media_list(*Params.PRINT_MEDIA)
 
-#DescriptorStorage(Params.DBDIR)
+#DescriptorStorage(Params.DATA_DIR)

@@ -1,14 +1,24 @@
 import os, re, socket, sys
+# XXX: Dont use cjson, its buggy, see comments at
+# http://pypi.python.org/pypi/python-cjson
+# use jsonlib or simplejson
+try:
+    import simplejson as _json
+except:
+    import json as _json
 
+json_read = _json.loads
+json_write = _json.dumps
 
 _args = iter( sys.argv )
 
-VERSION = 0.3
+VERSION = 0.4
 
 # proxy params
 PROG = _args.next()
 PORT = 8080
 ROOT = os.getcwd() + os.sep
+PID_FILE = '/var/run/htcache.pid'
 VERBOSE = 0
 TIMEOUT = 15
 FAMILY = socket.AF_INET
@@ -23,8 +33,8 @@ JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
-IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
+REWRITE = []
+REWRITE_FILE = '/etc/htcache/rules.rewrite'
 CACHE = 'caches.FileTree'
 ARCHIVE = ''
 ENCODE_PATHSEP = ''
@@ -37,8 +47,11 @@ TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
-DBDIR = '/var/lib/htcache/'
-RESOURCES = '/var/lib/htcache/resource.db'
+DATA_DIR = '/var/lib/htcache/'
+RESOURCES = DATA_DIR+'resource.db'
+HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
+IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
+PROXY_INJECT_JS = DATA_DIR+'htcache.js'
 # query params
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
@@ -132,6 +145,8 @@ for _arg in _args:
         DEBUG = True
     elif _arg == '-f':
         RESOURCES = _args.next()
+    elif _arg in ('--pid-file',):
+        PID_FILE = _args.next()
 
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
@@ -165,6 +180,13 @@ def parse_joinlist(fpath=JOIN_FILE):
         JOIN.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
             open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
 
+def parse_rewritelist(fpath=REWRITE_FILE):
+    global REWRITE_FILE
+    REWRITE = []
+    if os.path.isfile(fpath):
+        REWRITE.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
+            open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
+
 
 def validate_joinlist(fpath=JOIN_FILE):
     lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
@@ -177,6 +199,39 @@ def validate_joinlist(fpath=JOIN_FILE):
                 match = True
         if not match:
             print "Error: no match for", path
+
+def format_info():
+    """
+    Return JSON for config.
+    """
+    return json_write({
+        "htache": { 
+            "runtime": {
+                "program": PROG,
+            },
+            "config": {
+                "port": PORT,
+                "root": ROOT,
+                "pid-file": PID_FILE,
+                "verboseness": VERBOSE,
+                "timeout": TIMEOUT,
+                "socket-family": FAMILY,
+                "cache-type": CACHE,
+                "join-file": JOIN_FILE,
+                "drop-file": DROP_FILE,
+                "nocache-file": NOCACHE_FILE,
+                "rewrite-file": REWRITE_FILE,
+            },
+            "statistics": {
+                "rules": {
+                        "drop": len(DROP),
+                        "join": len(JOIN),
+                        "nocache": len(NOCACHE),
+                        "rewrite": len(REWRITE),
+                    }
+                }
+            }
+        })
 
 
 if __name__ == '__main__':

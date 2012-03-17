@@ -5,10 +5,7 @@ For better support of some weird URLs the latter is preferable.
 See README for description.
 """
 import time, os
-try:
-    from md5 import md5
-except DeprecationWarning:
-    from hashlib import md5
+from hashlib import md5
 import Cache, Params
 
 

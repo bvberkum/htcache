@@ -46,12 +46,12 @@ class HttpRequest:
 
         line = chunk[ :eol ]
         if ':' in line:
-            Params.log('> '+ line.rstrip(), 1)
+            Params.log('> '+ line.rstrip(), 2)
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known request header"% key)
+                Params.log("Warning: %r not a known request header"% key, 1)
                 key = key.title() # XXX: bad? :)
             # XXX: this should join headers like Via handling does later on, but
             # avoiding duplicates has not failed yet. See Protocol how to handle
@@ -98,7 +98,9 @@ class HttpRequest:
 
         chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, \
-                'client closed connection before sending a complete message header'
+                'client closed connection before sending a '\
+                'complete message header, ' \
+                'parser: %r, data: %r' % (self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
         while self.__parse:
             bytecnt = self.__parse( self.__recvbuf )
@@ -145,7 +147,7 @@ class HttpRequest:
         self.__port = port
         self.__reqpath = path
         self.__headers[ 'Host' ] = host
-        self.__headers[ 'Connection' ] = 'close'
+        #self.__headers[ 'Connection' ] = 'close'
 
         self.__headers.pop( 'Keep-Alive', None )
         self.__headers.pop( 'Proxy-Connection', None )

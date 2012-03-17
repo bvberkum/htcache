@@ -26,12 +26,11 @@ function startserver
   test -e $PID && kill -int `cat $PID`
   rm -rf $PREFIX.*
   mkdir $PREFIX.cache
-  if ! ./htcache -p $PORT -r $PREFIX.cache -f $RESOURCES -v -v $@ --daemon $PREFIX.log > $PID; then
-    cat $PID
-    rm $PID
+  if ! ./htcache -p $PORT -r $PREFIX.cache -f $RESOURCES -v -v $@ --daemon $PREFIX.log --pid-file $PID; then
+    test -e $PID && rm $PID
     exit 1
   else
-    echo Started server 
+      echo Started server at $(cat $PID)
   fi
 }
 
@@ -115,7 +114,8 @@ fi
 function abort
 {
   sleep $1
-  if kill %%; then
+  #if kill %%; then
+  if kill -int $(cat $PID); then
     echo
     sleep 1
   else
@@ -206,6 +206,7 @@ function stopserver
   #echo
   if test -e $PID; then
     kill -int `cat $PID`
+    echo "Killed server at $(cat $PID)"
     rm $PID
   fi
 }

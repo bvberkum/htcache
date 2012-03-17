@@ -10,11 +10,11 @@ DNSCache = {}
 def connect( addr ):
     assert Params.ONLINE, 'operating in off-line mode'
     if addr not in DNSCache:
-        Params.log('Requesting address info for %s:%i' % addr)
+        Params.log('Requesting address info for %s:%i' % addr, 2)
         DNSCache[ addr ] = socket.getaddrinfo(
             addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
     family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
-    Params.log('Connecting to %s:%i' % sockaddr)
+    Params.log('Connecting to %s:%i' % sockaddr, 1)
     sock = socket.socket( family, socktype, proto )
     sock.setblocking( 0 )
     sock.connect_ex( sockaddr )
@@ -65,26 +65,45 @@ class ProxyProtocol(object):
     "requested resource ID, set by subclass"
     Response = None
     "the htcache response class"
+    capture = None
+    "Wether to track additional metadata for resource"
 
-    def __init__(self, request):
+    def __init__(self, request, prepcache=True):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
+
+        # Track wether response server response was (partially) read
+        self.__status, self.__message = None, None
+
+        if not prepcache:
+            return
+
+        # Prepare default cache location
         cache_location = '%s:%i/%s' % (request.hostinfo +
                 (request.envelope[1],))
-        self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
-        Params.log('Cache position: %s' % self.cache.path)
-        Params.log("%i joins"%len(Params.JOIN));
+        
+        # Try Join rules
+        url = request.hostinfo[0] +'/'+ request.envelope[1]
         for line, regex in Params.JOIN:
-            url = request.hostinfo[0] +'/'+ request.envelope[1]
             m = regex.match(url)
             if m:
-                Params.log("Rewritten to: %s" % (m.groups(),))
-            #else:
-            #    Params.log("No match on %s for %s" % (url, line))
+                self.capture = True
+                repl = line.split(' ')[-1]
+                cache_location = regex.sub(repl, url)
+                Params.log("Joined URL matching rule %r" % line)
+
+        self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
+        Params.log('Prepped cache, position: %s' % self.cache.path, 1)
+
+        # Get descriptor storage reference
         self.descriptors = Resource.get_backend()
 
+    def has_response(self):
+        return self.__status and self.__message
+        
     def has_descriptor(self):
-        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
+        return self.cache.path in self.descriptors \
+                and isinstance(self.get_descriptor(), tuple)
 
     def get_descriptor(self):
         return self.descriptors[self.cache.path]
@@ -101,10 +120,10 @@ class ProxyProtocol(object):
         if port == 8080:
             Params.log("Direct request: %s" % path)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
-            self.Response = Response.ErrorReportResponse
+            self.Response = Response.DirectResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
-        #self.Response = Response.ErrorReportResponse
+        #self.Response = Response.DirectResponse
         # Filter request by regex from patterns.drop
         filtered_path = "%s/%s" % (host, path)
         for pattern, compiled in Params.DROP:
@@ -178,7 +197,7 @@ class HTTP:
     OK = 200
     PARTIAL_CONTENT = 206
     MULTIPLE_CHOICES = 300 # Variant resource, see alternatives list
-    MOVED_TEMPORARILY = 301 # Located elsewhere
+    MOVED_PERMANENTLY = 301 # Located elsewhere
     FOUND = 302 # Moved permanently
     SEE_OTHER = 303 # Resource for request located elsewhere using GET
     NOT_MODIFIED = 304
@@ -269,11 +288,24 @@ class HTTP:
                     'Proxy-Authorization',
                     'Connection',
                     'Keep-Alive',
-                    # Extension headers
+                    # Extension and msc. unsorted headers
+                    'X-Server',
+                    'X-Cache',
+                    'X-Cache-Hit',
+                    'X-Cache-Hits',
                     'X-Content-Type-Options',
                     'X-Powered-By',
                     'X-Relationship', # used by htcache
                     'X-Varnish',
+                    'Status',
+                    'X-AspNet-Version',
+                    'P3P',
+                    'Origin',
+                    'X-Requested-With',
+                    'Content-Disposition',
+                    'X-Frame-Options',
+                    'X-XSS-Protection',
+                    'VTag',
                 )
     """
     For information on other registered HTTP headers, see RFC 4229.
@@ -286,8 +318,6 @@ class HTTP:
 class HttpProtocol(ProxyProtocol):
 
     def __init__( self, request ):
-        super(HttpProtocol, self).__init__(request)
-    
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
@@ -299,36 +329,56 @@ class HttpProtocol(ProxyProtocol):
         self.requri = "http://%s/%s" %  (hostinfo, path)
 
         if self.prepare_direct_response(request):
+            super(HttpProtocol, self).__init__(request, False)
             self.__socket = None
             return
-
+        else:
+            super(HttpProtocol, self).__init__(request)
+    
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
 
         args = request.headers
         args.pop( 'Accept-Encoding', None )
-        args.pop( 'Range', None )
+        assert not args.pop( 'Range', None )
+
+        # if expires < now: revalidate
+        # RFC 2616 14.9.4: Cache revalidation and reload controls
+        cache_control = args.pop( 'Cache-Control', None )
+        # HTTP/1.0 compat
+        #if not cache_control:
+        #    cache_control = args.pop( 'Pragma', None )
+        #    if cache_control:
+        #        assert cache_control.strip() == "no-cache"
+        #        args['Cache-Control'] = "no-cache"
+
         stat = self.cache.partial() or self.cache.full()
-        if stat:
+        if stat: # and cached_resource
             size = stat.st_size
             mtime = time.strftime(
                 Params.TIMEFMT, time.gmtime( stat.st_mtime ) )
             if self.cache.partial():
                 Params.log('Requesting resume of partial file in cache: '
-                    '%i bytes, %s' % ( size, mtime ), 1)
+                    '%i bytes, %s' % ( size, mtime ))
                 args[ 'Range' ] = 'bytes=%i-' % size
                 args[ 'If-Range' ] = mtime
-            else:
+            else:#if cache_reload:
                 Params.log('Checking complete file in cache: %i bytes, %s' %
                     ( size, mtime ), 1)
+                # XXX: treat as unspecified end-to-end revalidation
+                # should detect existing cache-validating conditional?
+                # FIXME: Validate client validator against cached entry
                 args[ 'If-Modified-Since' ] = mtime
 
-        # TODO: Store relationship with referer
-        #referer = args.pop('Referer', None)
-        relationtype = args.pop('X-Relationship', None)
-        #self.descriptors.relate(relationtype, self.requri, referer)
 
-        Params.log("Connecting to %s:%s" % request.hostinfo)
+        # TODO: Store relationship with referer
+        relationtype = args.pop('X-Relationship', None)
+        referer = args.get('Referer', None)
+        if referer:
+            #self.descriptors.relate(relationtype, self.requri, referer)
+            pass
+
+        #Params.log("HttpProtocol: Connecting to %s:%s" % request.hostinfo, 2)
         self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
@@ -369,12 +419,12 @@ class HttpProtocol(ProxyProtocol):
 
         line = chunk[ :eol ]
         if ':' in line:
-            Params.log('> '+ line.rstrip(), 1)
+            Params.log('> '+ line.rstrip(), 2)
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known request header"% key)
+                Params.log("Warning: %r not a known request header"% key, 1)
                 key = key.title() # XXX: bad? :)
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
@@ -383,7 +433,7 @@ class HttpProtocol(ProxyProtocol):
         elif line in ( '\r\n', '\n' ):
             self.__parse = None
         else:
-            Params.log('Ignored header line: '+ line)
+            Params.log('Warning: ignored header line: '+ line)
 
         return eol
 
@@ -393,7 +443,8 @@ class HttpProtocol(ProxyProtocol):
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
         assert chunk, 'server closed connection before sending '\
-                        'a complete message header'
+                'a complete message header, '\
+                'parser: %r, data: %r' % (self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
         while self.__parse:
             bytes = self.__parse( self, self.__recvbuf )
@@ -407,8 +458,13 @@ class HttpProtocol(ProxyProtocol):
             return
 
         # Process and update headers before deferring to response class
-        if self.__status == HTTP.OK:
+        # 2xx, 3xx
+        if self.__status in (HTTP.OK, HTTP.MULTIPLE_CHOICES):
+                #HTTP.MOVED_PERMANENTLY, HTTP.FOUND, ):
+
+                #location = self.__args['Location']
             self.cache.open_new()
+            assert self.cache.partial()
             # FIXME: load http entity, perhaps response headers from shelve
             #self.descriptors.map_path(self.cache.path, uriref)
             #self.descriptors.put(uriref, 
@@ -419,7 +475,7 @@ class HttpProtocol(ProxyProtocol):
                     self.mtime = calendar.timegm( time.strptime(
                         self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
                 except:
-                    Params.log('Illegal time format in Last-Modified: %s.' %
+                    Params.log('Error: illegal time format in Last-Modified: %s.' %
                         self.__args[ 'Last-Modified' ])
                     # XXX: Try again, should make a list of alternate (but invalid) date formats
                     try:
@@ -433,7 +489,8 @@ class HttpProtocol(ProxyProtocol):
                                 self.__args[ 'Last-Modified' ],
                                 Params.ALTTIMEFMT ) )
                         except:
-                            pass
+                            Params.log('Fatal: unable to parse Last-Modified: %s.' %
+                                self.__args[ 'Last-Modified' ])
             if 'Content-Length' in self.__args:
                 self.size = int( self.__args[ 'Content-Length' ] )
             if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
@@ -444,38 +501,42 @@ class HttpProtocol(ProxyProtocol):
         elif self.__status == HTTP.PARTIAL_CONTENT and self.cache.partial():
             byterange = self.__args.pop( 'Content-Range', 'none specified' )
             assert byterange.startswith( 'bytes ' ), \
-                'unhandled content-range type: %s' % byterange
+                    'unhandled content-range type: %s' % byterange
             byterange, size = byterange[ 6: ].split( '/' )
             beg, end = byterange.split( '-' )
             self.size = int( size )
             assert self.size == int( end ) + 1, (self.size, end)
             self.cache.open_partial( int( beg ) )
+            assert self.cache.partial()
             if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-              self.Response = Response.ChunkedDataResponse
+                self.Response = Response.ChunkedDataResponse
             else:
-              self.Response = Response.DataResponse
+                self.Response = Response.DataResponse
 
-        elif self.__status == HTTP.NOT_MODIFIED and self.cache.full():
-            # FIXME: update last-modified?
-            self.cache.open_full()
-            self.Response = Response.DataResponse
+        # 3xx
+        elif self.__status == HTTP.NOT_MODIFIED:
+            if not self.cache.full():
+                assert not self.cache.partial()
+                Params.log("Warning: Cache miss: %s" % self.requri)
+                self.Response = Response.BlindResponse
+            else:
+                self.cache.open_full()
+                self.Response = Response.DataResponse
 
+        # 4xx
         elif self.__status in ( HTTP.FORBIDDEN, \
                     HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) \
                     and self.cache.partial():
+            Params.log("Warning: Cache corrupted?: %s" % self.requri)
             self.cache.remove_partial()
-            self.Response = Response.BlindResponse
-
-        elif self.__status in (HTTP.FOUND, HTTP.MOVED_TEMPORARILY,
-                    HTTP.TEMPORARY_REDIRECT):
-            location = self.__args['Location']
             self.Response = Response.BlindResponse
 
         else:
             self.Response = Response.BlindResponse
 
+
         # Cache headers
-        if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
+        if self.cache.full() or self.cache.partial():#cached_resource:
             pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
             #httpentityspec = Resource.HTTPEntity(self.__args)
             #self.descriptors.put(uriref, httpentityspec.toMetalink())
