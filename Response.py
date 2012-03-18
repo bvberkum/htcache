@@ -1,6 +1,8 @@
 import hashlib, socket, time, traceback
 
 import Params, fiber
+from HTTP import HTTP
+
 
 
 class BlindResponse:
@@ -18,8 +20,8 @@ class BlindResponse:
     def send( self, sock ):
 
         assert not self.Done
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
     def needwait( self ):
 
@@ -88,15 +90,6 @@ class DataResponse:
                 args[ 'Content-Length' ] = str( self.__protocol.size )
             if 'Content-Type' in cached_headers:
                 args['Content-Type'] = cached_headers['Content-Type']
-            #for regex, repl in Params.REWRITE:
-            #    print "Replace", repl
-            #    if regex.match(mediatype):
-            #        self.content_rewrite.append(regex, repl)
-            #        print "Rewriting HTML using %r, %r" % (regex, repl)
-            #        self.__args.pop('Content-MD5', None)
-            #        self.size += len(repl)
-            #        self.__args['Content-Length'] = self.size
-            #        break
         elif self.__end >= 0:
             head = 'HTTP/1.1 206 Partial Content'
             args[ 'Content-Length' ] = str( self.__end - self.__pos )
@@ -138,13 +131,21 @@ class DataResponse:
 
         assert not self.Done
         if self.__sendbuf:
-            bytes = sock.send( self.__sendbuf )
-            self.__sendbuf = self.__sendbuf[ bytes: ]
+            bytecnt = sock.send( self.__sendbuf )
+            self.__sendbuf = self.__sendbuf[ bytecnt: ]
         else:
-            bytes = Params.MAXCHUNK
-            if 0 <= self.__end < self.__pos + bytes:
-                bytes = self.__end - self.__pos
-            chunk = self.__protocol.read( self.__pos, bytes )
+            bytecnt = Params.MAXCHUNK
+            if 0 <= self.__end < self.__pos + bytecnt:
+                bytecnt = self.__end - self.__pos
+
+            chunk = self.__protocol.read( self.__pos, bytecnt )
+            if self.__protocol.rewrite:
+                for line, regex in Params.REWRITE:
+                    if regex.search(chunk):
+                        repl = ' '.join(line.split(' ')[1:])
+                        new_chunk, count = regex.subn(repl, chunk)
+                        self.__protocol.size += len(new_chunk)-len(chunk)
+                        chunk = new_chunk
             try:
                 self.__pos += sock.send( chunk )
             except:
@@ -248,8 +249,8 @@ class BlockedContentResponse:
 
     def send( self, sock ):
         assert not self.Done
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
         if not self.__sendbuf:
             self.Done = True
 
@@ -278,8 +279,8 @@ class BlockedImageContentResponse:
 
     def send( self, sock ):
         assert not self.Done
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
         if not self.__sendbuf:
             self.Done = True
 
@@ -295,27 +296,33 @@ class BlockedImageContentResponse:
 
 class DirectResponse:
 
+    Done = False
+
     """
     HTCache generated response for request directly to 
     proxy port.
     """
 
-    Done = False
-
     urlmap = {
         'reload': 'reload_proxy',
+        'htcache.css': 'serve_stylesheet',
         'js-menu': 'serve_js_menu',
         'echo': 'serve_echo',
-        'page-info': 'serve_info',
+        'page-info': 'serve_descriptor',
         'info': 'serve_params',
+        'browse': 'serve_frame',
     }
 
-    def __init__( self, protocol, request, status='200 Okeydokey, here it comes'):
-        path = request.envelope[1]
-        if path not in self.urlmap:
-            status = '404 No such resource'
+    def __init__( self, protocol, request, status='200 Okeydokey, here it comes', path=None):
+        if status[0] == '2':
+            path = request.envelope[1]
+            if '?' in path:
+                path = path.split('?')[0]
+            if path not in self.urlmap:
+                status = '404 No such resource'
+                path = 'echo'
+        else:
             path = 'echo'
-
         self.action = self.urlmap[path]
         getattr(self, self.action)(status, protocol, request)
 
@@ -349,10 +356,46 @@ class DirectResponse:
       
     def reload_proxy(self, status, protocol, request):
         self.prepare_response(status, "Reloading gateway")
-       
+
+    def serve_stylesheet(self, status, protocol, request):
+        cssdata = open(Params.PROXY_INJECT_CSS).read()
+        self.__sendbuf = "\r\n".join( [ 
+            "HTTP/1.1 %s" % status,
+            "Content-Type: text/css\r\n",
+            cssdata
+        ])
+
+    def serve_frame(self, status, protocol, request):
+        status = '200 Have A Look'
+        host = "%s:%s" % request.hostinfo
+        uri = '?'.join(request.envelope[1].split('?')[1:])
+        lines = [
+            '<html>',
+            '<head><title>HTCache browser</title>',
+            '<link rel="stylesheet" type="text/css" href="http://'+host+'/htcache.css" />',
+            '</head>',
+            '<body id="htcache-browse">',
+            '<pre>',
+            '</pre>',
+            '<iframe src="'+uri+'" />',
+            '</body>',
+            '</html>']
+
+        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/html\r\n'\
+                '\r\n%s' % ( status, '\n'.join( lines ) )
+
     def serve_params(self, status, protocol, request):
         msg = Params.format_info()
         self.prepare_response(status, msg)
+
+    def serve_descriptor(self, status, protocol, request):
+        self.prepare_response("299 TEST", request.recvbuf())#str(dir(request)))
+        return
+        if hasattr(protocol, 'cache') and protocol.cache:
+            descr = protocol.get_descriptor()
+            self.prepare_response(status, Params.json_write(descr))
+        else:
+            self.prepare_response("404 No Data", "No data for %s"%protocol.requri)
 
     def serve_js_menu(self, status, protocol, request):
         jsdata = open(Params.PROXY_INJECT_JS).read()
@@ -375,8 +418,8 @@ class DirectResponse:
 
     def send( self, sock ):
         assert not self.Done
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
         if not self.__sendbuf:
             self.Done = True
 

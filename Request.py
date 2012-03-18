@@ -1,7 +1,7 @@
 import os, socket, time
 
 import Params, Protocol
-from Protocol import HTTP
+from HTTP import HTTP
 
 
 

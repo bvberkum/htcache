@@ -1,6 +1,7 @@
 import calendar, os, time, socket, re
 
 import Params, Response, Resource, Cache
+from HTTP import HTTP
 
 
 
@@ -39,8 +40,8 @@ class BlindProtocol:
         return True
 
     def send( self, sock ):
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
         if not self.__sendbuf:
           self.Response = Response.BlindResponse
 
@@ -81,7 +82,7 @@ class ProxyProtocol(object):
         # Prepare default cache location
         cache_location = '%s:%i/%s' % (request.hostinfo +
                 (request.envelope[1],))
-        
+       
         # Try Join rules
         url = request.hostinfo[0] +'/'+ request.envelope[1]
         for line, regex in Params.JOIN:
@@ -97,6 +98,11 @@ class ProxyProtocol(object):
 
         # Get descriptor storage reference
         self.descriptors = Resource.get_backend()
+
+        #if self.has_descriptor() and not (self.cache.full() or
+        #        self.cache.partial()):
+        #    pass#del self.descriptors[self.cache.path]
+        #    #Params.log("Removed stale descriptor")
 
     def has_response(self):
         return self.__status and self.__message
@@ -192,131 +198,9 @@ class ProxyProtocol(object):
 #        del self.cache
 
 
-class HTTP:
-
-    OK = 200
-    PARTIAL_CONTENT = 206
-    MULTIPLE_CHOICES = 300 # Variant resource, see alternatives list
-    MOVED_PERMANENTLY = 301 # Located elsewhere
-    FOUND = 302 # Moved permanently
-    SEE_OTHER = 303 # Resource for request located elsewhere using GET
-    NOT_MODIFIED = 304
-    #USE_PROXY = 305
-    _ = 306 # Reserved
-    TEMPORARY_REDIRECT = 307 # Same as 302,
-    # added to explicitly contrast with 302 mistreated as 303
-
-    FORBIDDEN = 403
-    GONE = 410
-    REQUEST_RANGE_NOT_STATISFIABLE = 416
-
-    Entity_Headers =  (
-        # RFC 2616
-        'Allow',
-        'Content-Encoding',
-        'Content-Language',
-        'Content-Length',
-        'Content-Location',
-        'Content-MD5',
-        'Content-Range',
-        'Content-Type',
-        'Expires',
-        'Last-Modified',
-    # extension-header
-    )
-    Request_Headers = (
-        'Cookie',
-        # RFC 2616
-        'Accept',
-        'Accept-Charset',
-        'Accept-Encoding',
-        'Accept-Language',
-        'Authorization',
-        'Expect',
-        'From',
-        'Host',
-        'If-Match',
-        'If-Modified-Since',
-        'If-None-Match',
-        'If-Range',
-        'If-Unmodified-Since',
-        'Max-Forwards',
-        'Proxy-Authorization',
-        'Range',
-        'Referer',
-        'TE',
-        'User-Agent',
-        # RFC 2295
-        'Accept-Features',
-        'Negotiate',
-    )
-    Response_Headers = (
-        'Via',
-        'Set-Cookie',
-        'Location',
-        'Transfer-Encoding',
-        'X-Varnish',
-        # RFC 2616
-        'Accept-Ranges',
-        'Age',
-        'ETag',
-        'Location',
-        'Proxy-Authenticate',
-        'Retry-After',
-        'Server',
-        'Vary',
-        'WWW-Authenticate',
-        # RFC 2295
-        'Alternates',
-        'TCN',
-        'Variant-Vary',
-    )
-    Cache_Headers = (
-        'ETag',
-    )
-
-
-    Message_Headers = Request_Headers + Response_Headers +\
-            Entity_Headers + \
-            Cache_Headers + (
-                    # Generic headers
-                    # RFC 2616
-                    'Date',
-                    'Cache-Control', # RFC 2616 14.9
-                    'Pragma', # RFC 2616 14.32
-                    'Proxy-Connection',
-                    'Proxy-Authorization',
-                    'Connection',
-                    'Keep-Alive',
-                    # Extension and msc. unsorted headers
-                    'X-Server',
-                    'X-Cache',
-                    'X-Cache-Hit',
-                    'X-Cache-Hits',
-                    'X-Content-Type-Options',
-                    'X-Powered-By',
-                    'X-Relationship', # used by htcache
-                    'X-Varnish',
-                    'Status',
-                    'X-AspNet-Version',
-                    'P3P',
-                    'Origin',
-                    'X-Requested-With',
-                    'Content-Disposition',
-                    'X-Frame-Options',
-                    'X-XSS-Protection',
-                    'VTag',
-                )
-    """
-    For information on other registered HTTP headers, see RFC 4229.
-    """
-
-    # use these lists to create a mapping to retrieve the properly cased string.
-    Header_Map = dict([(k.lower(), k) for k in Message_Headers ])
-
-
 class HttpProtocol(ProxyProtocol):
 
+    rewrite = None
     def __init__( self, request ):
         host, port = request.hostinfo
         verb, path, proto = request.envelope
@@ -391,8 +275,8 @@ class HttpProtocol(ProxyProtocol):
     def send( self, sock ):
         assert self.hasdata(), "no data"
 
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
     def __parse_head( self, chunk ):
         eol = chunk.find( '\n' ) + 1
@@ -447,16 +331,19 @@ class HttpProtocol(ProxyProtocol):
                 'parser: %r, data: %r' % (self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
         while self.__parse:
-            bytes = self.__parse( self, self.__recvbuf )
-            if not bytes:
+            bytecnt = self.__parse( self, self.__recvbuf )
+            if not bytecnt:
                 sock.recv( len( chunk ) )
                 return
-            self.__recvbuf = self.__recvbuf[ bytes: ]
+            self.__recvbuf = self.__recvbuf[ bytecnt: ]
         sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
         if self.prepare_nocache_response():
             return
 
+        mediatype = self.__args.get('Content-Type', None)
+        if mediatype and 'html' in mediatype:
+            self.rewrite = True
         # Process and update headers before deferring to response class
         # 2xx, 3xx
         if self.__status in (HTTP.OK, HTTP.MULTIPLE_CHOICES):
@@ -582,8 +469,8 @@ class FtpProtocol( ProxyProtocol ):
     def send( self, sock ):
         assert self.hasdata()
 
-        bytes = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytes: ]
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
     def recv( self, sock ):
         assert not self.hasdata()

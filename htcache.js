@@ -246,18 +246,18 @@ HTCache.onKeyUp = function(evt) {
 	} else if(evt.keyCode == 109) HTCache.updateLayout(); else if(evt.keyCode == 61) HTCache.updateLayout();
 }
 HTCache.onLoad = function(evt) {
-	var htcache_proxy_menu = js.Lib.document.getElementById("htcache_proxy_menu");
 	var proxy_hostinfo = "dm:8080";
 	var xhr = new js.XMLHttpRequest();
-	xhr.setRequestHeader("Referer",js.Lib.window.location.href);
+	var loc = js.Lib.window.location.href.toString();
 	xhr.onreadystatechange = function() {
 		if(xhr.readyState == 4) {
 			var data = js.Lib.eval(xhr.responseText);
-			window.console.log(data);
-		}
+			window.console.log("Response: " + data);
+		} else window.console.log("Readystate " + xhr.readyState);
 	};
-	xhr.open("GET","http://" + proxy_hostinfo + "/page-info",true);
-	HTCache.updateLayout();
+	xhr.setRequestHeader("Referer",loc);
+	xhr.open("get","http://" + proxy_hostinfo + "/page-info",true);
+	window.console.log(xhr);
 }
 HTCache.onResize = function(evt) {
 	HTCache.updateLayout();

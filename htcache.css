@@ -1,0 +1,9 @@
+body#htcache-browse {
+    padding: 0;
+    margin: 0;
+}
+body#htcache-browse iframe {
+    width: 99.3%;
+    height: 95%;
+    margin: 3% 0.25% 1% 0.25%;
+}

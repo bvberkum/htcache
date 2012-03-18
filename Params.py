@@ -52,6 +52,7 @@ RESOURCES = DATA_DIR+'resource.db'
 HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
 PROXY_INJECT_JS = DATA_DIR+'htcache.js'
+PROXY_INJECT_CSS = DATA_DIR+'htcache.css'
 # query params
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
@@ -181,7 +182,7 @@ def parse_joinlist(fpath=JOIN_FILE):
             open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
 
 def parse_rewritelist(fpath=REWRITE_FILE):
-    global REWRITE_FILE
+    global REWRITE
     REWRITE = []
     if os.path.isfile(fpath):
         REWRITE.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in

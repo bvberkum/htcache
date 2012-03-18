@@ -1,38 +1,40 @@
-./Protocol.py:326:        # TODO: Store relationship with referer
-./Protocol.py:378:                key = key.title() # XXX: bad? :)
-./Protocol.py:412:            # FIXME: load http entity, perhaps response headers from shelve
-./Protocol.py:424:                    # XXX: Try again, should make a list of alternate (but invalid) date formats
-./Protocol.py:459:            # FIXME: update last-modified?
-./Protocol.py:479:            pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
-./Resource.py:15:# XXX: Dont use cjson, its buggy, see comments at
-./Resource.py:73:            # TODO: srcrefs, mediatype, charset, language, 
-./Resource.py:238:        # TODO: documents
+./Protocol.py:252:                # XXX: treat as unspecified end-to-end revalidation
+./Protocol.py:254:                # FIXME: Validate client validator against cached entry
+./Protocol.py:258:        # TODO: Store relationship with referer
+./Protocol.py:312:                key = key.title() # XXX: bad? :)
+./Protocol.py:355:            # FIXME: load http entity, perhaps response headers from shelve
+./Protocol.py:367:                    # XXX: Try again, should make a list of alternate (but invalid) date formats
+./Protocol.py:427:            pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
+./Resource.py:62:            # TODO: srcrefs, mediatype, charset, language, 
+./Resource.py:227:        # TODO: documents
 ./CHANGELOG.rst:1:TODO htcache version 1.0 (planned)
 ./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
 ./Cache.py:53:            "FIXME: implement saving in other roots"
 ./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
 ./init.sh:45:        # TODO: check htcache status before redirecting output to lock
-./Response.py:52:        # TODO: on/off: self.__hash = hashlib.sha1()
-./Response.py:67:          # TODO: parse mediatype, charset, language..
-./Response.py:144:        # XXX: store hash for new recv'd content
-./Response.py:278:            # XXX: move this to real direct protocol
+./Response.py:55:        # TODO: on/off: 
+./Response.py:70:          # TODO: parse mediatype, charset, language..
+./Response.py:162:        # TODO: store hash for new recv'd content
+./control.rst:21:        May cache and serve. XXX: while fresh?
 ./HTCache.hx:34:        // XXX: figure out a way to set global cookie? iframe from proxy?
+./.git/COMMIT_EDITMSG:30:#	modified:   TODO.list
 ./Request.py:55:                key = key.title() # XXX: bad? :)
 ./Request.py:56:            # XXX: this should join headers like Via handling does later on, but
-./Request.py:113:        # TODO: keep entity headers, strip other message headers from args
-./Request.py:183:        # XXX: used before protocol is determined,  assert self.Protocol
-./htcache:78:# XXX: more neat in fiber than here, move.
-./Params.py:16:ONLINE = True # XXX:bvb: useless..
-./Params.py:57:     --limit RATE    FIXME: limit download rate at a fixed K/s
-./Params.py:67:  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
-./Params.py:109:        pass # XXX
+./Request.py:115:        # TODO: keep entity headers, strip other message headers from args
+./Request.py:185:        # XXX: used before protocol is determined,  assert self.Protocol
+./htcache:76:# XXX: more neat in fiber than here, move.
+./Params.py:2:# XXX: Dont use cjson, its buggy, see comments at
+./Params.py:26:ONLINE = True # XXX:bvb: useless..
+./Params.py:70:     --limit RATE    FIXME: limit download rate at a fixed K/s
+./Params.py:80:  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+./Params.py:122:        pass # XXX
 ./Rules.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
 ./Rules.mk:18:TRGT                += $/TODO.list $/htcache.js
 ./Rules.mk:33:$/TODO.list: ./
 ./Rules.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
-./unit-test:87:# XXX: could not figure out a way to make wget save (headers) for non 200
+./unit-test:86:# XXX: could not figure out a way to make wget save (headers) for non 200
 ./main.rst:15:        - FIXME: Not working!
 ./main.rst:17:        - TODO: contains unused? CachedResource code , integrate or  remove
 ./main.rst:25:        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
-./main.rst:163:  the first argument being prefixed with '?'. FIXME: does not solve anything?
-./main.rst:195:TODO: a file-based header storage or perhaps even an Apache mod_asis
+./main.rst:165:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./main.rst:197:TODO: a file-based header storage or perhaps even an Apache mod_asis
