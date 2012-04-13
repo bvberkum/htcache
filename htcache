@@ -2,7 +2,7 @@
 import sys, time, weakref
 
 import Params, Protocol, Request, Response, fiber
-import Resource, Cache, caches
+import Resource
 
 
 DOWNLOADS = weakref.WeakValueDictionary()
@@ -79,4 +79,3 @@ while True:
                         mod = reload(mod)
         except Exception, e:
                 break
-

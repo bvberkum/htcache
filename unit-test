@@ -11,6 +11,7 @@ URL_HTTP="www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.
 URL_CHUNKED="jigsaw.w3.org:80/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/unittest.$PORT"
+RESOURCES='resources.db'
 
 if test -z "$1"; then
   while $0 $((++i)); do true; done
@@ -24,7 +25,7 @@ function startserver
   test -e $PID && kill -int `cat $PID`
   rm -rf $PREFIX.*
   mkdir $PREFIX.cache
-  if ! ./htcache -p $PORT -r $PREFIX.cache -v -v $@ --daemon $PREFIX.log > $PID; then
+  if ! ./htcache -p $PORT -r $PREFIX.cache -f $RESOURCES -v -v $@ --daemon $PREFIX.log > $PID; then
     cat $PID
     rm $PID
     exit 1
@@ -287,8 +288,10 @@ case $1 in
     check_log "refusing to connect to server" "AssertionError: operating in off-line mode"
     stopserver
     ;;
+
   *)
     exit 1
     ;;
 esac
+
 exit 0

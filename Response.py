@@ -1,5 +1,4 @@
-import sys, time, traceback, socket, hashlib
-from pprint import pformat
+import hashlib, socket, time, traceback
 
 import Params, fiber
 
@@ -58,9 +57,10 @@ class DataResponse:
             args = {}
 
         #if protocol.has_descriptor():
+        #  descr = protocol.descriptors[protocol.cache.path]
         #  descr = protocol.get_descriptor()
         #  srcrefs, mediatype, charset, languages, features = descr
-        #  Params.log("Stored %r" % (descr,))
+        #  Params.log("Descriptor: %s" % pformat(descr))
         #  # Abuse feature dict to store headers
         #  # TODO: parse mediatype, charset, language..
         #  if descr[-1]:
@@ -194,11 +194,12 @@ class BlockedContentResponse:
     Done = False
 
     def __init__(self, status, request):
+        url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
                 open(Params.HTML_PLACEHOLDER).read() % { 
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
-                        'location': '%s:%i/%s' % request.url(),
+                        'location': '%s:%i/%s' % url,
                         'software': 'htcache/0.1' }
 
     def hasdata( self ):
@@ -251,6 +252,7 @@ class BlockedImageContentResponse:
 
 
 class DirectResponse:
+
     """
     Echo request header in response body.
     """
@@ -262,8 +264,14 @@ class DirectResponse:
     }
 
     def __init__( self, status, request ):
-        path = request.url()[2]
-        self.action = None
+        lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
+        head, body = request.recvbuf().split( '\r\n\r\n', 1 )
+        for line in head.splitlines():
+            lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
+        if body:
+            lines.append( '+ Body: %i bytes' % len( body ) )
+        lines.append( '' )
+        lines.append( traceback.format_exc() )
 
         if path in self.urlmap:
             self.action = self.urlmap[path]
@@ -292,11 +300,9 @@ class DirectResponse:
                 status, '\n'.join( lines ) )
 
     def hasdata( self ):
-
         return bool( self.__sendbuf )
 
     def send( self, sock ):
-
         assert not self.Done
         bytes = sock.send( self.__sendbuf )
         self.__sendbuf = self.__sendbuf[ bytes: ]
@@ -309,25 +315,21 @@ class DirectResponse:
             raise fiber.Restart()
 
     def needwait( self ):
-
         return False
 
     def recv( self ):
-
         raise AssertionError
 
 
 class NotFoundResponse( DirectResponse ):
 
     def __init__( self, protocol, request ):
-
         DirectResponse.__init__( self, '404 Not Found', request )
 
 
 class ExceptionResponse( DirectResponse ):
 
     def __init__( self, request ):
-
         traceback.print_exc()
         DirectResponse.__init__( self, '500 Internal Server Error', request )
 

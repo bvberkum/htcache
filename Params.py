@@ -1,4 +1,4 @@
-import re, sys, os, socket
+import os, re, socket, sys
 
 
 _args = iter( sys.argv )
@@ -23,7 +23,6 @@ SORT = []
 SORT_FILE = '/etc/htcache/rules.sort'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
 IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
-#CACHE = 'Cache.File'
 CACHE = 'caches.FileTree'
 ARCHIVE = ''
 ENCODE_PATHSEP = ''
@@ -69,62 +68,41 @@ USAGE = '''usage: %(PROG)s [options]
 
   -h --help          show this help message and exit
 
-proxy options:
-
+Proxy:
   -p --port PORT     listen on this port for incoming connections, default %(PORT)i
   -r --root DIR      set cache root directory, default current: %(ROOT)s
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
-     --limit RATE    limit download rate at a fixed K/s
+     --limit RATE    FIXME: limit download rate at a fixed K/s
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
-plugins:
-
-  -c --cache TYPE    use module for caching, default %(CACHE)s. 
-  -b --backend REF   initialize metadata backend from reference, default 
+Cache:
+  -f RESOURCES
+  -c --cache TYPE    use module for caching, default %(CACHE)s.
+  -b --backend REF   initialize metadata backend from reference, default
                      %(BACKEND)s.
 
-cache options:
+Rules:
+  -d --drop FILE     filter requests for URI's based on regex patterns.
+                     read line for line from file, default %(DROP_FILE)s.
+  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
 
-  -a --archive FMT   prefix cache location by a formatted datetime. 
-                     ie. store a new copy every hour, day, etc. 
-  -D --nodir SEP     replace unix path separator, ie. don't create a directory
-                     tree. does not encode `archive` prefix.
-  TODO --encode query sep                   
-
-proxy rules:
-
-  -d --drop FILE     filter requests for URI's based on regex patterns. 
-                     read line for line from file, default %(DROP)s.
-  TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
-  -s --sort SORT     sort requests based on regex, directory-name pairs from file.
-                     unmatched requests are cached normally.
-
-misc. proxy options:
-
-  -6 --ipv6          try ipv6 addresses if available
-  -s --sha1sum DIR   maintain an index with the SHA1 checksum for each resource
-  -t --timeout SEC   break connection after so many seconds of inactivity, 
+Misc.:
+  -t --timeout SEC   break connection after so many seconds of inactivity,
                      default %(TIMEOUT)i
+  -6 --ipv6          try ipv6 addresses if available
   -v --verbose       increase output, use twice to show http headers
 
 
 See the documentation in ReadMe regarding configuration of the proxy. The
 following options don't run the proxy but access the cache and descriptor backend::
 
-cache maintenance:
-
-     TODO --prune-stale
-                     Delete outdated cached resources.
-     TODO --prune-gone
-                     Remove resources no longer online.
-
-resource queries:
+Resources:
      --print-info FILE
      --print-all-info
                      Print the resource record(s) for (each) cache location,
-                     then exit. 
+                     then exit.
      --print-record
                      Print all record info; tab separated, one per line.
                      This is the default.
@@ -139,11 +117,13 @@ resource queries:
      --print-audio
      --print-images
                      Search through predefined list of content-types.
-     
-resource maintenance:     
+
+Maintenance:
+     --prune-stale   TODO: Delete outdated cached resources.
+     --prune-gone    TODO: Remove resources no longer online.
      TODO --check-exists
                      Prune outdated resources or resources that are no longer online.
-                     
+
      TODO --check-encodings
      TODO --check-languages
      TODO --check-mediatypes
@@ -180,29 +160,15 @@ for _arg in _args:
             sys.exit( 'Error: %s requires an cache type argument' % _arg )
     elif _arg in ( '-d', '--drop' ):
         try:
-            DROP = os.path.realpath( _args.next() )
+            DROP_FILE = os.path.realpath(_args.next())
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-n', '--nocache' ):
         try:
-            NOCACHE = os.path.realpath( _args.next() )
-            #assert os.path.exists(NOCACHE)
+            NOCACHE_FILE = os.path.realpath(_args.next())
+            #assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
-    elif _arg in ( '-s', '--sort' ):
-        try:
-            SORT = os.path.realpath( _args.next() )
-            #assert os.path.exists(SORT)
-        except:
-            sys.exit( 'Error: %s requires an filename argument' % _arg )
-    elif _arg in ( '-s', '--sha1sum' ):
-        try:
-            ROOT = os.path.realpath( _args.next() ) + os.sep
-            assert os.path.isdir( ROOT )
-        except StopIteration:
-            sys.exit( 'Error: %s requires a directory argument' % _arg )
-        except:
-            sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
     elif _arg in ( '-r', '--root' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep
@@ -211,10 +177,6 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a directory argument' % _arg )
         except:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
-    elif _arg in ( '-a', '--archive' ):
-        ARCHIVE = _args.next()
-    elif _arg in ( '-D', '--nodir' ):
-        ENCODE_PATHSEP = _args.next()
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
     elif _arg in ( '-t', '--timeout' ):
@@ -225,8 +187,6 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
     elif _arg in ( '-6', '--ipv6' ):
         FAMILY = socket.AF_UNSPEC
-#  elif _arg == '--flat':
-#    FLAT = True
     elif _arg == '--static':
         STATIC = True
     elif _arg == '--offline':
@@ -241,54 +201,8 @@ for _arg in _args:
         LOG = _args.next()
     elif _arg == '--debug':
         DEBUG = True
-
-# resource queries
-    elif _arg == '--print-info':
-        PRINT_RECORD.append(_args.next())
-    elif _arg == '--print-all-info':  
-        PRINT_ALLRECORDS = True  
-    #elif '--print-record'  
-    #elif '--print-mode'  
-    #elif '--print-path'  
-    #elif '--print-url'  
-    elif _arg == '--find-info':  
-        args = _args.next()
-        _find={}
-        for a in args.split(','):
-            p = a.find(':')
-            k, a = a[:p], a[p+1:]
-            if ':' in a and not k == 'srcref':
-                p = a.find(':')
-                k2, a = a[:p], a[p+1:]
-                if k not in _find:
-                    _find[k] = {}
-                _find[k][k2] = a
-            else:
-                _find[k] = a
-        FIND_RECORDS.update(_find)
-    elif _arg.startswith('--print-'):
-        if _arg[8:] == 'documents':
-            PRINT_MEDIA.append('documents')
-        elif _arg[8:] == 'images':
-            PRINT_MEDIA.append('images')
-        elif _arg[8:] == 'audio':
-            PRINT_MEDIA.append('audio')
-        elif _arg[8:] == 'videos':
-            PRINT_MEDIA.append('videos')
-
-# cache maintenance
-    elif _arg.startswith('--prune-stale'):
-        pass
-
-# resource maintenance
-    elif _arg.startswith('--check-'):
-        if _arg[8:] == 'mediatypes':
-            CHECK_DESCRIPTOR.append('mediatypes')
-        elif _arg[8:] == 'encodings':
-            CHECK_DESCRIPTOR.append('encodings')
-        elif _arg[8:] == 'mediatypes':
-            CHECK_DESCRIPTOR.append('mediatypes')
-    #elif _arg == '--force-fix':
+    elif _arg == '-f':
+        RESOURCES = _args.next()
 
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
@@ -304,47 +218,13 @@ def parse_droplist(fpath=DROP_FILE):
     global DROP
     DROP = []
     if os.path.isfile(fpath):
-        DROP.extend([(p.strip(),re.compile(p.strip())) for p in
+        DROP.extend([(p.strip(), re.compile(p.strip())) for p in
             open(fpath).readlines() if not p.startswith('#')])
 
 def parse_nocache(fpath=NOCACHE_FILE):
     global NOCACHE
     NOCACHE = []
     if os.path.isfile(fpath):
-        NOCACHE.extend([(p.strip(),re.compile(p.strip())) for p in
+        NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
             open(fpath).readlines() if not p.startswith('#')])
-
-def split_csv(line):
-    line = line.strip()
-    if not line or line.startswith('#'):
-        return
-    values = []
-    vbuf = ''
-    Q = ('\'','\"')
-    inquote = False
-    for c in line:
-        if c in Q:
-            inquote = True
-        elif inquote:
-            if c in Q:
-                inquote = False
-            else:                
-                vbuf += c
-        elif c == ',' or c.isspace():
-            if vbuf:
-                values.append(vbuf)
-                vbuf = ''
-        else:
-            vbuf += c
-    if vbuf:
-        values.append(vbuf)
-        vbuf = ''
-    return values
-
-def parse_sort(fpath=SORT_FILE):
-    global SORT
-    SORT = {}
-    if os.path.isfile(fpath):
-        SORT.update([(p[1],re.compile(p[0])) for p in
-            map(split_csv, open(fpath).readlines()) if p])
 
