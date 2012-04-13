@@ -3,6 +3,8 @@ import os, re, socket, sys
 
 _args = iter( sys.argv )
 
+VERSION = 0.3
+
 # proxy params
 PROG = _args.next()
 PORT = 8080
@@ -17,6 +19,8 @@ LOG = False
 DEBUG = False
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
+JOIN = []
+JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
@@ -144,13 +148,37 @@ def parse_droplist(fpath=DROP_FILE):
     DROP = []
     if os.path.isfile(fpath):
         DROP.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if not p.startswith('#')])
+            open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 def parse_nocache(fpath=NOCACHE_FILE):
     global NOCACHE
     NOCACHE = []
     if os.path.isfile(fpath):
         NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if not p.startswith('#')])
+            open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 
+def parse_joinlist(fpath=JOIN_FILE):
+    global JOIN
+    JOIN = []
+    if os.path.isfile(fpath):
+        JOIN.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
+            open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
+
+
+def validate_joinlist(fpath=JOIN_FILE):
+    lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
+    for path in lines:
+        match = False
+        for line, regex in JOIN:
+            m = regex.match(line)
+            if m:
+                print 'Match', path, m.groups()
+                match = True
+        if not match:
+            print "Error: no match for", path
+
+
+if __name__ == '__main__':
+	parse_joinlist()
+	validate_joinlist()

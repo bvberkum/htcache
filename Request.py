@@ -1,6 +1,9 @@
 import os, socket, time
 
 import Params, Protocol
+from Protocol import HTTP
+
+
 
 
 class HttpRequest:
@@ -12,6 +15,10 @@ class HttpRequest:
         self.__recvbuf = ''
 
     def __parse_head( self, chunk ):
+        """
+        Start parsing request by splitting the envelope or request line,
+        defer to __parse_args.
+        """
 
         eol = chunk.find( '\n' ) + 1
         if eol == 0:
@@ -28,6 +35,10 @@ class HttpRequest:
         return eol
 
     def __parse_args( self, chunk ):
+        """
+        Parse request header. Defer to __parse_body if request entity body
+        is indicated.
+        """
 
         eol = chunk.find( '\n' ) + 1
         if eol == 0:
@@ -37,7 +48,14 @@ class HttpRequest:
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
-            key = key.title()
+            if key.lower() in HTTP.Header_Map:
+                key = HTTP.Header_Map[key.lower()]
+            else:
+                Params.log("Warning: %r not a known request header"% key)
+                key = key.title() # XXX: bad? :)
+            # XXX: this should join headers like Via handling does later on, but
+            # avoiding duplicates has not failed yet. See Protocol how to handle
+            # concatenation
             assert key not in self.__headers, 'duplicate key: %s' % key
             self.__headers[ key ] = value.strip()
         elif line in ( '\r\n', '\n' ):
@@ -52,11 +70,14 @@ class HttpRequest:
                 self.__body = None
                 self.__parse = None
         else:
-            Params.log('Ignored header line: %r' % line)
+            Params.log('Warning: Ignored header line: %r' % line)
 
         return eol
 
     def __parse_body( self, chunk ):
+        """
+        Parse request body.
+        """
 
         self.__body.write( chunk )
         assert self.__body.tell() <= self.__size, \
@@ -136,7 +157,8 @@ class HttpRequest:
                 Params.TIMEFMT, time.gmtime() )
 
         # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
-        via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
+        via = "1.1 %s:%i (htcache/%s)" % (socket.gethostname(), Params.PORT,
+                Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
             self.__headers['Via'] += ', '+ via
 

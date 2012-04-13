@@ -73,6 +73,14 @@ class ProxyProtocol(object):
                 (request.envelope[1],))
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
+        Params.log("%i joins"%len(Params.JOIN));
+        for line, regex in Params.JOIN:
+            url = request.hostinfo[0] +'/'+ request.envelope[1]
+            m = regex.match(url)
+            if m:
+                Params.log("Rewritten to: %s" % (m.groups(),))
+            #else:
+            #    Params.log("No match on %s for %s" % (url, line))
         self.descriptors = Resource.get_backend()
 
     def has_descriptor(self):
@@ -93,10 +101,10 @@ class ProxyProtocol(object):
         if port == 8080:
             Params.log("Direct request: %s" % path)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
-            self.Response = Response.DirectResponse
+            self.Response = Response.ErrorReportResponse
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
-        #self.Response = Response.DirectResponse
+        #self.Response = Response.ErrorReportResponse
         # Filter request by regex from patterns.drop
         filtered_path = "%s/%s" % (host, path)
         for pattern, compiled in Params.DROP:
@@ -198,6 +206,7 @@ class HTTP:
     # extension-header
     )
     Request_Headers = (
+        'Cookie',
         # RFC 2616
         'Accept',
         'Accept-Charset',
@@ -223,6 +232,11 @@ class HTTP:
         'Negotiate',
     )
     Response_Headers = (
+        'Via',
+        'Set-Cookie',
+        'Location',
+        'Transfer-Encoding',
+        'X-Varnish',
         # RFC 2616
         'Accept-Ranges',
         'Age',
@@ -238,22 +252,35 @@ class HTTP:
         'TCN',
         'Variant-Vary',
     )
-    Cache_Headers = Entity_Headers + (
+    Cache_Headers = (
         'ETag',
     )
 
 
     Message_Headers = Request_Headers + Response_Headers +\
-            Entity_Headers + (
+            Entity_Headers + \
+            Cache_Headers + (
                     # Generic headers
                     # RFC 2616
                     'Date',
                     'Cache-Control', # RFC 2616 14.9
                     'Pragma', # RFC 2616 14.32
+                    'Proxy-Connection',
+                    'Proxy-Authorization',
+                    'Connection',
+                    'Keep-Alive',
+                    # Extension headers
+                    'X-Content-Type-Options',
+                    'X-Powered-By',
+                    'X-Relationship', # used by htcache
+                    'X-Varnish',
                 )
     """
     For information on other registered HTTP headers, see RFC 4229.
     """
+
+    # use these lists to create a mapping to retrieve the properly cased string.
+    Header_Map = dict([(k.lower(), k) for k in Message_Headers ])
 
 
 class HttpProtocol(ProxyProtocol):
@@ -295,17 +322,18 @@ class HttpProtocol(ProxyProtocol):
                 Params.log('Checking complete file in cache: %i bytes, %s' %
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
+
+        # TODO: Store relationship with referer
+        #referer = args.pop('Referer', None)
+        relationtype = args.pop('X-Relationship', None)
+        #self.descriptors.relate(relationtype, self.requri, referer)
+
         Params.log("Connecting to %s:%s" % request.hostinfo)
         self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
         self.__parse = HttpProtocol.__parse_head
-
-        # TODO: Store relationship with referer
-        #referer = args.pop('Referer', None)
-        #relationtype = args.pop('X-Relationship', None)
-        #self.descriptors.relate(relationtype, self.requri, referer)
 
     def hasdata( self ):
         return bool( self.__sendbuf )
@@ -343,7 +371,11 @@ class HttpProtocol(ProxyProtocol):
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
-            # TODO: store in headerdict
+            if key.lower() in HTTP.Header_Map:
+                key = HTTP.Header_Map[key.lower()]
+            else:
+                Params.log("Warning: %r not a known request header"% key)
+                key = key.title() # XXX: bad? :)
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
             else:
