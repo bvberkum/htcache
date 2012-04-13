@@ -89,7 +89,7 @@ class AnyDBStorage(object):
         if not os.path.exists(path):
             try:
                 anydbm.open(path, 'n').close()
-            except Exception as e:
+            except Exception, e:
                 raise Exception("Unable to create new resource DB at <%s>: %s" %
                         (path, e))
         try:

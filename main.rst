@@ -8,26 +8,46 @@ It is developed for single user use but with certain acknowledgements works fine
 for real networked use. Notably there is no proxy authentication planned so all 
 functions are user available.
 
+master
+    stable
+        new_stable
+    development
+        new_development
+    dev*
+        :tests: 
+            - (pandora) 42 passed checks, 1 errors
+            - (iris) 40 passed checks, 3 errors
+
 branches
     master
-        - Follows new_stable
+        - XXX:Follows new_stable?
+        - FIXME: Not working
     stable
-        - FIXME: Not working!
+        - FIXME: Not working
         - SQL version
         - TODO: contains unused? CachedResource code , integrate or  remove
         - Proxy restart command
-    new_stable (current)
+    new_stable
         - Tests pass up to FTP tests.
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - Reload command
+        - Proxy restart command
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
         - trying to incoorporate gate.Resource, impl. htache.Resource
+        - started Resource
+        - started fiber.protocol
+        - request.hostinfo()
+        - request.envelope instead of reparsing req
     new_development
         - Running
         - Proxy restart command
+        - request.url()
+    dev (current)
+        - New reintegration of previous branches
+        - Now also running on iris (old debian) but with more errors.  
+
 
 .. contents::
 
@@ -41,7 +61,6 @@ Todo
    - don't cache Authorization response [14.8]
    - Cacheability: expiration [13.2]  
    - Cache-Control [14.9]
-
 
  - rules.join rewrites paths (to simplify, remove session id and other query meta vars)
  - rules.proc defers to external script.. or fifo? How to pass message: parsing should be easy enough to write ie. bash script.
@@ -60,11 +79,14 @@ Todo
    - browse static page
    - proxy config?
    - reload proxy
-    
+
+ - rules.sort prefixes paths
+ - would be nice to let addon's provide new rules.
+   Ex: user- or community provided favicons.
 
 Issues
- 1. Writing to client fails randomly, probably dropped connection
-    (eg. cancelled mouseovers)
+ 1. Dropped connections/failure to write to client happens, but does not appear
+    to be malignant. See Known errors 1.
  2. Some date headers in the wild still fail to parse.
  3. HTML placeholder served for all connections (e.g. also for flash, images)
  4. There is a version with other cl-options, it uses stdlib asyncore
@@ -74,6 +96,11 @@ Issues
     * http://web.archive.org/web/20071214200800/gertjan.freezope.org/replicator
 
  5. Embedded youtube does not work, but the site runs fine.
+
+Known errors
+ 1. Writing to client may fail sometimes because of a dropped connection. Ie.
+    Google Chrome establishes a pool of connections upon each request to speed
+    up browsing, which will time out and close if not used.
 
 Unittests
  No known failures.
@@ -107,16 +134,25 @@ htcache client/server flow::
                                 |
                                 |---blocked(1)-------->
                                 |---static(2)--------->
+                                |---direct(3)--------->
    server <------------normal---|
+          <------(4)rewritten---|
           <------*conditional---'
 
            --*normal----------> o
-                                |--*normal---------------->
-                                `--*nocache response(4)--->
+                                ~
+           ---rewritten(5)----> o
+                                |--*normal------------>
+                                |---rewritten(6)------>
+                                `--*nocache(7)-------->
 
-           ---not modified----> o--*cached---------------->
+           ---not modified----> o--*cached------------>
 
-           ---error-----------> o---blind----------------->
+           ---error-----------> o---blind------------->
+
+
+
+
 
    * indicates wether there may be partial entity-content transfer
 
@@ -127,11 +163,52 @@ responses are always served from cache and conditional requests may be.
 Beside these messages, also note the following special cases of request
 and response messages.
 
-1. blocked response                                  (rules.drop)
-4. blind response (uncached content)                 (rules.nocache)
+== ================================================= =======================
+                                                     Rules file
+-- ------------------------------------------------- -----------------------
+1. 'Blocked content' message                         rules.drop
+3. Rewritten request message                         rules,filter.req.sort
+4. Rewritten response message (cache rewritten)      rules,filter.res.sort
+5. Rewritten response message (cache original)       rules,filter.resp.sort
+6. Blind response (uncached)                         rules.nocache
+== ================================================= =======================
 
 See the section `Rule Syntax`_ for the exact syntax.
 
+Fiber
+~~~~~
+HTCache is a fork of http-replicator and the main script follows the same
+implementation using fibers. It has a bit more elaborated message handling::
+
+   HttpRequest ----> ProxyProtocol --------get--> DirectResponse (3)
+                      |            `----nocache-> Blocked(Image)ContentResponse (1)
+                      |            `--------ok--> DataResponse
+                      |            `--------ok--> RewrittenDataResponse (5,6)
+                      `- HttpProtocol ------ok--> (Chunked)DataResponse
+                      |               `--error--> BlindResponse
+                      `- FtpProtocol -----------> DataResponse
+                                     `----------> NotFoundResponse
+
+HttpRequest reads incoming request message and determines the protocol for the
+rest of the session. Protocol will wrap the incoming data, the parsed request
+header of that data and if needed send the actual message. Upon receiving a
+response it parses the message header and determines the appropiate response.
+
+TODO: Rewriting and content filtering is not implemented.
+
+Internal server
+~~~~~~~~~~~~~~~
+Beside serving in static mode (cached content directly from local storage, w/o
+server header), static responses may also include content generated by the proxy
+itself.
+
+/echo
+    Echo the request message.
+/reload
+    Reload the server, usefull while writing code.
+/htcache.js
+    The HTCache DHTML client may expose proxy functionality for retrieved
+    content. It is included by setting Params.DHTML_CLIENT.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -142,8 +219,10 @@ are given in the rewrite and rules files described before.
 The programs options are divided in three parts, the first group affects
 the proxy server, which is the default action.
 
-To manage the cached resources and their descriptors, additional
-query and maintenance options are provided. Note that maintenance may need
+User/system settings are provided using GNU/POSIX Command Line options.
+These are roughly divided in three parts; the first group affects
+the proxy server, which is the default action. The other two query or process
+cached data, and are usefull for maintenance. Note that maintenance may need
 exclusive write access to the cache and descriptor backends, meaning don't run
 with active proxy.
 
@@ -156,7 +235,7 @@ that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
 This can create problems with long filenames and the characters that appear
 in the various URL parts.
 
-Additional backends can deal with this issue ``--cache TYPE``).
+Additional backends can deal with this issue (``--cache TYPE``).
 The default backend was Cache.File which is compatible with ``wget -r`` but
 is inadequate for general use as web proxy. The new default caches.FileTreeQ
 combines some aspects desirable to deal with a wider range of resources.
@@ -170,7 +249,7 @@ combines some aspects desirable to deal with a wider range of resources.
   being hardcoded to 256 characters.
 - caches.FileTree - combines above three methods.
 - caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
-  filename.
+  filename. Simple and effective.
 
 Cache options
 _______________
@@ -190,6 +269,10 @@ stores the path in a single filename. This may affect FileTreeQ.
 
 Descriptor backends
 ____________________
+
+cache-path <=> uris
+cache-path => headers
+
 The descriptor backend (which contains URI, mediatype, charset, language and
 other resource-header data) is by default a flat index DB storage.
 No additional backends available at this time.
@@ -231,6 +314,11 @@ SORT rules currently prefix the cache-location with a tag, in above example the
 location under ROOT for all content from `youtube.com` will be ``mydir/``. If
 the ``--archive`` option is in effect it is prefixed to this tag. (Note that
 ``--nodir`` is applied *after prefixing*)
+
+filter.{req,res,resp}.filter::
+
+  # mediatype   pattern   replace
+  *             (.*)      \1
 
 This feature is under development.
 Rewriting content based on above message matching is planned.
