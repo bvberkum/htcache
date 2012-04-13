@@ -233,7 +233,7 @@ case $1 in
     check_equal "cached and served file are equal" cache/$URL_HTTP out2
     check_equal "normal and served entity headers are equal" out1.entity.headers out2.entity.headers
     check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 "
-    check_headers out2 "served via proxy" "Via:\ [a-z\.-]\+:$PORT\s*$"
+    check_headers out2 "served via proxy" "Via:\ [a-z\.-]\+:$PORT"
     stopserver
     ;;
   2)
