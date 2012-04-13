@@ -7,8 +7,9 @@ in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 branches
     master (current)
         - XXX:Follows new_stable?
+        - FIXME: Not working
     stable
-        - FIXME: Not working!
+        - FIXME: Not working
         - SQL version
         - TODO: contains unused? CachedResource code , integrate or  remove
         - Proxy restart command
@@ -29,6 +30,16 @@ branches
         - Running
         - Proxy restart command
         - request.url()
+    dev
+        - New reintegration of previous branches
+
+master
+    stable
+        new_stable
+    development
+        new_development
+    dev
+        ..
 
 .. contents::
 
