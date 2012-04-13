@@ -14,7 +14,7 @@ master
     development
         new_development
     dev*
-        :tests: 42 passed, 1 error
+        :tests: 40 passed, 3 error
 
 branches
     master
@@ -44,6 +44,7 @@ branches
         - request.url()
     dev (current)
         - New reintegration of previous branches
+        - Now also running on iris (old debian) but with more errors.  
 
 
 .. contents::
