@@ -14,7 +14,9 @@ master
     development
         new_development
     dev*
-        :tests: 40 passed, 3 error
+        :tests: 
+            - (pandora) 42 passed checks, 1 errors
+            - (iris) 40 passed checks, 3 errors
 
 branches
     master
