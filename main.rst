@@ -17,6 +17,28 @@ master
         :tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
+    
+        dev_cachemaint
+            Cache maintenance routines.
+
+            - ``--check-cache --prune`` remove invalid descriptors.
+            - ``--check-tree --prune`` remove files without descriptor.
+            - TODO: ``--keep-cache`` mark location revisioning
+            - TODO: ``--validate-tree`` resource cache should match size, checksum
+            - TODO: ``--validate-joinlist`` resource should have been rewritten
+            - TODO: ``--validate-joinlist --auto`` rename if possible
+            - TODO: ``--validate-lists`` 
+            - TODO: ``--check-joinlist`` run testlines from JOIN,  
+            - TODO: ``--check-lists``
+            - TODO: abstract, refactor query/maintenance mode handling. Allow
+              proxy request.
+            - TODO: ``--print-allrecords`` simply dump?
+            - TODO: ``--print-record`` query
+            - TODO: ``--print-records`` query
+            - TODO: ``--print-media`` query
+
+        dev_cacherev
+            .. 
 
 branches
     master

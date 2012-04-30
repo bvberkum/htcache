@@ -79,23 +79,8 @@ class ProxyProtocol(object):
         if not prepcache:
             return
 
-        # Prepare default cache location
-        cache_location = '%s:%i/%s' % (request.hostinfo +
-                (request.envelope[1],))
-       
-        # Try Join rules
-        url = request.hostinfo[0] +'/'+ request.envelope[1]
-        for line, regex in Params.JOIN:
-            m = regex.match(url)
-            if m:
-                self.capture = True
-                repl = line.split(' ')[-1]
-                cache_location = regex.sub(repl, url)
-                Params.log("Joined URL matching rule %r" % line)
-
-        self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
-        Params.log('Prepped cache, position: %s' % self.cache.path, 1)
-
+        self.cache = Resource.get_cache(request.hostinfo, request.envelope)
+      
         # Get descriptor storage reference
         self.descriptors = Resource.get_backend()
 

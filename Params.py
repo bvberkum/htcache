@@ -10,6 +10,9 @@ except:
 json_read = _json.loads
 json_write = _json.dumps
 
+
+## Main: determine runtime config from constants and ARGV
+
 _args = iter( sys.argv )
 
 VERSION = 0.4
@@ -24,9 +27,14 @@ TIMEOUT = 15
 FAMILY = socket.AF_INET
 STATIC = False
 ONLINE = True # XXX:bvb: useless..
-LIMIT = False
+LIMIT = False # XXX unused
+
+# misc. program params
 LOG = False
 DEBUG = False
+MODE = [] # emtpy for normal operation, function list for maintenance
+
+# proxy rule files
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
 JOIN = []
@@ -35,6 +43,8 @@ NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 REWRITE = []
 REWRITE_FILE = '/etc/htcache/rules.rewrite'
+
+# cache backend
 CACHE = 'caches.FileTree'
 ARCHIVE = ''
 ENCODE_PATHSEP = ''
@@ -53,11 +63,18 @@ HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
 PROXY_INJECT_JS = DATA_DIR+'htcache.js'
 PROXY_INJECT_CSS = DATA_DIR+'htcache.css'
-# query params
+
+# Static mode, query params
+PRINT = None
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
 PRINT_MEDIA = []
 FIND_RECORDS = {}
+
+CHECK = None
+PRUNE = False
+MAX_SIZE_PRUNE = 11*(1024**2)
+INTERACTIVE = False
 
 USAGE = '''usage: %(PROG)s [options]
 
@@ -81,6 +98,9 @@ Rules:
   -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
 
 Misc.:
+     --check-refs    TODO: iterate cache references.
+     --check-sortlist 
+                     TODO: iterate cache references, 
   -t --timeout SEC   break connection after so many seconds of inactivity,
                      default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
@@ -148,7 +168,19 @@ for _arg in _args:
         RESOURCES = _args.next()
     elif _arg in ('--pid-file',):
         PID_FILE = _args.next()
-
+    elif _arg in ('--prune',):
+        PRUNE = True
+    elif _arg in ('--print-allrecords',):
+        PRINT = 'records'
+        PRINT_ARGS = None
+    elif _arg in ('--check-cache',):
+        CHECK = 'check'
+    elif _arg in ('--validate-cache',):
+        CHECK = 'validate'
+    elif _arg in ('--check-tree',):
+        CHECK = 'tree'
+#    elif _arg in ('--check-joinlist',):
+#        MODE.append(check_joinlist)
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
 
@@ -187,7 +219,6 @@ def parse_rewritelist(fpath=REWRITE_FILE):
     if os.path.isfile(fpath):
         REWRITE.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
             open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
-
 
 def validate_joinlist(fpath=JOIN_FILE):
     lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
@@ -234,6 +265,7 @@ def format_info():
             }
         })
 
+descriptor_storage_type = None
 
 if __name__ == '__main__':
 	parse_joinlist()

@@ -74,6 +74,12 @@ class File(object):
     def full( self ):
         return os.path.isfile( self.path ) and os.stat( self.path )
 
+    def getsize(self):
+        if self.partial():
+            return os.path.getsize( self.path + Params.PARTIAL )
+        elif self.full():
+            return os.path.getsize( self.path )
+
     def open_new( self ):
         if Params.VERBOSE:
             print 'Preparing new file in cache'
