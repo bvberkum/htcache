@@ -172,9 +172,17 @@ for _arg in _args:
         PRUNE = True
     elif _arg in ('--run-join-rules',):
         MODE.append('run-join')
+
     elif _arg in ('--print-allrecords',):
-        PRINT = 'records'
+        PRINT = True
         PRINT_ARGS = None
+    elif _arg in ('--print-record',):
+        PRINT = True
+        PRINT_RECORD.append(_args.next())
+    elif _arg in ('--find-records',):
+        PRINT = True
+        FIND_RECORDS = _args.next()
+
     elif _arg in ('--check-cache',):
         CHECK = 'check'
     elif _arg in ('--validate-cache',):

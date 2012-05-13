@@ -40,17 +40,17 @@ Params.parse_joinlist()
 
 # print_args
 if Params.PRINT:
-    if Params.PRINT == 'records':
 #_ALLRECORDS:
-        assert not (Params.PRUNE or Params.CHECK)
-        descriptors = Resource.get_backend()
-        Resource.print_info(*descriptors.keys())
-    elif Params.PRINT_RECORD:
+    assert not (Params.PRUNE or Params.CHECK)
+    descriptors = Resource.get_backend()
+    if Params.PRINT_RECORD:
         Resource.print_info(*Params.PRINT_RECORD)
     elif Params.FIND_RECORDS:
         Resource.find_info(Params.FIND_RECORDS)
     elif Params.PRINT_MEDIA:
         Resource.print_media_list(*Params.PRINT_MEDIA)
+    else:
+        Resource.print_info(*descriptors.keys())
 
 ### Descriptor/Cache Maintenance static entry
 
