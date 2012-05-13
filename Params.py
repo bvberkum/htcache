@@ -170,6 +170,8 @@ for _arg in _args:
         PID_FILE = _args.next()
     elif _arg in ('--prune',):
         PRUNE = True
+    elif _arg in ('--run-join-rules',):
+        MODE.append('run-join')
     elif _arg in ('--print-allrecords',):
         PRINT = 'records'
         PRINT_ARGS = None
@@ -210,7 +212,7 @@ def parse_joinlist(fpath=JOIN_FILE):
     global JOIN
     JOIN = []
     if os.path.isfile(fpath):
-        JOIN.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
+        JOIN.extend([(p.strip(), re.compile('^'+p.split(' ')[0].strip()+'$')) for p in
             open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
 
 def parse_rewritelist(fpath=REWRITE_FILE):

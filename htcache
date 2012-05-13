@@ -176,6 +176,30 @@ elif Params.CHECK == 'check':
     #pb.clear()
     sys.exit(0)
 
+if Params.MODE:
+    for mode in Params.MODE:
+        if mode == 'run-join':
+            os.chdir(Params.ROOT)
+            for root, dirs, files in os.walk(Params.ROOT):
+                for d in dirs:
+                    if d in ['.git']:
+                        dirs.remove(d)
+                for f in files:
+                    fpath = os.path.join(root, f).replace(Params.ROOT,
+                            '')
+                    fpath2 = fpath.replace(':80','')
+                    fpath3 = Resource.joinlist_rewrite(fpath2)
+                    if fpath2 != fpath3:
+                        print 'Renaming: ', fpath3, fpath
+                        os.stat(fpath)
+                        os.rename(fpath, fpath3)
+                    #for line, regex in Params.JOIN:
+                    #    if m:
+                    #        m = regex.match(fpath)
+                    #        print 'Match', fpath, m.groups()
+    sys.exit(0)
+
+
 # Global backend: the cache descriptors storage
 
 backend = Params.descriptor_storage_type(Params.RESOURCES)
