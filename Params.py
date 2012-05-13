@@ -221,13 +221,16 @@ def parse_rewritelist(fpath=REWRITE_FILE):
             open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
 
 def validate_joinlist(fpath=JOIN_FILE):
+    """
+    Read all double commented lines as URLs, use on next first pattern line.
+    """
     lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
     for path in lines:
         match = False
         for line, regex in JOIN:
-            m = regex.match(line)
+            m = regex.match(path)
             if m:
-                print 'Match', path, m.groups()
+                #print 'Match', path, m.groups()
                 match = True
         if not match:
             print "Error: no match for", path
