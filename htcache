@@ -192,6 +192,9 @@ if Params.MODE:
                     if fpath2 != fpath3:
                         print 'Renaming: ', fpath3, fpath
                         os.stat(fpath)
+                        dirname = os.path.dirname(fpath3)
+                        if not os.path.isdir(dirname):
+                            os.makedirs(dirname)
                         os.rename(fpath, fpath3)
                     #for line, regex in Params.JOIN:
                     #    if m:
