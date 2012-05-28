@@ -134,9 +134,9 @@ class ProxyProtocol(object):
         for pattern, compiled in Params.NOCACHE:
             p = self.requri.find(':') # split scheme
             if compiled.match(self.requri[p+3:]):
-                self.Response = Response.BlindResponse
                 Params.log('Not caching request, matches pattern: %r.' %
                     pattern)
+                self.Response = Response.BlindResponse
                 return True
 
     def set_blocked_response(self, path):
@@ -293,7 +293,7 @@ class HttpProtocol(ProxyProtocol):
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known request header"% key, 1)
+                Params.log("Warning: %r not a known HTTP (response) header"% key, 1)
                 key = key.title() # XXX: bad? :)
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
@@ -333,10 +333,13 @@ class HttpProtocol(ProxyProtocol):
         # 2xx, 3xx
         if self.__status in (HTTP.OK, HTTP.MULTIPLE_CHOICES):
                 #HTTP.MOVED_PERMANENTLY, HTTP.FOUND, ):
-
                 #location = self.__args['Location']
-            self.cache.open_new()
-            assert self.cache.partial()
+            if self.cache.full():
+                self.cache.open_full()
+
+            else:
+                self.cache.open_new()
+                assert self.cache.partial()
             # FIXME: load http entity, perhaps response headers from shelve
             #self.descriptors.map_path(self.cache.path, uriref)
             #self.descriptors.put(uriref, 
@@ -404,6 +407,8 @@ class HttpProtocol(ProxyProtocol):
             self.Response = Response.BlindResponse
 
         else:
+            Params.log("Warning: unhandled: %s, %s" % (self.__status,
+                self.requri))
             self.Response = Response.BlindResponse
 
 

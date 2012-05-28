@@ -21,6 +21,16 @@ def makedirs( path ):
         os.mkdir( dirpath )
 
 
+def joinlist_rewrite(urlref):
+    for line, regex in Params.JOIN:
+        m = regex.match(urlref)
+        if m:
+            capture = True
+            repl = line.split(' ')[-1]
+            urlref = regex.sub(repl, urlref)
+            Params.log("Joined URL matching rule %r" % line, threshold=1)
+    return urlref
+
 def min_pos(*args):
     "Return smallest of all arguments (but >0)"
     r = sys.maxint
@@ -42,11 +52,46 @@ class File(object):
     mtime = -1
 
     def __init__(self, path=None):
+        """
+        The path is an `wget -r` path. Meaning it has the parts:
+        host/path?query. The cache implementation will determine the final
+        local path name. 
+        """
         super( File, self ).__init__()
+        os.chdir(Params.ROOT)
         if path:
-            self.init( path )
-            #assert len(self.path) < 255, \
-            #        "LBYL, cache location path to long for Cache.File! "
+            rpath = self.apply_rules(path)
+            self.init(rpath)
+            # symlink to rewritten path
+            #if path != rpath and not os.path.exists(path):
+            #    Params.log("Symlink: %s -> %s" %(path, rpath))
+            #    os.makedirs(os.path.dirname(path))
+            #    os.symlink(rpath, path)
+            # check if target is symlink, must exist
+            if os.path.islink(rpath):
+                target = os.readlink(rpath)
+                if not os.path.exists(target):
+                    Params.log("Warning: broken symlink, replacing: %s" % target)
+                    os.unlink(rpath)
+            # check if target is partial, rename
+            i = 1
+            if os.path.exists(rpath + Params.PARTIAL):
+                while os.path.exists('%s.%s%s' % (rpath, i, Params.PARTIAL)):
+                    i+=1
+                os.rename(rpath+Params.PARTIAL, '%s.%s%s'
+                        %(rpath,i,Params.PARTIAL))
+                Params.log("Warning: backed up duplicate incomplete %s" % i)
+                # XXX: todo: keep largest partial only
+            assert len(self.path) < 255, \
+                    "LBYL, cache location path to long for Cache.File! "
+
+    def apply_rules(self, path):
+        """
+        Apply rules for path.
+        """
+        if Params.JOIN:
+            return joinlist_rewrite(path)
+        return path
 
     def init(self, path):
         assert not path.startswith(os.sep), \
@@ -64,6 +109,7 @@ class File(object):
         # make archive path
         if Params.ARCHIVE:
             path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path
+
         self.path = os.path.join(Params.ROOT, path)
         self.file = None
 
@@ -72,7 +118,10 @@ class File(object):
             and os.stat( self.path + Params.PARTIAL )
 
     def full( self ):
-        return os.path.isfile( self.path ) and os.stat( self.path )
+        return (
+            ( os.path.islink( self.path ) and os.stat(os.readlink(self.path)) )
+                or (os.path.isfile( self.path ) and os.stat( self.path )  )
+            )
 
     def getsize(self):
         if self.partial():

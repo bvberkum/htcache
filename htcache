@@ -14,7 +14,7 @@ except ImportError, e:
     pass
 
 
-import Params, Protocol, Request, Response, Resource, fiber
+import Params, Cache, Protocol, Request, Response, Resource, fiber
 
 
 
@@ -188,7 +188,7 @@ if Params.MODE:
                     fpath = os.path.join(root, f).replace(Params.ROOT,
                             '')
                     fpath2 = fpath.replace(':80','')
-                    fpath3 = Resource.joinlist_rewrite(fpath2)
+                    fpath3 = Cache.joinlist_rewrite(fpath2)
                     if fpath2 != fpath3:
                         print 'Renaming: ', fpath3, fpath
                         os.stat(fpath)

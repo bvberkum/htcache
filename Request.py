@@ -51,7 +51,7 @@ class HttpRequest:
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known request header"% key, 1)
+                Params.log("Warning: %r not a known HTTP (request) header"% key, 1)
                 key = key.title() # XXX: bad? :)
             # XXX: this should join headers like Via handling does later on, but
             # avoiding duplicates has not failed yet. See Protocol how to handle
@@ -217,3 +217,5 @@ class HttpRequest:
         request2 = other.__verb, other.__host, other.__port, other.__reqpath
         return request1 == request2
 
+    def __str__(self):
+        return "<HttpRequest %s, %s>" % (self.hostinfo, self.envelope)

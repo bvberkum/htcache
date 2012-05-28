@@ -76,6 +76,8 @@ class HTTP:
         'Alternates',
         'TCN',
         'Variant-Vary',
+        # ???
+        'Srv',
     )
     Cache_Headers = (
         'ETag',

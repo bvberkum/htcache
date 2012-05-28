@@ -215,14 +215,15 @@ def get_cache(hostinfo, envelope):
     # Prepare default cache location
     cache_location = '%s:%i/%s' % (hostinfo +
             (envelope[1],))
-
+    
+    cache_location = cache_location.replace(':80', '')
     # Try Join rules
-    if Params.JOIN:
-        # FIXME: include hostname:
-        loc2 = hostinfo[0] +'/'+ envelope[1]
-        loc3 = joinlist_rewrite(loc2)
-        if loc2 != loc3:
-            cache_location = loc3
+    #if Params.JOIN:
+    #    # FIXME: include hostname:
+    #    loc2 = hostinfo[0] +'/'+ envelope[1]
+    #    loc3 = joinlist_rewrite(loc2)
+    #    if loc2 != loc3:
+    #        cache_location = loc3
 
     # cache_location is a URL path ref including query-part
     # backend will determine real cache location
@@ -252,7 +253,7 @@ def print_info(*paths):
     else:
         print >>sys.stderr, "No record found"
     backend.close()
-    sys.exit(1)
+    sys.exit(0)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
@@ -349,18 +350,6 @@ def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
     """
     return True
 
-
-# other utils
-
-def joinlist_rewrite(urlref):
-    for line, regex in Params.JOIN:
-        m = regex.match(urlref)
-        if m:
-            capture = True
-            repl = line.split(' ')[-1]
-            urlref = regex.sub(repl, urlref)
-            Params.log("Joined URL matching rule %r" % line, threshold=1)
-    return urlref
 
 #DescriptorStorage(Params.DATA_DIR)
 
