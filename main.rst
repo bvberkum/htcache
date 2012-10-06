@@ -52,6 +52,11 @@ branches
 
 .. contents::
 
+History
+-------
+v0.3
+    42 tests, 1 failure.
+
 Status
 ------
 Todo
