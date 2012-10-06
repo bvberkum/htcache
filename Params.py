@@ -61,7 +61,7 @@ DATA_DIR = '/var/lib/htcache/'
 RESOURCES = DATA_DIR+'resource.db'
 HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
-PROXY_INJECT = True
+PROXY_INJECT = False
 PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
 PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
 
