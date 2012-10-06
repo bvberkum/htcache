@@ -20,9 +20,14 @@ body ul#htcache-menu ul {
 body div#htcache-floater a.menulink {
     width: 100%;
     display: block;
+    color: black;
+    text-decoration: none;
+    border: 0;
 }
 div#htcache-floater a:hover {
     background-color: silver;
+}
+body div#htcache-floater input {
 }
 body div#htcache-floater {
     position: fixed;
@@ -48,6 +53,7 @@ body ul#htcache-menu.htc-collapsed {
    font-family: monospace;
 }
 body ul#htcache-menu li {
+    text-align: left;
     border-left: 3pt solid silver;
     padding: 0 .3em;
     margin: 0;

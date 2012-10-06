@@ -49,7 +49,7 @@ var dhtml_ui = function($){
                 var sub = local.add_dltree(subname, v);
                 $(menu.children()[1]).append(sub);
             } else {
-                $(menu.children()[1]).append('<li><label for="value-'+subname+'">'+k+'</label>: <input id="value'+subname+'" value="'+v+'" disabled="disabled"/></li>');
+                $(menu.children()[1]).append('<li><label for="value-'+subname+'">'+k+'</label>: <input id="value-'+subname+'" value="'+escape(v)+'" disabled="disabled"/></li>');
             }
         });
         //$('#'+name).text(tree);
@@ -62,33 +62,52 @@ var dhtml_ui = function($){
     var htcm = new HTCacheMenu();
     htcm.init_ui();
 
-    $.ajax({
-            'url': htcm.link + 'info',
-            failure: function(e) {
-                console.warn(e);
-            },
-            success: function(d) {
-                var dltree = htcm.add_dltree('htcache-info', d);
-                htcm.add_menu(dltree);
-                $(dltree.children()[1]).toggleClass('htc-collapsed');
-            }
-        });
+    function load() {
+        $.ajax({
+                'url': htcm.link + 'control',
+                failure: function(e) {
+                    console.warn(e);
+                },
+                success: function(d) {
+                    console.warn(d);
+                }
+            });
+        $.ajax({
+                'url': htcm.link + 'info',
+                failure: function(e) {
+                    console.warn(e);
+                },
+                success: function(d) {
+                    var dltree = htcm.add_dltree('htcache-info', d);
+                    htcm.add_menu(dltree);
+                    $(dltree.children()[1]).toggleClass('htc-collapsed');
+                }
+            });
 
-    $.ajax({
-            'url': htcm.link + 'page-info',
-            data: {
-                'url': window.location.href
-            },
-            failure: function(e) {
-                console.warn(e);
-            },
-            success: function(d) {
-                var dltree = htcm.add_dltree('htcache-page-info', d);
-                htcm.add_menu(dltree);
-                $(dltree.children()[1]).toggleClass('htc-collapsed');
-            }
-        });
-
+        $.ajax({
+                'url': htcm.link + 'page-info',
+                data: {
+                    'url': window.location.href
+                },
+                failure: function(e) {
+                    console.warn(e);
+                },
+                success: function(d) {
+                    props = d[4];
+                    feats = d[5];
+                    var dltree = htcm.add_dltree('htcache-page-info', props);
+                    htcm.add_menu(dltree);
+                }
+            });
+    }
+    load();
+    var reload = $('<a>reload</a>');
+    reload.click(function() {
+            $('#htcache-info').parent().remove();
+            $('#htcache-page-info').parent().remove();
+            load();
+    });
+    $('#htcache-floater').append(reload);
  }
 
 /* jQuery Initialization */
