@@ -248,10 +248,17 @@ def spawn( generator, port, debug, log ):
     except KeyboardInterrupt:
         print '[ DONE ]', generator.__name__, 'terminated'
         sys.exit( 0 )
+
     except Restart:
         print '[ RESTART ]', generator.__name__, 'will now respawn'
+        i = len( fibers )
+        while i:
+            i -= 1
+            #state = fibers[ i ].state
+        
         listener.close()
         raise
+
     except:
         print '[ DONE ]', generator.__name__, 'crashed'
         traceback.print_exc( file=sys.stdout )

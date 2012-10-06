@@ -10,7 +10,19 @@ SRC:=$(PACK) init.sh $(wildcard *.py) $(wildcard *.rst) \
 default:
 
 test::
-	@COVERAGE=0 ./unit-test
+	@COVERAGE_PROCESS_START=.coveragerc ./unit-test | tee /tmp/htcache-make.log
+	@echo $$(grep PASSED /tmp/htcache-make.log | wc -l) passed checks, $$(grep ERROR /tmp/htcache-make.log | wc -l) errors
+
+clean::
+	@find ./ \
+	    -name '*.pyc' \
+	    -exec rm -rvf {} +
+	@find ./ \
+	    -name '.coverage' \
+	    -exec rm -rvf {} +
+	@find ./ \
+	    -name '.coverage-*' \
+	    -exec rm -rvf {} +
 
 debug::
 	-mkdir debug-root

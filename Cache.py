@@ -3,26 +3,22 @@ import Params
 
 
 def load_backend_type(tp):
-    if '.' in tp:
-        p = tp.split('.')
-        path, name = '.'.join(p[:-1]), p[-1]
-    else:
-        path = tp
-        name = tp
-
-    mod = __import__(path, locals(), globals(), [])
-    return getattr(mod, name)
+    assert '.' in tp, "Specify backend as <module>.<backend-type>"
+    p = tp.split( '.' )
+    path, name = '.'.join( p[:-1] ), p[-1]
+    mod = __import__( path, locals(), globals(), [] )
+    return getattr( mod, name )
 
 
 def makedirs( path ):
-    dir = os.path.dirname( path )
-    if dir and not os.path.isdir( dir ):
-        if os.path.isfile( dir ):
-            print 'directory %s mistaken for file' % dir
-            os.remove( dir )
+    dirpath = os.path.dirname( path )
+    if dirpath and not os.path.isdir( dirpath ):
+        if os.path.isfile( dirpath ):
+            print 'directory %s mistaken for file' % dirpath
+            os.remove( dirpath )
         else:
-            makedirs( dir )
-        os.mkdir( dir )
+            makedirs( dirpath )
+        os.mkdir( dirpath )
 
 
 def min_pos(*args):
@@ -30,7 +26,7 @@ def min_pos(*args):
     r = sys.maxint
     for a in args:
         if a > -1:
-            r = min(a, r)
+            r = min( a, r )
     return r
 
 
@@ -45,19 +41,20 @@ class File(object):
     size = -1
     mtime = -1
 
-    def __init__( self, path=None):
-        super(File, self).__init__()
+    def __init__(self, path=None):
+        super( File, self ).__init__()
         if path:
-            self.init(path)
+            self.init( path )
             #assert len(self.path) < 255, \
             #        "LBYL, cache location path to long for Cache.File! "
 
     def init(self, path):
         assert not path.startswith(os.sep), \
             "FIXME: implement saving in other roots"
-        for tag, pattern in Params.SORT.items():
-            if pattern.match(path):
-                path = os.path.join(tag, path)
+# FIXME: SORT tags 
+#        for tag, pattern in Params.SORT.items():
+#            if pattern.match(path):
+#                path = os.path.join(tag, path)
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path

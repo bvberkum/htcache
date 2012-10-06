@@ -1,6 +1,8 @@
 import os, socket, time
 
 import Params, Protocol, Resource
+from Protocol import HTTP
+
 
 
 class HttpRequest:
@@ -12,6 +14,10 @@ class HttpRequest:
         self.__recvbuf = ''
 
     def __parse_head( self, chunk ):
+        """
+        Start parsing request by splitting the envelope or request line,
+        defer to __parse_args.
+        """
 
         eol = chunk.find( '\n' ) + 1
         if eol == 0:
@@ -28,6 +34,10 @@ class HttpRequest:
         return eol
 
     def __parse_args( self, chunk ):
+        """
+        Parse request header. Defer to __parse_body if request entity body
+        is indicated.
+        """
 
         eol = chunk.find( '\n' ) + 1
         if eol == 0:
@@ -37,7 +47,14 @@ class HttpRequest:
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
-            key = key.title()
+            if key.lower() in HTTP.Header_Map:
+                key = HTTP.Header_Map[key.lower()]
+            else:
+                Params.log("Warning: %r not a known request header"% key)
+                key = key.title() # XXX: bad? :)
+            # XXX: this should join headers like Via handling does later on, but
+            # avoiding duplicates has not failed yet. See Protocol how to handle
+            # concatenation
             assert key not in self.__headers, 'duplicate key: %s' % key
             self.__headers[ key ] = value.strip()
         elif line in ( '\r\n', '\n' ):
@@ -52,11 +69,14 @@ class HttpRequest:
                 self.__body = None
                 self.__parse = None
         else:
-            Params.log('Ignored header line: %r' % line)
+            Params.log('Warning: Ignored header line: %r' % line)
 
         return eol
 
     def __parse_body( self, chunk ):
+        """
+        Parse request body.
+        """
 
         self.__body.write( chunk )
         assert self.__body.tell() <= self.__size, \
@@ -107,6 +127,7 @@ class HttpRequest:
         else:
             self.Protocol = Protocol.BlindProtocol
             scheme = ''
+            port = 80
 
         if scheme:
             if '/' in host:
@@ -119,6 +140,10 @@ class HttpRequest:
                 port = int( port )
             else:
                 hostinfo = "%s:%s" % (host, port)
+
+        self.__host = host
+        self.__port = port
+        self.__reqpath = path
 
         req_url = "%s://%s/%s" % (scheme, hostinfo, path)
         self.resource = Resource.forRequest(req_url)
@@ -133,8 +158,8 @@ class HttpRequest:
             # Become HTTP/1.1 compliant
             self.__headers['Host'] = self.resource.ref.host
 
-        # Prepare rest of headers for pass-through to target server
         self.__headers[ 'Connection' ] = 'close'
+
         self.__headers.pop( 'Keep-Alive', None )
         self.__headers.pop( 'Proxy-Connection', None )
         self.__headers.pop( 'Proxy-Authorization', None )
@@ -145,7 +170,8 @@ class HttpRequest:
                 Params.TIMEFMT, time.gmtime() )
 
         # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
-        via = "1.1 %s:%i (htcache/0.1)" % (socket.gethostname(), Params.PORT)
+        via = "1.1 %s:%i (htcache/%s)" % (socket.gethostname(), Params.PORT,
+                Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
             self.__headers['Via'] += ', '+ via
 
@@ -167,14 +193,12 @@ class HttpRequest:
 
     @property
     def hostinfo(self):
-        # XXX: return self.resource.location.host, self.resource.location.port
         return self.__host, self.__port
 
     @property
     def envelope(self):
         # XXX: used before protocol is determined,  assert self.Protocol
         return self.__verb, self.__reqpath, self.__prototag
-        # XXX: return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
     @property
     def headers(self):
@@ -182,10 +206,26 @@ class HttpRequest:
         assert self.Protocol, "Request has no protocol"
         return self.__headers.copy()
 
+    def range(self):
+        byterange = self.__headers.get( 'Range' )
+        if not byterange:
+            return 0, -1
+        try:
+            assert byterange.startswith( 'bytes=' )
+            beg, end = byterange[ 6: ].split( '-' )
+            if not beg:
+                return int( end ), -1
+            elif not end:
+                return int( beg ), -1
+            else:
+                return int( beg ), int( end ) + 1
+        except:
+            raise AssertionError, \
+                'invalid byterange specification: %s' % byterange
+
     def __hash__( self ):
         assert self.Protocol, "no protocol"
         return hash(( self.__host, self.__port, self.__reqpath ))
-        # XXX return hash(( self.resource.host, self.resource.gport, self.resource.path ))
 
     def __eq__( self, other ):
         assert self.Protocol, "no protocol"

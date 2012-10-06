@@ -69,12 +69,26 @@ class ProxyProtocol(object):
     def __init__(self, request):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
+<<<<<<< HEAD
         url = request.hostinfo + (request.envelope[1],)
         cache_location = '%s:%i/%s' % url
+=======
+        cache_location = '%s:%i/%s' % (request.hostinfo +
+                (request.envelope[1],))
+>>>>>>> v0.3
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
+        Params.log("%i joins"%len(Params.JOIN));
+        for line, regex in Params.JOIN:
+            url = request.hostinfo[0] +'/'+ request.envelope[1]
+            m = regex.match(url)
+            if m:
+                Params.log("Rewritten to: %s" % (m.groups(),))
+            #else:
+            #    Params.log("No match on %s for %s" % (url, line))
         self.descriptors = Resource.get_backend()
 
+<<<<<<< HEAD
         self.request = request
         resource = request.resource
 
@@ -91,6 +105,13 @@ class ProxyProtocol(object):
 #
 #    def get_descriptor(self):
 #        return self.descriptors[self.cache.path]
+=======
+    def has_descriptor(self):
+        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
+
+    def get_descriptor(self):
+        return self.descriptors[self.cache.path]
+>>>>>>> v0.3
 
     def prepare_direct_response(self, request):
         """
@@ -104,10 +125,14 @@ class ProxyProtocol(object):
         if port == 8080:
             Params.log("Direct request: %s" % path)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
+<<<<<<< HEAD
             self.Response = Response.DirectResponse
+=======
+            self.Response = Response.ErrorReportResponse
+>>>>>>> v0.3
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
-        #self.Response = Response.DirectResponse
+        #self.Response = Response.ErrorReportResponse
         # Filter request by regex from patterns.drop
         filtered_path = "%s/%s" % (host, path)
         for pattern, compiled in Params.DROP:
@@ -122,12 +147,11 @@ class ProxyProtocol(object):
             self.Response = Response.DataResponse
             return True
 
-    def prepare_filtered_response(self):
-        "After parsing resheaders, return True "
-        # XXX: matches on path only
+    def prepare_nocache_response(self):
+        "Blindly respond for NoCache rule matches. "
         for pattern, compiled in Params.NOCACHE:
-            #Params.log("nocache p %s" % pattern)
-            if compiled.match(self.requri):
+            p = self.requri.find(':') # split scheme
+            if compiled.match(self.requri[p+3:]):
                 self.Response = Response.BlindResponse
                 Params.log('Not caching request, matches pattern: %r.' %
                     pattern)
@@ -210,6 +234,10 @@ class HTTP:
     # extension-header
     )
     Request_Headers = (
+<<<<<<< HEAD
+=======
+        'Cookie',
+>>>>>>> v0.3
         # RFC 2616
         'Accept',
         'Accept-Charset',
@@ -235,6 +263,14 @@ class HTTP:
         'Negotiate',
     )
     Response_Headers = (
+<<<<<<< HEAD
+=======
+        'Via',
+        'Set-Cookie',
+        'Location',
+        'Transfer-Encoding',
+        'X-Varnish',
+>>>>>>> v0.3
         # RFC 2616
         'Accept-Ranges',
         'Age',
@@ -250,6 +286,7 @@ class HTTP:
         'TCN',
         'Variant-Vary',
     )
+<<<<<<< HEAD
     Cache_Headers = Entity_Headers + (
             'ETag',
             )
@@ -257,16 +294,39 @@ class HTTP:
 
     Message_Headers = Request_Headers + Response_Headers +\
             Entity_Headers + (
+=======
+    Cache_Headers = (
+        'ETag',
+    )
+
+
+    Message_Headers = Request_Headers + Response_Headers +\
+            Entity_Headers + \
+            Cache_Headers + (
+>>>>>>> v0.3
                     # Generic headers
                     # RFC 2616
                     'Date',
                     'Cache-Control', # RFC 2616 14.9
                     'Pragma', # RFC 2616 14.32
+<<<<<<< HEAD
+=======
+                    'Proxy-Connection',
+                    'Proxy-Authorization',
+                    'Connection',
+                    'Keep-Alive',
+                    # Extension headers
+                    'X-Content-Type-Options',
+                    'X-Powered-By',
+                    'X-Relationship', # used by htcache
+                    'X-Varnish',
+>>>>>>> v0.3
                 )
     """
     For information on other registered HTTP headers, see RFC 4229.
     """
 
+<<<<<<< HEAD
 
 def map_headers_to_resource(headers):
     kwds = {}
@@ -298,22 +358,43 @@ def map_headers_to_resource(headers):
         else:
             print "Warning: ignored", hn
     return kwds
+=======
+    # use these lists to create a mapping to retrieve the properly cased string.
+    Header_Map = dict([(k.lower(), k) for k in Message_Headers ])
+>>>>>>> v0.3
 
 
 class HttpProtocol(ProxyProtocol):
 
     def __init__( self, request ):
         super(HttpProtocol, self).__init__(request)
+<<<<<<< HEAD
+=======
+    
+        host, port = request.hostinfo
+        verb, path, proto = request.envelope
+
+        # Prepare requri to identify request
+        if port != 80:
+            hostinfo = "%s:%s" % (host, port)
+        else:
+            hostinfo = host
+        self.requri = "http://%s/%s" %  (hostinfo, path)
+>>>>>>> v0.3
 
         if self.prepare_direct_response(request):
             self.__socket = None
             return
 
+<<<<<<< HEAD
         path = request.Resource.ref.path
+=======
+>>>>>>> v0.3
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
 
         args = request.headers
+<<<<<<< HEAD
         
         # TODO: filtered_path = "%s/%s" % (host, path)
         #for pattern, compiled, target in Params.JOIN:
@@ -330,6 +411,8 @@ class HttpProtocol(ProxyProtocol):
 
         # Prepare request for contact with origin server..
         head = 'GET %s HTTP/1.1' % path
+=======
+>>>>>>> v0.3
         args.pop( 'Accept-Encoding', None )
         args.pop( 'Range', None )
         stat = self.cache.partial() or self.cache.full()
@@ -352,6 +435,11 @@ class HttpProtocol(ProxyProtocol):
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         self.__recvbuf = ''
         self.__parse = HttpProtocol.__parse_head
+
+        # TODO: Store relationship with referer
+        #referer = args.pop('Referer', None)
+        #relationtype = args.pop('X-Relationship', None)
+        #self.descriptors.relate(relationtype, self.requri, referer)
 
     def hasdata( self ):
         return bool( self.__sendbuf )
@@ -389,7 +477,15 @@ class HttpProtocol(ProxyProtocol):
         if ':' in line:
             Params.log('> '+ line.rstrip(), 1)
             key, value = line.split( ':', 1 )
+<<<<<<< HEAD
             # TODO: store in headerdict
+=======
+            if key.lower() in HTTP.Header_Map:
+                key = HTTP.Header_Map[key.lower()]
+            else:
+                Params.log("Warning: %r not a known request header"% key)
+                key = key.title() # XXX: bad? :)
+>>>>>>> v0.3
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
             else:
@@ -417,11 +513,17 @@ class HttpProtocol(ProxyProtocol):
             self.__recvbuf = self.__recvbuf[ bytes: ]
         sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
-        if self.prepare_filtered_response():
+        if self.prepare_nocache_response():
             return
 
+        # Process and update headers before deferring to response class
         if self.__status == HTTP.OK:
             self.cache.open_new()
+            # FIXME: load http entity, perhaps response headers from shelve
+            #self.descriptors.map_path(self.cache.path, uriref)
+            #self.descriptors.put(uriref, 
+            #descr = self.get_descriptor()
+            #self.mtime, self.size = scriptor.last_modified, descr.
             if 'Last-Modified' in self.__args:
                 try:
                     self.mtime = calendar.timegm( time.strptime(
@@ -429,7 +531,7 @@ class HttpProtocol(ProxyProtocol):
                 except:
                     Params.log('Illegal time format in Last-Modified: %s.' %
                         self.__args[ 'Last-Modified' ])
-                    # Try again:
+                    # XXX: Try again, should make a list of alternate (but invalid) date formats
                     try:
                         tmhdr = re.sub('\ [GMT0\+-]+$', '',
                             self.__args[ 'Last-Modified' ])
@@ -478,6 +580,7 @@ class HttpProtocol(ProxyProtocol):
                     HTTP.TEMPORARY_REDIRECT):
             location = self.__args['Location']
             self.Response = Response.BlindResponse
+<<<<<<< HEAD
             if isinstance(self.request.resource, (Variant, Invariant)):
                 print 'Variant resource has moved'
             #elif isinstance(self.request.resource, Resource):
@@ -488,13 +591,21 @@ class HttpProtocol(ProxyProtocol):
             self.request.resource.update(
                     status=self.__status, 
                     **map_headers_to_resource(self.__args))
+=======
+>>>>>>> v0.3
 
         else:
             self.Response = Response.BlindResponse
 
-        # Update descriptor
+        # Cache headers
         if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
+<<<<<<< HEAD
             pass # TODO: srcrefs, mediatype, charset, language, 
+=======
+            pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
+            #httpentityspec = Resource.HTTPEntity(self.__args)
+            #self.descriptors.put(uriref, httpentityspec.toMetalink())
+>>>>>>> v0.3
             self.descriptors[self.cache.path] = [self.requri], self.__args
 
     def recvbuf( self ):
@@ -524,6 +635,7 @@ class FtpProtocol( ProxyProtocol ):
 
         self.__socket = connect(request.hostinfo)
         self.__path = request.Resource.ref.path
+        self.__path_old = request.envelope[1] # XXX
         self.__sendbuf = ''
         self.__recvbuf = ''
         self.__handle = FtpProtocol.__handle_serviceready

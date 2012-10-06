@@ -1,11 +1,40 @@
-TODO htcache version 1.0 (planned but non-committed)
+TODO htcache version 1.0 (planned)
   * Tested FTP use.
   * RFC 2616 adherence.
   * On-line cache maintenance.  
+  * Static browsing of cached resources.  
+  * Multiple mechanisms to reduce content duplication.
+  * Filter content using URL regex matching.  
+  * Keep favicon until user approves changes, set custom favicons.
+  * In-browser JS control served with (x)HTML resources to allow 
+    in-navigation proxy operations on the current resource.
+  * Keep version and navigation history for certain resources.
 
-2010-09-28 htcache version 0.3 (development)
+2012-03-14 htcache version 0.9 
+2012-03-14 htcache version 0.8 
+2012-03-14 htcache version 0.7 
+2012-03-14 htcache version 0.6 
+2012-03-14 htcache version 0.5 
+2012-03-14 htcache version 0.4 (development)
+  * All this time forgot to bump version number.
+  * Capture: Re-introduce content hashing but only for specific resources.
+    Track history by these checksums, and also track X-Relationship (nav)
+    relations between them.
+  * Proc: implement idea to defer processing to external script.
+    Makes for a very dirty HTTP proxy triggered workflow. 
 
-2010-09-28 htcache version 0.2
+2010-09-28 htcache version 0.3 (mpe)
+  * Many changes and a bit of history corruption in the branches, I made a mess
+    of it but as of now most tests pass again. Development went on in too many
+    disparate directions and I didn't handle that well.
+  * However some new tests were created and most of the tests are passing.
+    FTP support has not returned yet.
+  * NoCache and Drop are working as before (cache bypass and request blocker)
+  * Join has been added to rewrite URL's (effectively joining them if possible with
+    existing downloads). This works to reduce duplication for known URLs.
+  * Mapping known headers to proper case.
+
+2010-09-28 htcache version 0.2 (mpe)
   * rename to htcache
   * added support for alternative cache directory layouts using modular 
     cache backends  

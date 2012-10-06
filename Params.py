@@ -3,6 +3,8 @@ import os, re, socket, sys
 
 _args = iter( sys.argv )
 
+VERSION = 0.3
+
 # proxy params
 PROG = _args.next()
 PORT = 8080
@@ -17,6 +19,8 @@ LOG = False
 DEBUG = False
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
+JOIN = []
+JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 SORT = []
@@ -37,23 +41,16 @@ PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 #BACKEND = '/var/lib/htcache/resource.db'
 #BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
-#BACKEND = 'mysql://rsr:rAz0r1@robin/rsr_o'
 BACKEND = 'mysql://root:MassRootSql@robin/taxus_o'
-#BACKEND = 'mysql://root:MassRootSql@robin/taxus_t'
-#BACKEND = 'mysql://root:MassRootSql@robin/taxus_p'
-
-BACKENDS = {
-        # name: test, type
-    }
-BD_IDX_TEST, BD_IDX_TYPE = 0, 1
-
-SHA1SUM = '/var/cache/sha1sum/'
-#TODO CRC, par2?
+#BACKENDS = { # name: test, type }
+#BD_IDX_TEST, BD_IDX_TYPE = 0, 1
+#SHA1SUM = '/var/cache/sha1sum/'
 #PAR2 = '/var/cache/par2/'
+DBDIR = '/var/lib/htcache/'
+RESOURCES = '/var/lib/htcache/resource.db'
 # query params
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
-FIND_RECORDS = {}
 PRINT_MEDIA = []
 DHTML_CLIENT = True
 
@@ -63,6 +60,7 @@ cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
 CHECK_DESCRIPTOR = []
 
 #     --flat          flat mode; cache all files in root directory (dangerous!)
+FIND_RECORDS = {}
 
 USAGE = '''usage: %(PROG)s [options]
 
@@ -179,6 +177,17 @@ for _arg in _args:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
+    elif _arg in ( '--nodir' ):
+        pass # XXX
+        #try:
+        _args.next()
+        #except:
+        #    sys.exit( 'Error: %s requires argument' % _arg )
+    elif _arg in ( '--cache' ):
+        try:
+            CACHE = _args.next()
+        except:
+            sys.exit( 'Error: %s requires argument' % _arg )
     elif _arg in ( '-t', '--timeout' ):
         try:
             TIMEOUT = int( _args.next() )
@@ -189,14 +198,6 @@ for _arg in _args:
         FAMILY = socket.AF_UNSPEC
     elif _arg == '--static':
         STATIC = True
-    elif _arg == '--offline':
-        ONLINE = False
-        STATIC = True
-    elif _arg == '--limit':
-        try:
-            LIMIT = float( _args.next() ) * 1024
-        except:
-            sys.exit( 'Error: %s requires a numerical argument' % _arg )
     elif _arg == '--daemon':
         LOG = _args.next()
     elif _arg == '--debug':
@@ -219,12 +220,37 @@ def parse_droplist(fpath=DROP_FILE):
     DROP = []
     if os.path.isfile(fpath):
         DROP.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if not p.startswith('#')])
+            open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 def parse_nocache(fpath=NOCACHE_FILE):
     global NOCACHE
     NOCACHE = []
     if os.path.isfile(fpath):
         NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if not p.startswith('#')])
+            open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
+
+def parse_joinlist(fpath=JOIN_FILE):
+    global JOIN
+    JOIN = []
+    if os.path.isfile(fpath):
+        JOIN.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
+            open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
+
+
+def validate_joinlist(fpath=JOIN_FILE):
+    lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
+    for path in lines:
+        match = False
+        for line, regex in JOIN:
+            m = regex.match(line)
+            if m:
+                print 'Match', path, m.groups()
+                match = True
+        if not match:
+            print "Error: no match for", path
+
+
+if __name__ == '__main__':
+	parse_joinlist()
+	validate_joinlist()

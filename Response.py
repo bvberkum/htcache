@@ -56,17 +56,19 @@ class DataResponse:
         except:
             args = {}
 
-        #if protocol.has_descriptor():
-        #  descr = protocol.descriptors[protocol.cache.path]
-        #  descr = protocol.get_descriptor()
-        #  srcrefs, mediatype, charset, languages, features = descr
-        #  Params.log("Descriptor: %s" % pformat(descr))
-        #  # Abuse feature dict to store headers
-        #  # TODO: parse mediatype, charset, language..
-        #  if descr[-1]:
-        #    for k, v in descr[-1].items():
-        #      #if 'encoding' in k.lower(): continue
-        #      args[k] = v
+        cached_headers = {}
+        if protocol.has_descriptor():
+            #Params.log(protocol.get_descriptor())
+            urls, mediatype, charset, languages, metadata, features = protocol.get_descriptor()
+            cached_headers = metadata
+            #urirefs, cached_args = protocol.get_descriptor()
+            #Params.log(descr)
+          # Abuse feature dict to store headers
+          # TODO: parse mediatype, charset, language..
+          #if descr[-1]:
+          #  for k, v in descr[-1].items():
+          #    #if 'encoding' in k.lower(): continue
+          #    args[k] = v
         #else:
         #  Params.log("No descriptor for %s" % protocol.cache.path)
 
@@ -76,10 +78,13 @@ class DataResponse:
         args[ 'Connection' ] = 'close'
         if self.__protocol.mtime >= 0:
             args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, time.gmtime( self.__protocol.mtime ) )
+
         if self.__pos == 0 and self.__end == self.__protocol.size:
             head = 'HTTP/1.1 200 OK'
             if self.__protocol.size >= 0:
                 args[ 'Content-Length' ] = str( self.__protocol.size )
+            if 'Content-Type' in cached_headers:
+                args['Content-Type'] = cached_headers['Content-Type']
         elif self.__end >= 0:
             head = 'HTTP/1.1 206 Partial Content'
             args[ 'Content-Length' ] = str( self.__end - self.__pos )
@@ -96,6 +101,7 @@ class DataResponse:
         if Params.VERBOSE > 1:
             for key in args:
                 Params.log('> %s: %s' % ( key, args[ key ].replace( '\r\n', ' > ' ) ))
+
         # Prepare response for client
         self.__sendbuf = '\r\n'.join( [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
         if Params.LIMIT:
@@ -195,7 +201,7 @@ class BlockedContentResponse:
 
     def __init__(self, status, request):
         url = request.hostinfo + (request.envelope[1],)
-        self.__sendbuf = "HTTP/1.1 OK\r\nContent-Type: text/html\r\n\r\n" +\
+        self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\nContent-Type: text/html\r\n\r\n" +\
                 open(Params.HTML_PLACEHOLDER).read() % { 
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
@@ -227,7 +233,7 @@ class BlockedImageContentResponse:
 
     def __init__(self, status, request):
         data = open(Params.IMG_PLACEHOLDER).read()
-        self.__sendbuf = "HTTP/1.1 OK\r\nContent-Length: %i\r\n'\
+        self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\nContent-Length: %i\r\n'\
                 'Content-Type: image/png\r\n\r\n%s" % (
                 len(data), data)
 
@@ -251,10 +257,10 @@ class BlockedImageContentResponse:
         pass
 
 
-class DirectResponse:
+class ErrorReportResponse:
 
     """
-    Echo request header in response body.
+    Echo request header in response body
     """
 
     Done = False
@@ -264,26 +270,41 @@ class DirectResponse:
     }
 
     def __init__( self, status, request ):
-        lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
-        head, body = request.recvbuf().split( '\r\n\r\n', 1 )
-        for line in head.splitlines():
-            lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
-        if body:
-            lines.append( '+ Body: %i bytes' % len( body ) )
-        lines.append( '' )
-        lines.append( traceback.format_exc() )
+#        lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
+#        head, body = request.recvbuf().split( '\r\n\r\n', 1 )
+#        for line in head.splitlines():
+#            lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
+#        if body:
+#            lines.append( '+ Body: %i bytes' % len( body ) )
+#        lines.append( '' )
+#        lines.append( traceback.format_exc() )
+
+        path = request.envelope[1]
+        self.action = None
 
         if path in self.urlmap:
             self.action = self.urlmap[path]
             getattr(self, self.action)()
         else:
-            lines = [ 'HTCache: %s' % status, '', 'Requesting:' ]
+            lines = [ 'HTCache: %s' % status, '' ]
+            
+            lines.append( 'Requesting:' )
+            lines.append( '' )
+
             head, body = request.recvbuf().split( '\r\n\r\n', 1 )
             for line in head.splitlines():
                 lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
             if body:
                 lines.append( '+ Body: %i bytes' % len( body ) )
+
             lines.append( '' )
+            lines.append( '(Partial) Response:' )
+            lines.append( '' )
+            head, body = protocol.recvbuf().split( '\r\n\r\n', 1 )
+            for line in head.splitlines():
+                lines.append( len( line ) > 78 and '  %s...' % line[ :75 ] or '  %s' % line )
+            lines.append( '' )
+
             lines.append( traceback.format_exc() )
 
             self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
@@ -321,15 +342,16 @@ class DirectResponse:
         raise AssertionError
 
 
-class NotFoundResponse( DirectResponse ):
+class NotFoundResponse( ErrorReportResponse ):
 
     def __init__( self, protocol, request ):
-        DirectResponse.__init__( self, '404 Not Found', request )
+        ErrorReportResponse.__init__( self, '404 Not Found', request )
 
 
-class ExceptionResponse( DirectResponse ):
+class ExceptionResponse( ErrorReportResponse ):
 
-    def __init__( self, request ):
+    def __init__( self, request, protocol ):
         traceback.print_exc()
-        DirectResponse.__init__( self, '500 Internal Server Error', request )
+        ErrorReportResponse.__init__( self, '500 Internal Server Error',
+                request, protocol )
 

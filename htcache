@@ -4,12 +4,23 @@ import sys, time, weakref
 import Params, Protocol, Request, Response, fiber
 import Resource
 
+import os
+import coverage
+import sys
+import time
+import weakref
+
+coverage.process_startup()
+
+import Params, Protocol, Request, Response, Resource, fiber
+>>>>>>> v0.3
 
 DOWNLOADS = weakref.WeakValueDictionary()
 
 Params.parse_droplist()
 Params.parse_nocache()
-Params.parse_sort()
+#Params.parse_sort()
+Params.parse_joinlist()
 
 
 def HTCache( client, address ):
@@ -51,7 +62,7 @@ def HTCache( client, address ):
     except Exception:
         if Params.VERBOSE:
             print 'Switching to ExceptionResponse'
-        response = Response.ExceptionResponse( request )
+        response = Response.ExceptionResponse( request, protocol )
 
     while not response.Done:
         if response.hasdata():
@@ -70,12 +81,17 @@ def HTCache( client, address ):
             response.finalize(client)
         #protocol.descriptors.close()
 
+# XXX: more neat in fiber than here, move.
 while True:
-        try:
-                fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
-        except fiber.Restart, e:
-                Resource.get_backend().close()
-                for mod in (Params, Protocol, Request, Response, Resource, fiber):
-                        mod = reload(mod)
-        except Exception, e:
-                break
+    try:
+        fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
+    except fiber.Restart, e:
+        Resource.get_backend().close()
+        for mod in (Params, Protocol, Request, Response, Resource, fiber):
+            mod = reload(mod)
+    except Exception, e:
+        Params.log(e)
+        break
+
+Resource.get_backend().close()
+
