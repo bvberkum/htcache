@@ -69,13 +69,10 @@ class ProxyProtocol(object):
     def __init__(self, request):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
-<<<<<<< HEAD
         url = request.hostinfo + (request.envelope[1],)
         cache_location = '%s:%i/%s' % url
-=======
-        cache_location = '%s:%i/%s' % (request.hostinfo +
-                (request.envelope[1],))
->>>>>>> v0.3
+        #cache_location = '%s:%i/%s' % (request.hostinfo +
+        #        (request.envelope[1],))
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
         Params.log("%i joins"%len(Params.JOIN));
@@ -111,7 +108,6 @@ class ProxyProtocol(object):
 
     def get_descriptor(self):
         return self.descriptors[self.cache.path]
->>>>>>> v0.3
 
     def prepare_direct_response(self, request):
         """
@@ -125,11 +121,7 @@ class ProxyProtocol(object):
         if port == 8080:
             Params.log("Direct request: %s" % path)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
-<<<<<<< HEAD
-            self.Response = Response.DirectResponse
-=======
             self.Response = Response.ErrorReportResponse
->>>>>>> v0.3
             return True
         # Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.ErrorReportResponse
@@ -234,10 +226,7 @@ class HTTP:
     # extension-header
     )
     Request_Headers = (
-<<<<<<< HEAD
-=======
         'Cookie',
->>>>>>> v0.3
         # RFC 2616
         'Accept',
         'Accept-Charset',
@@ -599,13 +588,10 @@ class HttpProtocol(ProxyProtocol):
 
         # Cache headers
         if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
-<<<<<<< HEAD
             pass # TODO: srcrefs, mediatype, charset, language, 
-=======
             pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
             #httpentityspec = Resource.HTTPEntity(self.__args)
             #self.descriptors.put(uriref, httpentityspec.toMetalink())
->>>>>>> v0.3
             self.descriptors[self.cache.path] = [self.requri], self.__args
 
     def recvbuf( self ):

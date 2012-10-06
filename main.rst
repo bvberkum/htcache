@@ -9,8 +9,6 @@ for real networked use. Notably there is no proxy authentication planned so all
 functions are user available.
 
 branches
-    master (current)
-        - Follows new_stable
     stable
         - FIXME: Not working!
         - SQL version
@@ -32,6 +30,12 @@ branches
         - Running
         - Proxy restart command
         - request.url()
+
+Old brnaches
+    master (current)
+        - Follows new_stable
+        - Not in use. Is in a unfinished merge with 0.3.  
+
 
 .. contents::
 

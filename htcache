@@ -13,7 +13,6 @@ import weakref
 coverage.process_startup()
 
 import Params, Protocol, Request, Response, Resource, fiber
->>>>>>> v0.3
 
 DOWNLOADS = weakref.WeakValueDictionary()
 
