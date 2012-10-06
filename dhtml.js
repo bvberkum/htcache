@@ -1,32 +1,93 @@
 console.debug("Loading htcache.js...");
 
+var htcache_log = function(msg) {
+    if (typeof console != 'undefined') {
+        console.log(msg);
+    }
+}
+
 var dhtml_ui = function($){
 
-    var link = $('script#htcache-dhtml-ui').attr('src').replace('htcache.js','');
-    var session_id = $('script#htcache-dhtml-ui').attr('class');
-    console.debug([link, session_id]);
+    var HTCacheMenu = function() {
+        this.link = $('script#htcache-dhtml-ui').attr('src').replace('dhtml.js','');
+        this.session_id = $('script#htcache-dhtml-ui').attr('class');
+    };
+    HTCacheMenu.prototype.init_ui = function() {
+        $('head')
+            .append('<link href="'+this.link+'dhtml.css" rel="stylesheet" type="text/css" media="screen"/>')
+        $('body')
+            .append('<div id="htcache-floater"><a class="menulink">htcache</a><ul id="htcache-menu" /></div>');
+
+        $('#htcache-menu')
+            .append('<li id="htcache-menu-link"></li>');
+
+        $('#htcache-menu')
+            .append('<li><pre id="htcache-session"/></li>');
+
+        $('#htcache-info')
+            .text([this.link, this.session_id]);
+
+//        this.toggle();
+        $('#htcache-floater > a').click(this.toggle);
+        $('#htcache-floater > ul').toggleClass('htc-collapsed');
+    };
+    HTCacheMenu.prototype.toggle = function() {
+        $(this).next().toggleClass('htc-collapsed');
+    };
+    HTCacheMenu.prototype.add_dltree = function(name, tree) {
+        var menu = $('#'+name);
+        if (menu.length == 0) {
+            menu = $('<li><a class="menulink">'+name+'</a><ul id="'+name+'"/></li>');
+            $('a', menu).click(this.toggle);
+        } else {
+            menu = menu.parent();
+        };
+        var local = this;
+        $.each(tree, function(k, v) {
+            var subname = name+'_'+k;
+            if (typeof v == 'object') {
+                var sub = local.add_dltree(subname, v);
+                $(menu.children()[1]).append(sub);
+            } else {
+                $(menu.children()[1]).append('<li><label for="value-'+subname+'">'+k+'</label>: <input id="value'+subname+'" value="'+v+'" disabled="disabled"/></li>');
+            }
+        });
+        //$('#'+name).text(tree);
+        return menu;
+    };
+    HTCacheMenu.prototype.add_menu = function(li) {
+        $('#htcache-menu').append(li);
+    };
+
+    var htcm = new HTCacheMenu();
+    htcm.init_ui();
 
     $.ajax({
-            'url': link + 'info',
+            'url': htcm.link + 'info',
             failure: function(e) {
                 console.warn(e);
             },
             success: function(d) {
-                console.info(d);
+                var dltree = htcm.add_dltree('htcache-info', d);
+                htcm.add_menu(dltree);
+                $(dltree.children()[1]).toggleClass('htc-collapsed');
             }
         });
 
     $.ajax({
-            'url': link + 'page-info',
+            'url': htcm.link + 'page-info',
+            data: {
+                'url': window.location.href
+            },
             failure: function(e) {
                 console.warn(e);
             },
             success: function(d) {
-                console.info(d);
+                var dltree = htcm.add_dltree('htcache-page-info', d);
+                htcm.add_menu(dltree);
+                $(dltree.children()[1]).toggleClass('htc-collapsed');
             }
         });
-
-//    $('head').append('<link href="" rel="stylesheet" type="text/css" media="screen"/>')
 
  }
 
@@ -37,7 +98,7 @@ function insert_jQuery() {
     var head = document.getElementsByTagName('head')[0];
     head.appendChild(script);
     script.onload = function() {
-        console.log('loaded');
+        htcache_log('loaded');
         dhtml_ui(jQuery);
     }
 }

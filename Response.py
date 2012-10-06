@@ -1,8 +1,7 @@
-import hashlib, socket, time, traceback
+import hashlib, socket, time, traceback, urlparse, urllib
 
-import Params, fiber
+import Params, fiber, Resource
 from HTTP import HTTP
-
 
 
 class BlindResponse:
@@ -393,14 +392,26 @@ class DirectResponse:
 
     def serve_params(self, status, protocol, request):
         msg = Params.format_info()
-        self.prepare_response(status, msg)
+        self.prepare_response(status, msg, mime='application/json')
 
     def serve_descriptor(self, status, protocol, request):
-        self.prepare_response("299 TEST", request.recvbuf())#str(dir(request)))
-        return
-        if hasattr(protocol, 'cache') and protocol.cache:
-            descr = protocol.get_descriptor()
-            self.prepare_response(status, Params.json_write(descr))
+#        self.prepare_response("299 TEST", request.recvbuf())#str(dir(request)))
+#        return
+        q = urlparse.urlparse( request.url[2] )[4]
+        url = urlparse.urlparse(urllib.unquote(q[4:]))
+        print url
+        if ':' in url[1]:
+            hostinfo = url[1].split(':')
+            hostinfo[1] = int(hostinfo[1])
+        else:
+            hostinfo = url[1], 80
+        cache = Resource.get_cache(hostinfo, url[2])
+        descriptors = Resource.get_backend()
+        print cache.path
+        if cache.path in descriptors:
+            descr = descriptors[url]
+            self.prepare_response(status, Params.json_write(descr), 
+                    mime='application/json')
         else:
             self.prepare_response("404 No Data", "No data for %s"%protocol.requri)
 
@@ -413,12 +424,12 @@ class DirectResponse:
             jsdata
         ])
 
-    def prepare_response(self, status, msg):
+    def prepare_response(self, status, msg, mime='text/plain'):
         if isinstance(msg, list):
             lines = msg
         else:
             lines = [msg]
-        headers = "Access-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n"
+        headers = "Access-Control-Allow-Origin: *\r\nContent-Type: "+mime+"\r\n"
         self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
                 '\r\n%s' % ( status, headers, '\n'.join( lines ) )
 

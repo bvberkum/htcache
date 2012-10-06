@@ -306,7 +306,7 @@ def format_info():
     Return JSON for config.
     """
     return json_write({
-        "htache": { 
+        "htcache": { 
             "runtime": {
                 "program": PROG,
             },

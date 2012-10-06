@@ -121,8 +121,7 @@ elif Params.CHECK == 'files':
                     #print urlparts
                     pathname += '?'+urlparts.query
                 hostinfo = hostname, port
-                envelope = None, pathname, None
-                cache = Resource.get_cache(hostinfo, envelope)
+                cache = Resource.get_cache(hostinfo, pathname)
                 #print 'got cache', cache.getsize(), cache.path
 # end
     Params.log("Finished checking %s cache locations, found %s resources" % (
@@ -162,8 +161,7 @@ elif Params.CHECK == 'cache':
             #print urlparts
             pathname += '?'+urlparts.query
         hostinfo = hostname, port
-        envelope = None, pathname, None
-        cache = Resource.get_cache(hostinfo, envelope)
+        cache = Resource.get_cache(hostinfo, pathname)
 # end
         act = None
         if not check(cache, *descr):

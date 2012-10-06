@@ -210,11 +210,10 @@ def get_backend(main=True):
     return Params.descriptor_storage_type(Params.RESOURCES, 'r') 
 
 
-def get_cache(hostinfo, envelope):
+def get_cache(hostinfo, req_path):
 
     # Prepare default cache location
-    cache_location = '%s:%i/%s' % (hostinfo +
-            (envelope[1],))
+    cache_location = '%s:%i/%s' % (hostinfo + (req_path,))
     
     cache_location = cache_location.replace(':80', '')
     # Try Join rules

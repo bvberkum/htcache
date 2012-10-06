@@ -7,3 +7,61 @@ body#htcache-browse iframe {
     height: 95%;
     margin: 3% 0.25% 1% 0.25%;
 }
+body ul#htcache-menu a.menulink {
+    font-weight: bold;
+    cursor: pointer;
+}
+body ul#htcache-menu,
+body ul#htcache-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+body div#htcache-floater a.menulink {
+    width: 100%;
+    display: block;
+}
+div#htcache-floater a:hover {
+    background-color: silver;
+}
+body div#htcache-floater {
+    position: fixed;
+    top: .1em !important;
+    right: .2em !important;
+    border-left: .5em solid cornflowerblue;
+    padding: .2em;
+    margin: 0;
+}
+body ul#htcache-menu {
+    /*
+    */
+    border: 1px solid pink;
+    background: #faaabb;
+    width: 29em;
+    font-size: 9pt;
+    font-family: sans-serif;
+/*    padding:0 .1em;*/
+}
+body ul#htcache-menu.htc-collapsed {
+   width: 5em;
+   font-weight: bold;
+   font-family: monospace;
+}
+body ul#htcache-menu li {
+    border-left: 3pt solid silver;
+    padding: 0 .3em;
+    margin: 0;
+    /*margin-bottom: 2pt;
+    margin: 0 1pt;
+     * */
+}
+ul.htc-collapsed li {
+   display: none; 
+}
+ul.htc-collapsed:before {
+   content: "... ";
+}
+pre {
+    white-space: pre-line;
+    font-family: monospace;
+}

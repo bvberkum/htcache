@@ -1,4 +1,4 @@
-import calendar, os, time, socket, re
+import calendar, os, time, socket, re, urlparse
 
 import Params, Response, Resource, Cache
 from HTTP import HTTP
@@ -89,7 +89,7 @@ class ProxyProtocol(object):
         if not prepcache:
             return
 
-        self.cache = Resource.get_cache(request.hostinfo, request.envelope)
+        self.cache = Resource.get_cache(request.hostinfo, request.envelope[1])
       
         # Get descriptor storage reference
         self.descriptors = Resource.get_backend()
