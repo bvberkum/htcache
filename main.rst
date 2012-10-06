@@ -17,6 +17,7 @@ master
         :tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
+            - (dm) 34 passed checks, 7 errors
 
 branches
     master
