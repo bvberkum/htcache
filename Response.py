@@ -104,7 +104,7 @@ class DataResponse:
             args[ 'Content-Range' ] = 'bytes */*'
             args[ 'Content-Length' ] = '0'
 
-        Params.log('HTCache responds %s' % head)
+        Params.log('HTCache responds %s' % head, threshold=1)
         if Params.VERBOSE > 1:
             for key in args:
                 Params.log('> %s: %s' % ( 
@@ -149,7 +149,7 @@ class DataResponse:
             try:
                 self.__pos += sock.send( chunk )
             except:
-                Params.log("Error writing to client, aborted!")  
+                Params.log("Error writing to client, aborted!")
                 self.Done = True
                 # Unittest 2: keep partial file 
                 #if not self.__protocol.cache.full():
@@ -186,7 +186,7 @@ class DataResponse:
                         'connection closed prematurely'
             else:
                 self.__protocol.size = self.__protocol.tell()
-                Params.log('Connection closed at byte %i' % self.__protocol.size)
+                Params.log('Connection closed at byte %i' % self.__protocol.size, threshold=2)
             self.Done = not self.hasdata()
 
         #if self.Done:
@@ -219,14 +219,14 @@ class ChunkedDataResponse( DataResponse ):
             chunksize = int( head.split( ';' )[ 0 ], 16 )
             if chunksize == 0:
                 self.__protocol.size = self.__protocol.tell()
-                Params.log('Connection closed at byte %i' % self.__protocol.size)
+                Params.log('Connection closed at byte %i' % self.__protocol.size, threshold=2)
                 self.Done = not self.hasdata()
                 return
             if len( tail ) < chunksize + 2:
                 return
             assert tail[ chunksize:chunksize+2 ] == '\r\n', \
                     'chunked data error: chunk does not match announced size'
-            Params.log('Received %i byte chunk' % chunksize, 1)
+            Params.log('Received %i byte chunk' % chunksize, threshold=1)
             self.__protocol.write( tail[ :chunksize ] )
             self.__recvbuf = tail[ chunksize+2: ]
 

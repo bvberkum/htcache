@@ -184,11 +184,11 @@ for _arg in _args:
         FIND_RECORDS = _args.next()
 
     elif _arg in ('--check-cache',):
-        CHECK = 'check'
-    elif _arg in ('--validate-cache',):
-        CHECK = 'validate'
-    elif _arg in ('--check-tree',):
-        CHECK = 'tree'
+        CHECK = 'cache'
+#    elif _arg in ('--validate-cache',):
+#        CHECK = 'validate'
+    elif _arg in ('--check-files',):
+        CHECK = 'files'
 #    elif _arg in ('--check-joinlist',):
 #        MODE.append(check_joinlist)
     else:
@@ -197,8 +197,9 @@ for _arg in _args:
 
 def log(msg, threshold=0):
   "Not much of a log.."
+  #assert not threshold == 0
   # see fiber.py which manages stdio
-  if VERBOSE > threshold:
+  if VERBOSE >= threshold:
     print msg
 
 def parse_droplist(fpath=DROP_FILE):

@@ -66,9 +66,11 @@ branches
         - Running
         - Proxy restart command
         - request.url()
-    dev (current)
+    dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
+    dev_cachemaint (current)
+        - Work on command line cache maintenance.
 
 
 .. contents::

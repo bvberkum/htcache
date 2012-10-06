@@ -38,6 +38,14 @@ Params.parse_joinlist()
 
 ### Descriptor/Cache Query static entry
 
+from fnmatch import fnmatch
+
+def path_ignore(path):
+    for p in ('*.git*','*.sw[pon]','*.py[c]','*Makefile', '*.py', '*.mk'):
+        if fnmatch(path, p):
+            return True
+
+
 # print_args
 if Params.PRINT:
 #_ALLRECORDS:
@@ -59,7 +67,7 @@ elif Params.CHECK == 'validate':
     #    check = Resource.validate_cache
     pass
 
-elif Params.CHECK == 'tree':
+elif Params.CHECK == 'files':
     check = Resource.check_tree
     if Params.PRUNE:
         descriptors = Resource.get_backend()
@@ -68,9 +76,17 @@ elif Params.CHECK == 'tree':
     pcount, rcount = 0, 0
     Params.log("Iterating paths in cache root location. ")
     for root, dirs, files in os.walk(Params.ROOT):
+
+        # Ignore files in root
+        if not root[len(Params.ROOT):]:
+            continue
+#        print root[len(Params.ROOT):]
+
 #    	rdir = os.path.join(Params.ROOT, root)
         for f in dirs + files:
             f = os.path.join(root, f)
+            #if path_ignore(f):
+            #    continue
             pcount += 1
             if f not in descriptors:
                 if os.path.isfile(f):
@@ -114,7 +130,7 @@ elif Params.CHECK == 'tree':
     descriptors.close()
     sys.exit(0)
 
-elif Params.CHECK == 'check':
+elif Params.CHECK == 'cache':
     check = Resource.check_cache
     #term = Resource.TerminalController()
     #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
@@ -211,6 +227,8 @@ backend = Params.descriptor_storage_type(Params.RESOURCES)
 def HTCache( client, address ):
 
     Params.log('Accepted request from %s:%i' % address, 1)
+    
+    Params.log('Downloads: %s; +1 (%s:%i)' % ((len(DOWNLOADS),)+ address))
 
     request = Request.HttpRequest()
     protocol = None
@@ -256,7 +274,7 @@ def HTCache( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    Params.log('Transaction successfully completed')
+    Params.log('Transaction successfully completed', 1)
 
     #if protocol:
     #    if response.Done:
@@ -264,7 +282,8 @@ def HTCache( client, address ):
     #protocol.descriptors.close()
 
 
-# XXX: more neat in fiber than here, move.
+# XXX: more neat in fiber than here, move, but need to couple with backend to do
+# that
 while True:
     try:
         fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG,

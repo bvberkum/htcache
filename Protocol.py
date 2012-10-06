@@ -4,6 +4,13 @@ import Params, Response, Resource, Cache
 from HTTP import HTTP
 
 
+class DNSLookupException(Exception):
+    def __init__(self, addr, exc):
+        self.addr = addr
+        self.exc = exc
+    def __str__(self):
+        return "DNS lookup error for %s: %s" % (self.addr, self.exc)
+
 
 LOCALHOSTS = ('localhost',socket.gethostname(),'127.0.0.1','127.0.1.1')
 DNSCache = {}
@@ -12,8 +19,11 @@ def connect( addr ):
     assert Params.ONLINE, 'operating in off-line mode'
     if addr not in DNSCache:
         Params.log('Requesting address info for %s:%i' % addr, 2)
-        DNSCache[ addr ] = socket.getaddrinfo(
-            addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
+        try:
+            DNSCache[ addr ] = socket.getaddrinfo(
+                addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
+        except Exception, e:
+            raise DNSLookupException(addr, e)
     family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
     Params.log('Connecting to %s:%i' % sockaddr, 1)
     sock = socket.socket( family, socktype, proto )
@@ -269,7 +279,7 @@ class HttpProtocol(ProxyProtocol):
             return 0
 
         line = chunk[ :eol ]
-        Params.log('Server responds '+ line.rstrip())
+        Params.log('Server responds '+ line.rstrip(), threshold=1)
         fields = line.split()
         assert (2 <= len( fields )) \
             and fields[ 0 ].startswith( 'HTTP/' ) \

@@ -1,5 +1,6 @@
 import sys, os, select, time, socket, traceback
 
+import Params
 
 class Restart(Exception): pass
 
@@ -57,7 +58,7 @@ class Fiber:
         except AssertionError, msg:
             if not str(msg):
                 msg = traceback.format_exc()
-            print 'Assertion failure:', msg
+            Params.log('Assertion failure: %s'% msg)
         except:
             traceback.print_exc()
 
@@ -114,7 +115,7 @@ class DebugFiber( Fiber ):
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
             if self.state:
-                print 'Waiting at', self
+                Params.log('Waiting at %s'% self, 1)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -189,7 +190,8 @@ def spawn( generator, port, debug, log, pid_file ):
     else:
         myFiber = GatherFiber
 
-    print '[ INIT ]', generator.__name__, 'started at %s:%i' % ( socket.gethostname(), port )
+    Params.log('[ INIT ] %s started at %s:%i' % (generator.__name__,
+        socket.gethostname(), port ), 1)
 
     try:
 
@@ -230,10 +232,10 @@ def spawn( generator, port, debug, log, pid_file ):
                     expire = state.expire
 
             if expire is None:
-                print '[ IDLE ]', time.ctime()
+                Params.log('[ IDLE ] %s %s'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-                print '[ BUSY ]', time.ctime()
+                Params.log('[ BUSY ] %s %s'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
             else:
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -250,7 +252,7 @@ def spawn( generator, port, debug, log, pid_file ):
                 trysend[ fileno ].step()
 
     except KeyboardInterrupt:
-        print '[ DONE ]', generator.__name__, 'terminated'
+        Params.log('[ DONE ] %s terminated'% (generator.__name__))
         sys.exit( 0 )
 
     except Restart:
@@ -264,6 +266,6 @@ def spawn( generator, port, debug, log, pid_file ):
         raise
 
     except:
-        print '[ DONE ]', generator.__name__, 'crashed'
+        print '[ DONE ]', generator.__name__, 'crashed', len(fibers)
         traceback.print_exc( file=sys.stdout )
         sys.exit( 1 )

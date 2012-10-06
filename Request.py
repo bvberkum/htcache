@@ -12,6 +12,7 @@ class HttpRequest:
 
     def __init__( self ):
         self.__parse = self.__parse_head
+        self.__recvbuflen = 0
         self.__recvbuf = ''
 
     def __parse_head( self, chunk ):
@@ -25,7 +26,7 @@ class HttpRequest:
           return 0
 
         line = chunk[ :eol ]
-        Params.log('Client sends '+ line.rstrip())
+        Params.log('Client sends '+ line.rstrip(), threshold=1)
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
@@ -99,9 +100,10 @@ class HttpRequest:
         chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, \
                 'client closed connection before sending a '\
-                'complete message header, ' \
-                'parser: %r, data: %r' % (self.__parse, self.__recvbuf)
+                'complete message header at %s, ' \
+                'parser: %r, data: %r' % (self.__recvbuflen, self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
+        self.__recvbuflen += len(chunk)
         while self.__parse:
             bytecnt = self.__parse( self.__recvbuf )
             if not bytecnt:
