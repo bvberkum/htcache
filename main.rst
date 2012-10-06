@@ -21,6 +21,9 @@ master
         dev_cachemaint
             Cache maintenance routines.
 
+            :tests:
+              - (dm) 21 passed checks, 22 errors
+
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
             - TODO: ``--keep-cache`` mark location revisioning
