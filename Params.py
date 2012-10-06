@@ -61,8 +61,9 @@ DATA_DIR = '/var/lib/htcache/'
 RESOURCES = DATA_DIR+'resource.db'
 HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
-PROXY_INJECT_JS = DATA_DIR+'htcache.js'
-PROXY_INJECT_CSS = DATA_DIR+'htcache.css'
+PROXY_INJECT = True
+PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
+PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
 
 # Static mode, query params
 PRINT = None
@@ -93,9 +94,11 @@ Cache:
   -f RESOURCES
 
 Rules:
-  -d --drop FILE     filter requests for URI's based on regex patterns.
+     --drop FILE     filter requests for URI's based on regex patterns.
                      read line for line from file, default %(DROP_FILE)s.
-  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+     --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+     --rewrite FILE  Filter any webresource by selecting on URL or 
+
 
 Misc.:
      --check-refs    TODO: iterate cache references.
@@ -112,23 +115,33 @@ for _arg in _args:
 
     if _arg in ( '-h', '--help' ):
         sys.exit( USAGE )
+
     elif _arg in ( '-p', '--port' ):
         try:
             PORT = int( _args.next() )
             assert PORT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
-    elif _arg in ( '-d', '--drop' ):
+
+    elif _arg in ( '--drop', ):
         try:
             DROP_FILE = os.path.realpath(_args.next())
+            assert os.path.exists(DROP_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
-    elif _arg in ( '-n', '--nocache' ):
+    elif _arg in ( '--nocache', ):
         try:
             NOCACHE_FILE = os.path.realpath(_args.next())
-            #assert os.path.exists(NOCACHE_FILE)
+            assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
+    elif _arg in ( '--rewrite', ):
+        try:
+            REWRITE_FILE = os.path.realpath(_args.next())
+            assert os.path.exists(REWRITE_FILE)
+        except:
+            sys.exit( 'Error: %s requires an filename argument' % _arg )
+
     elif _arg in ( '-r', '--root' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep
@@ -189,32 +202,35 @@ for _arg in _args:
 #        CHECK = 'validate'
     elif _arg in ('--check-files',):
         CHECK = 'files'
+
 #    elif _arg in ('--check-joinlist',):
 #        MODE.append(check_joinlist)
+
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
 
 
 def log(msg, threshold=0):
-  "Not much of a log.."
-  #assert not threshold == 0
-  # see fiber.py which manages stdio
-  if VERBOSE >= threshold:
-    print msg
+    """
+    Not much of a log..
+    Output if VERBOSE >= threshold
+    """
+    #assert not threshold == 0
+    # see fiber.py which manages stdio
+    if VERBOSE >= threshold:
+        print msg
 
 def parse_droplist(fpath=DROP_FILE):
     global DROP
     DROP = []
-    if os.path.isfile(fpath):
-        DROP.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if p.strip() and not p.startswith('#')])
+    DROP.extend([(p.strip(), re.compile(p.strip())) for p in
+        open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 def parse_nocache(fpath=NOCACHE_FILE):
     global NOCACHE
     NOCACHE = []
-    if os.path.isfile(fpath):
-        NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if p.strip() and not p.startswith('#')])
+    NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
+        open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 
 def parse_joinlist(fpath=JOIN_FILE):
@@ -227,9 +243,48 @@ def parse_joinlist(fpath=JOIN_FILE):
 def parse_rewritelist(fpath=REWRITE_FILE):
     global REWRITE
     REWRITE = []
-    if os.path.isfile(fpath):
-        REWRITE.extend([(p.strip(), re.compile(p.split(' ')[0].strip())) for p in
-            open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
+    for p in open(fpath).readlines():
+        if not p.strip() or p.strip().startswith('#'):
+            continue
+        match, replace = p.strip().split('\t')
+        REWRITE.append((re.compile(match), replace))
+
+# XXX: first need to see working
+def parse_rewritelist_(fpath=REWRITE_FILE):
+    global REWRITE
+    REWRITE_RULES = []
+    REWRITE = {}
+    for p in open(fpath).readlines():
+        if not p.strip() or p.strip().startswith('#'):
+            continue
+            
+        # Parse line and cleanup, compile rule
+        fields = p.strip().split('\t')
+        patterns = [ re.compile(f) if f != '.*' else None for f in fields[:-1] ]
+
+        mime_pattern, hostinfo_pattern, path_pattern, entity_match = patterns
+        entity_replace = fields[-1]
+      
+        # Get rule number
+        if entity_replace in REWRITE_RULES:
+            idx = REWRITE_RULES.index(entity_replace)
+        else:
+            idx = len(REWRITE_RULES)
+            REWRITE_RULES.append(entity_replace)
+
+        # Store new content rewrite rules
+#        REWRITE[] = 
+        REWRITE.append((
+                mime_pattern,
+                hostinfo_pattern,
+                path_pattern,
+                entity_mathc,
+                entity_replace
+            ))
+
+def match_rewrite(mediatype, hostinfo, path):
+    pass
+#/XXX
 
 def validate_joinlist(fpath=JOIN_FILE):
     """
@@ -282,5 +337,7 @@ def format_info():
 descriptor_storage_type = None
 
 if __name__ == '__main__':
-	parse_joinlist()
-	validate_joinlist()
+    #parse_joinlist()
+    #validate_joinlist()
+    parse_rewritelist()
+

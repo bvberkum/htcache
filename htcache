@@ -33,7 +33,7 @@ to locally stored data.
 Params.parse_droplist()
 Params.parse_nocache()
 Params.parse_joinlist()
-#Params.parse_rewritelist()
+Params.parse_rewritelist()
 
 
 ### Descriptor/Cache Query static entry

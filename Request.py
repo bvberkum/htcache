@@ -188,6 +188,10 @@ class HttpRequest:
         return self.__verb, self.__reqpath, self.__prototag
 
     @property
+    def url(self):
+        return self.__host, self.__port, self.__reqpath
+
+    @property
     def headers(self):
         assert self.Protocol, "Request has no protocol"
         return self.__headers.copy()

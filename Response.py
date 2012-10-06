@@ -47,6 +47,8 @@ class DataResponse:
 
     def __init__( self, protocol, request ):
 
+        Params.log("New DataResponse for "+str(request.url))
+
         self.__protocol = protocol
         self.__pos, self.__end = request.range()
         if self.__end == -1:
@@ -60,12 +62,10 @@ class DataResponse:
 
         cached_headers = {}
         if protocol.has_descriptor():
-            #Params.log(protocol.get_descriptor())
-            urls, mediatype, charset, languages, metadata, features = \
-                    protocol.get_descriptor()
+            descr = protocol.get_descriptor()
+            urls, mediatype, charset, languages, metadata, features = descr
             cached_headers = metadata
             #urirefs, cached_args = protocol.get_descriptor()
-            #Params.log(descr)
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
           #if descr[-1]:
@@ -79,6 +79,10 @@ class DataResponse:
         via = "%s:%i" % (socket.gethostname(), Params.PORT)
         if args.setdefault('Via', via) != via:
             args['Via'] += ', '+ via
+# XXX: this may need to be on js serving..
+#        if self.__protocol.rewrite:
+#            args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
+
         args[ 'Connection' ] = 'close'
         if self.__protocol.mtime >= 0:
             args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, \
@@ -140,12 +144,14 @@ class DataResponse:
 
             chunk = self.__protocol.read( self.__pos, bytecnt )
             if self.__protocol.rewrite:
-                for line, regex in Params.REWRITE:
+                Params.log("Trying to rewrite chunk. ")
+                for regex, repl in Params.REWRITE:
                     if regex.search(chunk):
-                        repl = ' '.join(line.split(' ')[1:])
                         new_chunk, count = regex.subn(repl, chunk)
                         self.__protocol.size += len(new_chunk)-len(chunk)
                         chunk = new_chunk
+                    else:
+                        Params.log("No match")
             try:
                 self.__pos += sock.send( chunk )
             except:
@@ -230,6 +236,7 @@ class ChunkedDataResponse( DataResponse ):
             self.__protocol.write( tail[ :chunksize ] )
             self.__recvbuf = tail[ chunksize+2: ]
 
+
 class BlockedContentResponse:
 
     Done = False
@@ -305,8 +312,8 @@ class DirectResponse:
 
     urlmap = {
         'reload': 'reload_proxy',
-        'htcache.css': 'serve_stylesheet',
-        'js-menu': 'serve_js_menu',
+        'dhtml.css': 'serve_stylesheet',
+        'dhtml.js': 'serve_script',
         'echo': 'serve_echo',
         'page-info': 'serve_descriptor',
         'info': 'serve_params',
@@ -397,11 +404,12 @@ class DirectResponse:
         else:
             self.prepare_response("404 No Data", "No data for %s"%protocol.requri)
 
-    def serve_js_menu(self, status, protocol, request):
+    def serve_script(self, status, protocol, request):
         jsdata = open(Params.PROXY_INJECT_JS).read()
         self.__sendbuf = "\r\n".join( [ 
             "HTTP/1.1 %s" % status,
-            "Content-Type: application/javascript\r\n",
+            "Content-Type: application/javascript\r\n"
+            "Access-Control-Allow-Origin: *\r\n",
             jsdata
         ])
 
@@ -410,8 +418,9 @@ class DirectResponse:
             lines = msg
         else:
             lines = [msg]
-        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n'\
-                '\r\n%s' % ( status, '\n'.join( lines ) )
+        headers = "Access-Control-Allow-Origin: *\r\nContent-Type: text/plain\r\n"
+        self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
+                '\r\n%s' % ( status, headers, '\n'.join( lines ) )
 
     def hasdata( self ):
         return bool( self.__sendbuf )

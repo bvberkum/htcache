@@ -196,6 +196,7 @@ class ProxyProtocol(object):
 class HttpProtocol(ProxyProtocol):
 
     rewrite = None
+
     def __init__( self, request ):
         host, port = request.hostinfo
         verb, path, proto = request.envelope
@@ -248,7 +249,6 @@ class HttpProtocol(ProxyProtocol):
                 # should detect existing cache-validating conditional?
                 # FIXME: Validate client validator against cached entry
                 args[ 'If-Modified-Since' ] = mtime
-
 
         # TODO: Store relationship with referer
         relationtype = args.pop('X-Relationship', None)
@@ -333,12 +333,17 @@ class HttpProtocol(ProxyProtocol):
             self.__recvbuf = self.__recvbuf[ bytecnt: ]
         sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
+        # Header was parsed
+
         if self.prepare_nocache_response():
             return
 
         mediatype = self.__args.get('Content-Type', None)
-        if mediatype and 'html' in mediatype:
+        Params.log(mediatype)
+        if Params.PROXY_INJECT and mediatype and 'html' in mediatype:
+            Params.log("XXX: Rewriting HTML resource: "+self.requri)
             self.rewrite = True
+
         # Process and update headers before deferring to response class
         # 2xx, 3xx
         if self.__status in (HTTP.OK, HTTP.MULTIPLE_CHOICES):
