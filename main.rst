@@ -8,11 +8,7 @@ It is developed for single user use but with certain acknowledgements works fine
 for real networked use. Notably there is no proxy authentication planned so all 
 functions are user available.
 
-master
-    stable
-        new_stable
-    development
-        new_development
+Tests
     dev*
         :tests: 
             - (pandora) 42 passed checks, 1 errors
@@ -47,24 +43,7 @@ master
 branches
     master
         - XXX:Follows new_stable?
-        - FIXME: Not working
-    stable
-        - FIXME: Not working
-        - SQL version
-        - TODO: contains unused? CachedResource code , integrate or  remove
-        - Proxy restart command
-    development
-        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
-        - anydbm storage
-        - trying to incoorporate gate.Resource, impl. htache.Resource
-        - started Resource
-        - started fiber.protocol
-        - request.hostinfo()
-        - request.envelope instead of reparsing req
-    new_development
-        - Running
-        - Proxy restart command
-        - request.url()
+        - FIXME: needs a lot of merging to get this right again
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
@@ -78,6 +57,23 @@ Old branches
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
         - Proxy restart command
+    stable
+        - FIXME: Not working
+        - SQL version
+        - TODO: contains unused? CachedResource code , integrate or  remove
+        - Proxy restart command
+    development-old
+        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
+        - anydbm storage
+        - trying to incoorporate gate.Resource, impl. htache.Resource
+        - started Resource
+        - started fiber.protocol
+        - request.hostinfo()
+        - request.envelope instead of reparsing req
+    new_development
+        - Running
+        - Proxy restart command
+        - request.url()
 
 .. contents::
 
