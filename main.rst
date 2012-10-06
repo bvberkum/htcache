@@ -53,11 +53,6 @@ branches
         - SQL version
         - TODO: contains unused? CachedResource code , integrate or  remove
         - Proxy restart command
-    new_stable
-        - Tests pass up to FTP tests.
-        - anydbm storage
-        - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - Proxy restart command
     development
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
@@ -76,8 +71,20 @@ branches
     dev_cachemaint (current)
         - Work on command line cache maintenance.
 
+Old branches
+    new_stable
+        - Uses script/res library, out of use for now.
+        - Tests pass up to FTP tests.
+        - anydbm storage
+        - Sort, Join and Proc rules in addition to NoCache and Drop.
+        - Proxy restart command
 
 .. contents::
+
+History
+-------
+v0.3
+    42 tests, 1 failure.
 
 Status
 ------
