@@ -45,14 +45,16 @@ var dhtml_ui = function($){
         var local = this;
         $.each(tree, function(k, v) {
             var subname = name+'_'+k;
-            if (typeof v == 'object') {
+            if (typeof v == 'object' && v != null) {
                 var sub = local.add_dltree(subname, v);
                 $(menu.children()[1]).append(sub);
-            } else {
+            } else if (v != null) {
+                v = $("<div/>").text(v).html().replace(/\"/g, '');
                 $(menu.children()[1]).append('<li><label for="value-'+subname+'">'+k+'</label>: <input id="value'+subname+'" value="'+v+'" disabled="disabled"/></li>');
+            } else {
+                $(menu.children()[1]).append('<li><label for="value-'+subname+'">'+k+'</label>: <input id="value'+subname+'" value="" disabled="disabled"/></li>');
             }
         });
-        //$('#'+name).text(tree);
         return menu;
     };
     HTCacheMenu.prototype.add_menu = function(li) {

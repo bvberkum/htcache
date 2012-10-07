@@ -53,11 +53,8 @@ class HttpRequest:
                 key = HTTP.Header_Map[key.lower()]
             else:
                 Params.log("Warning: %r not a known HTTP (request) header"% key, 1)
-                key = key.title() # XXX: bad? :)
-            # XXX: this should join headers like Via handling does later on, but
-            # avoiding duplicates has not failed yet. See Protocol how to handle
-            # concatenation
-            assert key not in self.__headers, 'duplicate key: %s' % key
+                key = key.title() 
+            assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
         elif line in ( '\r\n', '\n' ):
             self.__size = int( self.__headers.get( 'Content-Length', 0 ) )

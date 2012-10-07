@@ -222,7 +222,7 @@ if Params.MODE:
 backend = Params.descriptor_storage_type(Params.RESOURCES)
 
 
-def HTCache( client, address ):
+def HTCache_fiber_handler( client, address ):
 
     Params.log('Accepted request from %s:%i' % address, 1)
     
@@ -284,7 +284,7 @@ def HTCache( client, address ):
 # that
 while True:
     try:
-        fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG,
+        fiber.spawn( HTCache_fiber_handler, Params.PORT, Params.DEBUG, Params.LOG,
                 Params.PID_FILE )
     except fiber.Restart, e:
         Resource.get_backend().close()
