@@ -1,3 +1,7 @@
+TODO:
+    - Remove new_stable, new_development, stable-old branches
+    - Get master up to date.
+
 ./Protocol.py:252:                # XXX: treat as unspecified end-to-end revalidation
 ./Protocol.py:254:                # FIXME: Validate client validator against cached entry
 ./Protocol.py:258:        # TODO: Store relationship with referer
