@@ -208,11 +208,15 @@ class HttpProtocol(ProxyProtocol):
             hostinfo = host
         self.requri = "http://%s/%s" %  (hostinfo, path)
 
+        # Calling super constructor
         if self.prepare_direct_response(request):
+            # don't initialize cache for direct requests, let response class
+            # handle further processing.
             super(HttpProtocol, self).__init__(request, False)
             self.__socket = None
             return
         else:
+            # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
     
         # Prepare request for contact with origin server..
@@ -220,7 +224,8 @@ class HttpProtocol(ProxyProtocol):
 
         args = request.headers
         args.pop( 'Accept-Encoding', None )
-        assert not args.pop( 'Range', None )
+        assert not args.pop( 'Range', None ), \
+                "Req for %s had a range.." % self.requri
 
         # if expires < now: revalidate
         # RFC 2616 14.9.4: Cache revalidation and reload controls
@@ -249,6 +254,11 @@ class HttpProtocol(ProxyProtocol):
                 # should detect existing cache-validating conditional?
                 # FIXME: Validate client validator against cached entry
                 args[ 'If-Modified-Since' ] = mtime
+        else: 
+        	# don't gateway conditions, client seems to have cache but this is 
+            # a miss for the proxy
+            args.pop( 'If-None-Match', None )
+            args.pop( 'If-Modified-Since', None )
 
         # TODO: Store relationship with referer
         relationtype = args.pop('X-Relationship', None)
@@ -317,7 +327,12 @@ class HttpProtocol(ProxyProtocol):
         return eol
 
     def recv( self, sock ):
-        " Read until header can be parsed, then determine Response type. "
+        """"
+        The Protocol.recv function processes the server response.
+        It reads until headers can be parsed, then determines and prepares 
+        Response type. Once this is available fiber initializes it and
+        to it.
+        """
         assert not self.hasdata(), "has data"
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
@@ -339,72 +354,27 @@ class HttpProtocol(ProxyProtocol):
             return
 
         mediatype = self.__args.get('Content-Type', None)
-        Params.log(mediatype)
         if Params.PROXY_INJECT and mediatype and 'html' in mediatype:
             Params.log("XXX: Rewriting HTML resource: "+self.requri)
             self.rewrite = True
 
         # Process and update headers before deferring to response class
-        # 2xx, 3xx
+        # 2xx
         if self.__status in (HTTP.OK, HTTP.MULTIPLE_CHOICES):
-                #HTTP.MOVED_PERMANENTLY, HTTP.FOUND, ):
-                #location = self.__args['Location']
-            if self.cache.full():
-                self.cache.open_full()
 
-            else:
-                self.cache.open_new()
-                assert self.cache.partial()
-            # FIXME: load http entity, perhaps response headers from shelve
-            #self.descriptors.map_path(self.cache.path, uriref)
-            #self.descriptors.put(uriref, 
-            #descr = self.get_descriptor()
-            #self.mtime, self.size = scriptor.last_modified, descr.
-            if 'Last-Modified' in self.__args:
-                try:
-                    self.mtime = calendar.timegm( time.strptime(
-                        self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
-                except:
-                    Params.log('Error: illegal time format in Last-Modified: %s.' %
-                        self.__args[ 'Last-Modified' ])
-                    # XXX: Try again, should make a list of alternate (but invalid) date formats
-                    try:
-                        tmhdr = re.sub('\ [GMT0\+-]+$', '',
-                            self.__args[ 'Last-Modified' ])
-                        self.mtime = calendar.timegm( time.strptime(
-                            tmhdr, Params.TIMEFMT[:-4] ) )
-                    except:
-                        try:
-                            self.mtime = calendar.timegm( time.strptime(
-                                self.__args[ 'Last-Modified' ],
-                                Params.ALTTIMEFMT ) )
-                        except:
-                            Params.log('Fatal: unable to parse Last-Modified: %s.' %
-                                self.__args[ 'Last-Modified' ])
-            if 'Content-Length' in self.__args:
-                self.size = int( self.__args[ 'Content-Length' ] )
-            if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-                self.Response = Response.ChunkedDataResponse
-            else:
-                self.Response = Response.DataResponse
+            self.recv_entity()
+            self.resp_data();
 
         elif self.__status == HTTP.PARTIAL_CONTENT and self.cache.partial():
-            byterange = self.__args.pop( 'Content-Range', 'none specified' )
-            assert byterange.startswith( 'bytes ' ), \
-                    'unhandled content-range type: %s' % byterange
-            byterange, size = byterange[ 6: ].split( '/' )
-            beg, end = byterange.split( '-' )
-            self.size = int( size )
-            assert self.size == int( end ) + 1, (self.size, end)
-            self.cache.open_partial( int( beg ) )
-            assert self.cache.partial()
-            if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-                self.Response = Response.ChunkedDataResponse
-            else:
-                self.Response = Response.DataResponse
 
-        # 3xx
+            self.recv_part()
+            self.resp_data();
+
+        # 3xx: redirects
         elif self.__status == HTTP.NOT_MODIFIED:
+                #HTTP.MOVED_PERMANENTLY, HTTP.FOUND, ):
+                #location = self.__args['Location']
+
             if not self.cache.full():
                 assert not self.cache.partial()
                 Params.log("Warning: Cache miss: %s" % self.requri)
@@ -413,14 +383,16 @@ class HttpProtocol(ProxyProtocol):
                 self.cache.open_full()
                 self.Response = Response.DataResponse
 
-        # 4xx
+        # 4xx: client error
         elif self.__status in ( HTTP.FORBIDDEN, \
                     HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) \
                     and self.cache.partial():
+
             Params.log("Warning: Cache corrupted?: %s" % self.requri)
             self.cache.remove_partial()
             self.Response = Response.BlindResponse
 
+        # anything else, XXX: should do more cleanup here, e.g. on 404, etc.
         else:
             Params.log("Warning: unhandled: %s, %s" % (self.__status,
                 self.requri))
@@ -433,6 +405,71 @@ class HttpProtocol(ProxyProtocol):
             #httpentityspec = Resource.HTTPEntity(self.__args)
             #self.descriptors.put(uriref, httpentityspec.toMetalink())
             self.descriptors[self.cache.path] = [self.requri], self.__args
+
+    def recv_entity(self):
+        """
+        Prepare to receive new entity.
+        """
+        if self.cache.full():
+            self.cache.open_full()
+        else:
+            self.cache.open_new()
+            assert self.cache.partial()
+        # FIXME: load http entity, perhaps response headers from shelve
+        #self.descriptors.map_path(self.cache.path, uriref)
+        #self.descriptors.put(uriref, 
+        #descr = self.get_descriptor()
+        #self.mtime, self.size = scriptor.last_modified, descr.
+        if 'Last-Modified' in self.__args:
+            try:
+                self.mtime = calendar.timegm( time.strptime(
+                    self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
+            except:
+                Params.log('Error: illegal time format in Last-Modified: %s.' %
+                    self.__args[ 'Last-Modified' ])
+                # XXX: Try again, should make a list of alternate (but invalid) date formats
+                try:
+                    tmhdr = re.sub('\ [GMT0\+-]+$', '',
+                        self.__args[ 'Last-Modified' ])
+                    self.mtime = calendar.timegm( time.strptime(
+                        tmhdr, Params.TIMEFMT[:-4] ) )
+                except:
+                    try:
+                        self.mtime = calendar.timegm( time.strptime(
+                            self.__args[ 'Last-Modified' ],
+                            Params.ALTTIMEFMT ) )
+                    except:
+                        Params.log('Fatal: unable to parse Last-Modified: %s.' %
+                            self.__args[ 'Last-Modified' ])
+        if 'Content-Length' in self.__args:
+            self.size = int( self.__args[ 'Content-Length' ] )
+        if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
+            self.Response = Response.ChunkedDataResponse
+        else:
+            self.Response = Response.DataResponse
+
+    def recv_part(self):
+        """
+        Prepare to receive partial entity.
+        """
+        byterange = self.__args.pop( 'Content-Range', 'none specified' )
+        assert byterange.startswith( 'bytes ' ), \
+                'unhandled content-range type: %s' % byterange
+        byterange, size = byterange[ 6: ].split( '/' )
+        beg, end = byterange.split( '-' )
+        self.size = int( size )
+        # Sanity check
+        assert self.size == int( end ) + 1, \
+                "Complete range %r should match entity size of %s"%(end, self.size)
+        self.cache.open_partial( int( beg ) )
+        assert self.cache.partial(), "Missing cache but receiving partial entity. "
+
+    def resp_data(self):
+        if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
+            self.Response = Response.ChunkedDataResponse
+        else:
+            self.Response = Response.DataResponse
+
 
     def recvbuf( self ):
         return '\r\n'.join(
