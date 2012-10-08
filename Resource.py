@@ -251,8 +251,6 @@ def print_info(*paths):
         print >>sys.stderr, "Found one record"
     else:
         print >>sys.stderr, "No record found"
-    backend.close()
-    sys.exit(0)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
@@ -276,29 +274,35 @@ def print_media_list(*media):
     import sys
     sys.exit()
 
-def find_info(props):
+def find_info(q):
     import sys
+    global backend
+    print 'Searching for', q
     for path in backend:
         res = backend[path]
-        for k in props:
-            if k in ('0','srcref'):
-                if props[k] in res[0]:
-                    print path
-            elif k in ('1','mediatype'):
-                if props[k] == res[1]:
-                    print path
-            elif k in ('2','charset'):
-                if props[k] == res[2]:
-                    print path
-            elif k in ('3','language'):
-                if props[k] in res[3]:
-                    print path
-            elif k in ('4','feature'):
-                for k2 in props[k]:
-                    if k2 not in res[4]:
-                        continue
-                    if res[4][k2] == props[k][k2]:
-                        print path
+        urls, mime, qs, n, meta, feats = res
+        for u in urls:
+            if q in u:
+                print path, mime, urls
+#        for k in props:
+#            if k in ('0','srcref'):
+#                if props[k] in res[0]:
+#                    print path
+#            elif k in ('1','mediatype'):
+#                if props[k] == res[1]:
+#                    print path
+#            elif k in ('2','charset'):
+#                if props[k] == res[2]:
+#                    print path
+#            elif k in ('3','language'):
+#                if props[k] in res[3]:
+#                    print path
+#            elif k in ('4','feature'):
+#                for k2 in props[k]:
+#                    if k2 not in res[4]:
+#                        continue
+#                    if res[4][k2] == props[k][k2]:
+#                        print path
     backend.close()
     sys.exit(1)
 
@@ -349,8 +353,130 @@ def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
     """
     return True
 
+def check_files():
+    if Params.PRUNE:
+        descriptors = Resource.get_backend()
+    else:
+        descriptors = Resource.get_backend(main=False)
+    pcount, rcount = 0, 0
+    Params.log("Iterating paths in cache root location. ")
+    for root, dirs, files in os.walk(Params.ROOT):
+
+        # Ignore files in root
+        if not root[len(Params.ROOT):]:
+            continue
+#        print root[len(Params.ROOT):]
+
+#    	rdir = os.path.join(Params.ROOT, root)
+        for f in dirs + files:
+            f = os.path.join(root, f)
+            #if path_ignore(f):
+            #    continue
+            pcount += 1
+            if f not in descriptors:
+                if os.path.isfile(f):
+                    Params.log("Missing descriptor for %s" % f)
+                    if Params.PRUNE:
+                        size = os.path.getsize(f)
+                        if size < Params.MAX_SIZE_PRUNE:
+                            os.unlink(f)
+                            Params.log("Removed unknown file %s" % f)
+                        else:
+                            Params.log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
+                elif not (os.path.isdir(f) or os.path.islink(f)):
+                    Params.log("Unrecognized path %s" % f)
+            elif f in descriptors:
+                rcount += 1
+                descr = descriptors[f]
+                if not len(descr) != 7:
+                    Params.log("Unknown descriptor for %s" % descr)
+                    continue
+                uriref = descr[0][0]
+                Params.log("Found resource %s" % uriref, threshold=1)
+# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+                port = 80
+                if len(descr[0]) != 1:
+                    Params.log("Multiple references %s" % f)
+                    continue
+                urlparts = urlparse(uriref)
+                hostname = urlparts.netloc
+                pathname = urlparts.path[1:] 
+# XXX: cannot reconstruct--, or should always normalize?
+                if urlparts.query:
+                    #print urlparts
+                    pathname += '?'+urlparts.query
+                hostinfo = hostname, port
+                cache = Resource.get_cache(hostinfo, pathname)
+                #print 'got cache', cache.getsize(), cache.path
+# end
+    Params.log("Finished checking %s cache locations, found %s resources" % (
+        pcount, rcount))
+    descriptors.close()
+    sys.exit(0)
+
+def check_cache():
+    #term = Resource.TerminalController()
+    #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
+    #pb = Resource.ProgressBar(term, 'Iterating descriptors')
+    if Params.PRUNE:
+        descriptors = Resource.get_backend()
+    else:
+        descriptors = Resource.get_backend(main=False)
+    refs = descriptors.keys()
+    count = len(refs)
+    Params.log("Iterating %s descriptors" % count)
+    for i, ref in enumerate(refs):
+        if Params.VERBOSE > 2:
+            print i, ref
+        descr = descriptors[ref]
+        urirefs, mediatype, d1, d2, meta, features = descr
+        #progress = float(i)/count
+        #pb.update(progress, ref)
+# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+        port = 80
+        if len(urirefs) != 1:
+            Params.log("Multiple references %s" % ref)
+            continue
+        urlparts = urlparse(urirefs[0])
+        hostname = urlparts.netloc
+        pathname = urlparts.path[1:] 
+# XXX: cannot reconstruct--, or should always normalize?
+        if urlparts.query:
+            #print urlparts
+            pathname += '?'+urlparts.query
+        hostinfo = hostname, port
+        cache = Resource.get_cache(hostinfo, pathname)
+# end
+        act = None
+        if not check_cache(cache, *descr):
+            if not Params.PRUNE:
+                continue
+            act = True
+            if cache.full() or cache.partial():
+                path = cache.path
+                if cache.partial():
+                    path += '.incomplete'
+                if os.path.getsize(path) > Params.MAX_SIZE_PRUNE:
+                    if Params.INTERACTIVE:
+                        pass
+                    Params.log("Keeping %s" % path)
+                    continue
+                if os.path.isfile(path):
+                    print 'size=', cache.getsize() / 1024**2
+                    os.unlink(path)
+                    Params.log("Deleted %s" % path)
+                else:
+                    Params.log("Unable to remove dir %s" % path)
+            del descriptors[ref]
+            Params.log("Removed %s" % cache.path)
+    Params.log("Finished checking %s cache descriptors" % count)
+    descriptors.close()
+    #pb.clear()
+    sys.exit(0)
+
 
 #DescriptorStorage(Params.DATA_DIR)
+
 
 import sys, re
 

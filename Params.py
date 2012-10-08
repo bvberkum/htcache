@@ -66,13 +66,9 @@ PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
 PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
 
 # Static mode, query params
-PRINT = None
-PRINT_RECORD = []
-PRINT_ALLRECORDS = False
-PRINT_MEDIA = []
-FIND_RECORDS = {}
+CMD = None
+CMD_ARGS = []
 
-CHECK = None
 PRUNE = False
 MAX_SIZE_PRUNE = 11*(1024**2)
 INTERACTIVE = False
@@ -99,6 +95,8 @@ Rules:
      --nocache FILE  TODO: bypass caching for requests based on regex pattern.
      --rewrite FILE  Filter any webresource by selecting on URL or 
 
+Query
+     --media-image
 
 Misc.:
      --check-refs    TODO: iterate cache references.
@@ -177,24 +175,27 @@ for _arg in _args:
         LOG = _args.next()
     elif _arg == '--debug':
         DEBUG = True
-    elif _arg == '-f':
-        RESOURCES = _args.next()
     elif _arg in ('--pid-file',):
         PID_FILE = _args.next()
+
+    elif _arg in ('-f','--resource'):
+        RESOURCES = _args.next()
     elif _arg in ('--prune',):
         PRUNE = True
-    elif _arg in ('--run-join-rules',):
-        MODE.append('run-join')
 
     elif _arg in ('--print-allrecords',):
-        PRINT = True
-        PRINT_ARGS = None
+        CMD='print-all-records'
     elif _arg in ('--print-record',):
-        PRINT = True
-        PRINT_RECORD.append(_args.next())
+        CMD='print-record'
+        CMD_ARGS=_args.next()
     elif _arg in ('--find-records',):
-        PRINT = True
-        FIND_RECORDS = _args.next()
+        CMD='find-records'
+        CMD_ARGS=_args.next()
+
+#    elif _arg in ('--check-joinlist',):
+#        MODE.append(check_joinlist)
+    elif _arg in ('--run-join-rules',):
+        MODE.append('run-join')
 
     elif _arg in ('--check-cache',):
         CHECK = 'cache'
@@ -202,9 +203,6 @@ for _arg in _args:
 #        CHECK = 'validate'
     elif _arg in ('--check-files',):
         CHECK = 'files'
-
-#    elif _arg in ('--check-joinlist',):
-#        MODE.append(check_joinlist)
 
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
