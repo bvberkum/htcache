@@ -1,0 +1,8 @@
+
+d         := .
+/         := $d/
+BUILD     := $/.build
+B         := $(BUILD)/
+
+include Rules.mk
+

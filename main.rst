@@ -8,17 +8,62 @@ It is developed for single user use but with certain acknowledgements works fine
 for real networked use. Notably there is no proxy authentication planned so all 
 functions are user available.
 
+Tests
+    dev*
+        :tests: 
+            - (pandora) 42 passed checks, 1 errors
+            - (iris) 40 passed checks, 3 errors
+            - (dm) 34 passed checks, 7 errors
+    
+        dev_cachemaint
+            Cache maintenance routines.
+
+            :tests:
+              - (dm) 21 passed checks, 22 errors
+
+            - ``--check-cache --prune`` remove invalid descriptors.
+            - ``--check-tree --prune`` remove files without descriptor.
+            - TODO: ``--keep-cache`` mark location revisioning
+            - TODO: ``--validate-tree`` resource cache should match size, checksum
+            - TODO: ``--validate-joinlist`` resource should have been rewritten
+            - TODO: ``--validate-joinlist --auto`` rename if possible
+            - TODO: ``--validate-lists`` 
+            - TODO: ``--check-joinlist`` run testlines from JOIN,  
+            - TODO: ``--check-lists``
+            - TODO: abstract, refactor query/maintenance mode handling. Allow
+              proxy request.
+            - TODO: ``--print-allrecords`` simply dump?
+            - TODO: ``--print-record`` query
+            - TODO: ``--print-records`` query
+            - TODO: ``--print-media`` query
+
+        dev_cacherev
+            .. 
+
 branches
+    master (current)
+        - Follows new_stable
+        - Not in use. Is in a unfinished merge with 0.3.  
+        - FIXME: needs a lot of merging to get this right again
+    dev
+        - New reintegration of previous branches
+        - Now also running on iris (old debian) but with more errors.  
+    dev_cachemaint (current)
+        - Work on command line cache maintenance.
+
+Old branches
     stable
-        - FIXME: Not working!
+        - FIXME: Not working
         - SQL version
         - TODO: contains unused? CachedResource code , integrate or  remove
         - Proxy restart command
     new_stable
+        - Uses script/res library, out of use for now.
         - Tests pass up to FTP tests.
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
-    development
+        - Proxy restart command
+    development-old
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
         - anydbm storage
         - trying to incoorporate gate.Resource, impl. htache.Resource
@@ -31,13 +76,12 @@ branches
         - Proxy restart command
         - request.url()
 
-Old brnaches
-    master (current)
-        - Follows new_stable
-        - Not in use. Is in a unfinished merge with 0.3.  
-
-
 .. contents::
+
+History
+-------
+v0.3
+    42 tests, 1 failure.
 
 Status
 ------
@@ -47,6 +91,7 @@ Todo
 
    - calculate Age field [14.6]
    - don't cache Authorization response [14.8]
+   - Cacheability: expiration [13.2]  
    - Cache-Control [14.9]
 
  - rules.join rewrites paths (to simplify, remove session id and other query meta vars)
@@ -66,7 +111,10 @@ Todo
    - browse static page
    - proxy config?
    - reload proxy
-    
+
+ - rules.sort prefixes paths
+ - would be nice to let addon's provide new rules.
+   Ex: user- or community provided favicons.
 
 Issues
  1. Dropped connections/failure to write to client happens, but does not appear

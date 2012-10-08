@@ -1,5 +1,6 @@
 import sys, os, select, time, socket, traceback
 
+import Params
 
 class Restart(Exception): pass
 
@@ -57,7 +58,7 @@ class Fiber:
         except AssertionError, msg:
             if not str(msg):
                 msg = traceback.format_exc()
-            print 'Assertion failure:', msg
+            Params.log('Assertion failure: %s'% msg)
         except:
             traceback.print_exc()
 
@@ -114,7 +115,7 @@ class DebugFiber( Fiber ):
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
             if self.state:
-                print 'Waiting at', self
+                Params.log('Waiting at %s'% self, 1)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -127,7 +128,7 @@ class DebugFiber( Fiber ):
         self.__newline = string.endswith( '\n' )
 
 
-def fork( output ):
+def fork( output, pid_file ):
 
     try:
         log = open( output, 'w' )
@@ -157,7 +158,8 @@ def fork( output ):
         sys.exit( 1 )
 
     if pid:
-        print pid
+        open(pid_file, 'wb').write(str(pid))
+        print 'Forked process, htcache now at PID', pid
         sys.exit( 0 )
 
     os.dup2( log.fileno(), sys.stdout.fileno() )
@@ -165,8 +167,9 @@ def fork( output ):
     os.dup2( nul.fileno(), sys.stdin.fileno()  )
 
 
-def spawn( generator, port, debug, log ):
+def spawn( generator, port, debug, log, pid_file ):
 
+    # set up listening socket
     try:
         listener = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
         listener.setblocking( 0 )
@@ -177,15 +180,19 @@ def spawn( generator, port, debug, log ):
         print 'error: failed to create socket:', e
         sys.exit( 1 )
 
+    # fork and exit for deamon mode
     if log:
-        fork( log )
+        fork( log, pid_file )
 
+    # stay attached to console
     if debug:
         myFiber = DebugFiber
     else:
         myFiber = GatherFiber
 
-    print '[ INIT ]', generator.__name__, 'started at %s:%i' % ( socket.gethostname(), port )
+    Params.log('[ INIT ] %s started at %s:%i' % (generator.__name__,
+        socket.gethostname(), port ), 1)
+
     try:
 
         fibers = []
@@ -225,10 +232,10 @@ def spawn( generator, port, debug, log ):
                     expire = state.expire
 
             if expire is None:
-                print '[ IDLE ]', time.ctime()
+                Params.log('[ IDLE ] %s %s'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-                print '[ BUSY ]', time.ctime()
+                Params.log('[ BUSY ] %s %s'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
             else:
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -246,7 +253,7 @@ def spawn( generator, port, debug, log ):
                 trysend[ fileno ].step()
 
     except KeyboardInterrupt:
-        print '[ DONE ]', generator.__name__, 'terminated'
+        Params.log('[ DONE ] %s terminated'% (generator.__name__))
         sys.exit( 0 )
 
     except Restart:
@@ -255,11 +262,11 @@ def spawn( generator, port, debug, log ):
         while i:
             i -= 1
             #state = fibers[ i ].state
-        
+        # close before sending response 
         listener.close()
         raise
 
     except:
-        print '[ DONE ]', generator.__name__, 'crashed'
+        print '[ DONE ]', generator.__name__, 'crashed', len(fibers)
         traceback.print_exc( file=sys.stdout )
         sys.exit( 1 )

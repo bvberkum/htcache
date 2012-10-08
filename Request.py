@@ -2,6 +2,7 @@ import os, socket, time
 
 import Params, Protocol, Resource
 from Protocol import HTTP
+# FIXME from HTTP import HTTP
 
 
 
@@ -11,6 +12,7 @@ class HttpRequest:
 
     def __init__( self ):
         self.__parse = self.__parse_head
+        self.__recvbuflen = 0
         self.__recvbuf = ''
 
     def __parse_head( self, chunk ):
@@ -24,7 +26,7 @@ class HttpRequest:
           return 0
 
         line = chunk[ :eol ]
-        Params.log('Client sends '+ line.rstrip())
+        Params.log('Client sends '+ line.rstrip(), threshold=1)
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
@@ -45,17 +47,14 @@ class HttpRequest:
 
         line = chunk[ :eol ]
         if ':' in line:
-            Params.log('> '+ line.rstrip(), 1)
+            Params.log('> '+ line.rstrip(), 2)
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known request header"% key)
-                key = key.title() # XXX: bad? :)
-            # XXX: this should join headers like Via handling does later on, but
-            # avoiding duplicates has not failed yet. See Protocol how to handle
-            # concatenation
-            assert key not in self.__headers, 'duplicate key: %s' % key
+                Params.log("Warning: %r not a known HTTP (request) header"% key, 1)
+                key = key.title() 
+            assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
         elif line in ( '\r\n', '\n' ):
             self.__size = int( self.__headers.get( 'Content-Length', 0 ) )
@@ -97,8 +96,11 @@ class HttpRequest:
 
         chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, \
-                'client closed connection before sending a complete message header'
+                'client closed connection before sending a '\
+                'complete message header at %s, ' \
+                'parser: %r, data: %r' % (self.__recvbuflen, self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
+        self.__recvbuflen += len(chunk)
         while self.__parse:
             bytecnt = self.__parse( self.__recvbuf )
             if not bytecnt:
@@ -127,9 +129,9 @@ class HttpRequest:
         else:
             self.Protocol = Protocol.BlindProtocol
             scheme = ''
-            port = 80
+            port = 8080
 
-        if scheme:
+        if scheme: # if proxied URL
             if '/' in host:
                 host, path = host.split( '/', 1 )
             else:
@@ -145,19 +147,26 @@ class HttpRequest:
         self.__port = port
         self.__reqpath = path
 
-        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
-        self.resource = Resource.forRequest(req_url)
+# FIXME: new dev comment
+        # TODO: keep entity headers, strip other message headers from args
+        #Params.log('href %s'% proxied_url)
+        #self.Resource = Resource.Resource(proxied_url, self.args())
 
-        if not self.resource:
-            self.resource = Resource.new(req_url)
-        
-        if Params.VERBOSE > 1:
-            print 'Matched to resource', req_url
-        
-        if self.resource and 'Host' not in self.__headers:
-            # Become HTTP/1.1 compliant
-            self.__headers['Host'] = self.resource.ref.host
-
+# FIXME: old master
+#        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
+#        self.resource = Resource.forRequest(req_url)
+#
+#        if not self.resource:
+#            self.resource = Resource.new(req_url)
+#        
+#        if Params.VERBOSE > 1:
+#            print 'Matched to resource', req_url
+#        
+#        if self.resource and 'Host' not in self.__headers:
+#            # Become HTTP/1.1 compliant
+#            self.__headers['Host'] = self.resource.ref.host
+#
+        self.__headers[ 'Host' ] = host
         self.__headers[ 'Connection' ] = 'close'
 
         self.__headers.pop( 'Keep-Alive', None )
@@ -174,10 +183,6 @@ class HttpRequest:
                 Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
             self.__headers['Via'] += ', '+ via
-
-    @property
-    def hostinfo(self):
-        return self.resource.location.host, self.resource.location.port
 
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
@@ -199,6 +204,15 @@ class HttpRequest:
     def envelope(self):
         # XXX: used before protocol is determined,  assert self.Protocol
         return self.__verb, self.__reqpath, self.__prototag
+
+#FIXME: old master
+#    @property
+#    def hostinfo(self):
+#        return self.resource.location.host, self.resource.location.port
+#
+    @property
+    def url(self):
+        return self.__host, self.__port, self.__reqpath
 
     @property
     def headers(self):
@@ -233,3 +247,5 @@ class HttpRequest:
         request2 = other.__verb, other.__host, other.__port, other.__reqpath
         return request1 == request2
 
+    def __str__(self):
+        return "<HttpRequest %s, %s>" % (self.hostinfo, self.envelope)
