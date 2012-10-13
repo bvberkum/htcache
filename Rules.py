@@ -61,12 +61,6 @@ def split_csv(line):
         vbuf = ''
     return values
 
-def parse_sort(fpath=Params.SORT_FILE):
-    Params.SORT = {}
-    if os.path.isfile(fpath):
-        Params.SORT.update([(p[1], re.compile(p[0])) for p in
-            map(split_csv, open(fpath).readlines()) if p])
-
 def parse_rewritelist(fpath=Params.REWRITE_FILE):
     Params.REWRITE = []
     for p in open(fpath).readlines():
