@@ -432,11 +432,8 @@ def get_cache(hostinfo, req_path):
     cache_location = '%s:%i/%s' % (hostinfo + (req_path,))
     cache_location = cache_location.replace(':80', '')
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
-    import os
-    print cache.path, os.path.exists(cache.path)
-    Params.log("%s %s" % (Params.CACHE, cache))
+    Params.log("Init cache: %s %s" % (Params.CACHE, cache), 3)
     Params.log('Prepped cache, position: %s' % cache.path, 1)
-
 # XXX: use unrewritten path as descriptor key, need unique descriptor per resource
     cache.descriptor_key = cache_location
     return cache
