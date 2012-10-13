@@ -125,7 +125,7 @@ class ProxyProtocol(object):
         """
         host, port = request.hostinfo
         verb, path, proto = request.envelope
-        if port == 8080:
+        if port == Params.PORT:
             Params.log("Direct request: %s" % path)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
             self.Response = Response.DirectResponse

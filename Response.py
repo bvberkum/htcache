@@ -1,7 +1,7 @@
 import hashlib, socket, time, traceback, urlparse, urllib
 
-import Params, fiber, Resource
-from HTTP import HTTP
+import fiber
+import Params, Resource, Rules, HTTP
 
 
 class BlindResponse:
@@ -148,7 +148,8 @@ class DataResponse:
 
             chunk = self.__protocol.read( self.__pos, bytecnt )
             if self.__protocol.rewrite:
-                chunk = Rules.Rewrite.run(chunk)
+                delta, chunk = Rules.Rewrite.run(chunk)
+                self.__protocol.size += delta
             try:
                 self.__pos += sock.send( chunk )
             except:
@@ -358,6 +359,21 @@ class DirectResponse:
         self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n'\
                 '\r\n%s' % ( status, '\n'.join( lines ) )
       
+    def control_proxy(self, status, protocol, request):
+        head, body = request.recvbuf().split( '\r\n\r\n', 1 )
+        req = { 
+                'args': request.header
+            }
+        if body:
+            try:
+                req = Params.json_read(body)
+            except:
+                #print "JSON: ",request.recvbuf()
+                raise
+        # TODO: echos only
+        self.prepare_response(status, 
+                Params.json_write(req), mime="application/json")
+
     def reload_proxy(self, status, protocol, request):
         self.prepare_response(status, "Reloading gateway")
 
@@ -393,11 +409,9 @@ class DirectResponse:
         self.prepare_response(status, msg, mime='application/json')
 
     def serve_descriptor(self, status, protocol, request):
-#        self.prepare_response("299 TEST", request.recvbuf())#str(dir(request)))
-#        return
-        q = urlparse.urlparse( request.url[2] )[4]
+        q = urlparse.urlparse( request.url[3] )[4]
         url = urlparse.urlparse(urllib.unquote(q[4:]))
-        print url
+
         if ':' in url[1]:
             hostinfo = url[1].split(':')
             hostinfo[1] = int(hostinfo[1])
