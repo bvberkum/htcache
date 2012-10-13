@@ -6,7 +6,7 @@ import difflib
 
 
 
-ignore_header_match = ('date', 'set-cookie')
+ignore_header_match = ('date', 'set-cookie', 'expires')
 proxy_headers = ()#'via')
 
 class SystemTest:
@@ -47,7 +47,7 @@ class SystemTest:
                 del self.result[0][expected_header]
         for result_header in self.result[0]:
             if result_header not in self.expected[0] and result_header not in proxy_headers:
-                print "New header %r" % result_header
+                print "New header %r: %r" % (result_header, self.result[0][result_header])
         expected_content = self.expected[1]
         result_content = self.result[1]
         if expected_content != result_content:
@@ -72,9 +72,13 @@ if __name__ == '__main__':
     SystemTestRunner.main([
             'http://dotmpe.com/',
 #            'http://ebay.com/',
-            'http://google.com/',
+#            'http://google.com/',
             'http://viking-z.org/',
             'http://catb.org/jargon/index.html',
             'http://catb.org/jargon/html/index.html',
-            'http://catb.org/jargon/html/go01.html'
+            'http://catb.org/jargon/html/go01.html',
+            'http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js',
+"http://www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt",
+"http://jigsaw.w3.org:80/HTTP/ChunkedScript",
+"ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
         ])

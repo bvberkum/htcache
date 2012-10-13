@@ -168,7 +168,6 @@ class Descriptor(object):
 
     def from_headers(class_, args):
         for hn in Protocol.HTTP.Cache_Headers:
-            
             pass
 
 
@@ -258,7 +257,7 @@ class AnyDBStorage(object):
 
     def __contains__(self, path):
         path = strip_root(path)
-        return self.has_path(path)
+        return self.has(path)
 
     def __iter__(self):
         return iter(self.__be)
@@ -281,9 +280,7 @@ class AnyDBStorage(object):
     def get(self, path):
         data = self.__be[path]
         value = tuple(Params.json_read(data))
-        return Descriptor(value, be=self)
-# FIXME: current dev
-#        return tuple(Params.json_read(self.__be[path]))
+        return Descriptor(value)#, be=self)
 
     def set(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
@@ -403,7 +400,7 @@ def _is_sql(be):
 #            return Params.BACKENDS[name][Params.BD_IDX_TYPE](be)
 #
 #    raise Exception("Unable to find backend type of %r" % be)
-#
+
 def get_cache(hostinfo, req_path):
 
     # Prepare default cache location
@@ -421,6 +418,7 @@ def get_cache(hostinfo, req_path):
     # cache_location is a URL path ref including query-part
     # backend will determine real cache location
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
+    Params.log("%s %s" % (Params.CACHE, cache))
     Params.log('Prepped cache, position: %s' % cache.path, 1)
     cache.descriptor_key = cache_location
     return cache

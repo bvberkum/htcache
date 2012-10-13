@@ -4,7 +4,7 @@
 # adapted for htcache. Public domain.
 # 
 
-PORT=8090
+PORT=8888
 NUM="$1"
 PREFIX="/tmp/htcache-unittest$NUM"
 URL_HTTP="www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
@@ -22,6 +22,7 @@ fi
 
 function startserver
 {
+  echo "Starting server at $PORT"
   [ -e .coverage ] && rm .coverage
   test -e $PID && kill -int `cat $PID`
   rm -rf $PREFIX.*

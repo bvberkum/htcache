@@ -84,13 +84,6 @@ class ProxyProtocol(object):
         super(ProxyProtocol, self).__init__()
 
 # FIXME:
-#        url = request.hostinfo + (request.envelope[1],)
-#        cache_location = '%s:%i/%s' % url
-#        #cache_location = '%s:%i/%s' % (request.hostinfo +
-#        #        (request.envelope[1],))
-#        self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
-#        Params.log('Cache position: %s' % self.cache.path)
-#        Params.log("%i joins"%len(Params.JOIN));
 #        for line, regex in Params.JOIN:
 #            url = request.hostinfo[0] +'/'+ request.envelope[1]
 #            m = regex.match(url)
@@ -98,27 +91,10 @@ class ProxyProtocol(object):
 #                Params.log("Rewritten to: %s" % (m.groups(),))
 #            #else:
 #            #    Params.log("No match on %s for %s" % (url, line))
-#        self.descriptors = Resource.get_backend()
 
         self.request = request
-        resource = request.resource
 
-        #self.descriptors = Resource.init_backend(request)
-        cache_be = Cache.load_backend_type(Params.CACHE)
-        # 
-        #self.cache = request.resource.init(self.descriptors, cache_be)
-        cache_location = '%s:%i%s' % (resource.location.host, resource.location.port, resource.path)
-        self.cache = cache_be(cache_location)
-        Params.log('Cache locator: %s' % self.cache.path)
-
-# FIXME:
-#    def has_descriptor(self):
-#        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
-#
-#    def get_descriptor(self):
-#        return self.descriptors[self.cache.path]
-
-        # Track wether response server response was (partially) read
+        # Track server response
         self.__status, self.__message = None, None
 
         if not prepcache:
@@ -396,7 +372,7 @@ class HttpProtocol(ProxyProtocol):
             # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
     
-        path = request.Resource.ref.path
+        #path = request.Resource.ref.path
 
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
@@ -559,7 +535,7 @@ class HttpProtocol(ProxyProtocol):
             self.recv_entity()
             self.resp_data();
 
-        elif self.__status == HTTP.PARTIAL_CONTENT
+        elif self.__status == HTTP.PARTIAL_CONTENT \
                 and self.cache.partial():
 
             self.recv_part()
@@ -656,10 +632,6 @@ class HttpProtocol(ProxyProtocol):
                             self.__args[ 'Last-Modified' ])
         if 'Content-Length' in self.__args:
             self.size = int( self.__args[ 'Content-Length' ] )
-        if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-            self.Response = Response.ChunkedDataResponse
-        else:
-            self.Response = Response.DataResponse
 
     def recv_part(self):
         """
