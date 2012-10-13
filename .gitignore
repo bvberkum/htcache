@@ -1,1 +1,7 @@
-test.log
+.coverage*
+coverage*
+*.pyc
+dist
+*.sw[op]
+*.log
+htmlcov
