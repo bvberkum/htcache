@@ -19,7 +19,7 @@ VERSION = 0.4
 
 # proxy params
 PROG = _args.next()
-PORT = 8081
+PORT = 8080
 ROOT = os.getcwd() + os.sep
 PID_FILE = '/var/run/htcache.pid'
 VERBOSE = 0

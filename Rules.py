@@ -151,13 +151,14 @@ class Drop:
 class Rewrite:
 
     @classmethod
-    def rewrite(klass, chunk):
+    def run(klass, chunk):
+        delta = 0
         Params.log("Trying to rewrite chunk. ", 3)
         for regex, repl in Params.REWRITE:
             if regex.search(chunk):
                 new_chunk, count = regex.subn(repl, chunk)
-                self.__protocol.size += len(new_chunk)-len(chunk)
+                delta += len(new_chunk)-len(chunk)
                 chunk = new_chunk
             else:
                 Params.log("No match on chunk", 4)
-        return chunk
+        return delta, chunk
