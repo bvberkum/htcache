@@ -25,7 +25,7 @@ def connect( addr ):
         except Exception, e:
             raise DNSLookupException(addr, e)
     family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
-    Params.log('Connecting to %s:%i' % sockaddr, 1)
+    Params.log('Connecting to %s:%i' % sockaddr,3)
     sock = socket.socket( family, socktype, proto )
     sock.setblocking( 0 )
     sock.connect_ex( sockaddr )
@@ -305,6 +305,8 @@ class HTTP:
                     'X-Powered-By',
                     'X-Relationship', # used by htcache
                     'X-Varnish',
+                    'X-Cache',
+                    'X-Cache-Hit',
                 )
     """
     For information on other registered HTTP headers, see RFC 4229.
@@ -456,6 +458,7 @@ class HttpProtocol(ProxyProtocol):
             pass
 
         #Params.log("HttpProtocol: Connecting to %s:%s" % request.hostinfo, 2)
+        Params.log("Connecting to %s:%s" % request.hostinfo,2)
         self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
@@ -603,6 +606,8 @@ class HttpProtocol(ProxyProtocol):
                 self.requri))
             self.Response = Response.BlindResponse
 
+
+        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked'
 
         # Cache headers
 #        if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
