@@ -82,10 +82,6 @@ class File(object):
         Apply rules for path.
         """
         path = Rules.Join.rewrite(path)
-# FIXME: SORT tags 
-#        for tag, pattern in Params.SORT.items():
-#            if pattern.match(path):
-#                path = os.path.join(tag, path)
         return path
 
     def init(self, path):
