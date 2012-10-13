@@ -241,6 +241,7 @@ def spawn( generator, port, debug, log, pid_file ):
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
 
             #print '[ IO ] Data on', len(canrecv), "inputs,", len(cansend), "outputs"
+
             for fileno in canrecv:
                 #print '[ IO ] Receiving from', tryrecv[fileno]
                 if fileno is listener.fileno():

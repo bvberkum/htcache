@@ -1,8 +1,8 @@
 import os, socket, time
 
-import Params, Protocol
-from HTTP import HTTP
-
+import Params, Protocol, Resource
+from Protocol import HTTP
+# FIXME from HTTP import HTTP
 
 
 
@@ -111,10 +111,6 @@ class HttpRequest:
         # Headers are parsed, determine target server and resource
         verb, proxied_url, proto = self.envelope
 
-        # TODO: keep entity headers, strip other message headers from args
-        #Params.log('href %s'% proxied_url)
-        #self.Resource = Resource.Resource(proxied_url, self.args())
-
         # Accept http and ftp proxy requests
         if self.__reqpath.startswith( 'http://' ):
             host = self.__reqpath[ 7: ]
@@ -131,22 +127,47 @@ class HttpRequest:
             port = 21
         # Accept static requests, and further parse host
         else:
-            host = self.__reqpath
-            port = 80
+            self.Protocol = Protocol.BlindProtocol
+            scheme = ''
             port = 8080
-        if '/' in host:
-            host, path = host.split( '/', 1 )
-        else:
-            path = ''
-        if ':' in host:
-            host, port = host.split( ':' )
-            port = int( port )
+
+        if scheme: # if proxied URL
+            if '/' in host:
+                host, path = host.split( '/', 1 )
+            else:
+                path = ''
+            if ':' in host:
+                hostinfo = host
+                host, port = host.split( ':' )
+                port = int( port )
+            else:
+                hostinfo = "%s:%s" % (host, port)
 
         self.__host = host
         self.__port = port
         self.__reqpath = path
+
+# FIXME: new dev comment
+        # TODO: keep entity headers, strip other message headers from args
+        #Params.log('href %s'% proxied_url)
+        #self.Resource = Resource.Resource(proxied_url, self.args())
+
+# FIXME: old master
+#        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
+#        self.resource = Resource.forRequest(req_url)
+#
+#        if not self.resource:
+#            self.resource = Resource.new(req_url)
+#        
+#        if Params.VERBOSE > 1:
+#            print 'Matched to resource', req_url
+#        
+#        if self.resource and 'Host' not in self.__headers:
+#            # Become HTTP/1.1 compliant
+#            self.__headers['Host'] = self.resource.ref.host
+#
         self.__headers[ 'Host' ] = host
-        #self.__headers[ 'Connection' ] = 'close'
+        self.__headers[ 'Connection' ] = 'close'
 
         self.__headers.pop( 'Keep-Alive', None )
         self.__headers.pop( 'Proxy-Connection', None )
@@ -184,12 +205,18 @@ class HttpRequest:
         # XXX: used before protocol is determined,  assert self.Protocol
         return self.__verb, self.__reqpath, self.__prototag
 
+#FIXME: old master
+#    @property
+#    def hostinfo(self):
+#        return self.resource.location.host, self.resource.location.port
+#
     @property
     def url(self):
         return self.__host, self.__port, self.__reqpath
 
     @property
     def headers(self):
+        # XXX: used before protocol is determined,  assert self.Protocol
         assert self.Protocol, "Request has no protocol"
         return self.__headers.copy()
 

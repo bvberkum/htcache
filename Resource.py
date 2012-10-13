@@ -15,6 +15,10 @@ import Params, Cache
 
 class DescriptorStorage(object):
 
+    """
+    Base class.
+    """
+
     shelve = None
     "Shelved descriptor objects"
     cachemap = None
@@ -75,9 +79,150 @@ class DescriptorStorage(object):
     
 #            db = dbshelve.open(filename)
 
+def strip_root(path):
+    if path.startswith(Params.ROOT):
+        path = path[len(Params.ROOT):]
+    if path.startswith(os.sep):
+        path = path[1:]
+    return path
 
 
 ### Descriptor Storage types:
+
+class Descriptor(object):
+
+    mapping = [
+        'locations',
+        'mediatype',
+        'size',
+        'etag',
+        'last_modified',
+        'quality_indicator',
+        'encodings',
+        'language',
+        'features',
+        'extension_headers',
+    ]
+    """
+    Item names for each tuple index.
+    """
+
+    def __init__(self, data):#, be=None):
+        assert isinstance(data, tuple)
+        if len(data) > len(self.mapping):
+            raise ValueError()
+        self.__data = data
+        self.storage = None
+        #if be != None:
+        #    self.bind(be)
+
+    def __getattr__(self, name):
+        if name in self.mapping:
+            idx = self.mapping.index(name)
+            return self[idx]
+        else:
+            return super(Descriptor, self).__getattr__(self, name)
+
+    @property
+    def data(self):
+        return self.__data
+
+    def bind(self, location, storage):
+        self.cache_location = location
+        self.storage = storage
+        return self
+
+    def __getitem__(self, idx):
+        if idx >= len(self.data):
+            raise IndexError()
+        #if idx < len(self.data):
+        return self.__data[idx]
+
+    def __setitem__(self, idx, value):
+        self.__data[idx] = value
+
+    def __contains__(self, value):
+        return value in self.__data
+
+    def __iter__(self):
+        return iter(self.__data)
+
+    def update(self, values):# *values, **kwds):
+        if not isinstance(values, Descriptor):
+            assert isinstance(values, tuple), values
+        else:
+            values = values.data
+        _update = ()
+        len_values = len(values)
+        for idx, name in enumerate(self.mapping):
+            if len_values == idx:
+                break
+            if self[idx] != values[idx]:
+                self[idx] = values[idx]
+                _update += (idx,)
+        return _update
+
+    def commit(self):
+        ""
+        self.storage[self.cache_location] = self
+
+    def from_headers(class_, args):
+        for hn in Protocol.HTTP.Cache_Headers:
+            
+            pass
+
+
+class DescriptorStorage(object):
+
+    """
+    Item is the local path to a cached resource.
+    """
+
+    def __init__(self, *params):
+        pass
+
+    def __getitem__(self, path):
+        path = strip_root(path)
+        if path in self:
+            return self.get(path)
+        else:
+            d = Descriptor((None,) * len(Descriptor.mapping))\
+                .bind(path, self)
+            return d
+
+    def __setitem__(self, path, values):
+        if not isinstance(values, Descriptor):
+            assert isinstance(values, tuple)
+        else:
+            values = values.data
+        if path in self:
+            self[path].update(values)
+        else:
+            new_values = self[path]
+            new_values.update(values)
+            self.set(path, new_values)
+
+    def __contains__(self, path):
+        raise AbstractClass()
+
+    def __len__(self):
+        raise AbstractClass()
+
+    def __iter__(self):
+        raise AbstractClass()
+
+    def get(self, path):
+        raise AbstractClass()
+
+    def set(self, path, name, value):
+        raise AbstractClass()
+
+    def commit(self):
+        raise AbstractClass()
+
+    def close(self):
+        raise AbstractClass()
+
 
 class FileStorage(object):
     def __init__(self):
@@ -85,6 +230,9 @@ class FileStorage(object):
     def close(self): pass
     def update(self, hrds): pass
 
+
+# FIXME: old master
+# class AnyDBStorage(DescriptorStorage):
 class AnyDBStorage(object):
 
     def __init__(self, path, mode='rw'):
@@ -109,7 +257,8 @@ class AnyDBStorage(object):
         return self.__be.keys()
 
     def __contains__(self, path):
-        return self.has(path)
+        path = strip_root(path)
+        return self.has_path(path)
 
     def __iter__(self):
         return iter(self.__be)
@@ -130,7 +279,11 @@ class AnyDBStorage(object):
         return path in self.__be
 
     def get(self, path):
-        return tuple(Params.json_read(self.__be[path]))
+        data = self.__be[path]
+        value = tuple(Params.json_read(data))
+        return Descriptor(value, be=self)
+# FIXME: current dev
+#        return tuple(Params.json_read(self.__be[path]))
 
     def set(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
@@ -193,13 +346,17 @@ class AnyDBStorage(object):
 #                (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
 #                and isinstance(srcrefs[0], str)), srcrefs
 
+
+backend = None
+
+# FIXME: old master global storage
 if os.path.isdir(Params.RESOURCES):
+#    backend =  FileStorage(Params.RESOURCES)
     Params.descriptor_storage_type = FileStorage
 
 elif Params.RESOURCES.endswith('.db'):
     Params.descriptor_storage_type = AnyDBStorage
-
-backend = None
+#    backend =  FileStorage(Params.RESOURCES)
 
 def get_backend(main=True):
     global backend
@@ -209,7 +366,44 @@ def get_backend(main=True):
         return backend
     return Params.descriptor_storage_type(Params.RESOURCES, 'r') 
 
+class RelationalStorage(DescriptorStorage):
 
+    def __init__(self, dbref):
+        engine = create_engine(dbref)
+        self._session = sessionmaker(bind=engine)()
+
+    def get(self, url):
+        self._session.query(
+                taxus.data.Resource, taxus.data.Locator).join('lctr').filter_by(ref=url).all()
+
+
+def _is_db(be):
+    # file -s resource.db | grep -i berkeley
+    return os.path.isdir(os.path.dirname(be)) and be.endswith('.db')
+
+def _is_sql(be):
+    # file -s resource.db | grep -i sqlite
+    return \
+        be.startswith('sqlite:///') or \
+        be.startswith('mysql://') or \
+        be.endswith('.sqlite')
+
+#Params.BACKENDS.update(dict(
+#        # TODO: filestorage not implemented
+#        file= (lambda p: os.path.isdir(p), FileStorage),
+#        anydb= (_is_db, AnyDBStorage),
+#        sql= (_is_sql, RelationalStorage)
+#    ))
+#
+# FIXME : old master
+#def init_backend(request, be=Params.BACKEND):
+#
+#    for name in Params.BACKENDS:
+#        if Params.BACKENDS[name][Params.BD_IDX_TEST](be):
+#            return Params.BACKENDS[name][Params.BD_IDX_TYPE](be)
+#
+#    raise Exception("Unable to find backend type of %r" % be)
+#
 def get_cache(hostinfo, req_path):
 
     # Prepare default cache location
@@ -232,7 +426,7 @@ def get_cache(hostinfo, req_path):
     return cache
 
 
-# special command line options allow resource DB queries:
+# psuedo-Main: special command line options allow resource DB queries:
 
 def print_info(*paths):
     import sys

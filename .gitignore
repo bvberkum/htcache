@@ -6,3 +6,6 @@ dist
 *.log
 htmlcov
 test.log
+tags
+test
+gentags.sh
