@@ -72,8 +72,7 @@ class DataResponse:
           #    #if 'encoding' in k.lower(): continue
           #    args[k] = v
         #else:
-        #  Params.log("No descriptor for %s" % protocol.path)
-        #srcrefs, mediatype, charset, languages, features = protocol.get_descriptor()
+        #  Params.log("No descriptor for %s" % protocol.cache.path)
 
         via = "%s:%i" % (socket.gethostname(), Params.PORT)
         if args.setdefault('Via', via) != via:

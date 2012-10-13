@@ -43,6 +43,8 @@ NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 REWRITE = []
 REWRITE_FILE = '/etc/htcache/rules.rewrite'
+#SORT = []
+#SORT_FILE = '/etc/htcache/rules.sort'
 
 # cache backend
 CACHE = 'caches.FileTree'
@@ -70,6 +72,14 @@ PRINT = None
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
 PRINT_MEDIA = []
+DHTML_CLIENT = True
+
+cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
+
+# maintenance params
+CHECK_DESCRIPTOR = []
+
+#     --flat          flat mode; cache all files in root directory (dangerous!)
 FIND_RECORDS = {}
 
 CHECK = None
@@ -92,6 +102,10 @@ Proxy:
 
 Cache:
   -f RESOURCES
+  -c --cache TYPE    use module for caching, default %(CACHE)s.
+  FIXME:
+  -b --backend REF   initialize metadata backend from reference,
+  default...
 
 Rules:
      --drop FILE     filter requests for URI's based on regex patterns.
@@ -108,6 +122,48 @@ Misc.:
                      default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
   -v --verbose       increase output, use twice to show http headers
+
+
+See the documentation in ReadMe regarding configuration of the proxy. The
+following options don't run the proxy but access the cache and descriptor backend::
+
+Resources:
+     --print-info FILE
+     --print-all-info
+                     Print the resource record(s) for (each) cache location,
+                     then exit.
+     --print-record
+                     Print all record info; tab separated, one per line.
+                     This is the default.
+     FIXME --print-mode line|tree
+     TODO --print-url
+     TODO --print-path
+                     List either URLs or PATHs only, omit record data.
+     --find-info KEY:[KEY:]ARG[,...]
+                     Search for exact record matches.
+     --print-documents
+     --print-videos
+     --print-audio
+     --print-images
+                     Search through predefined list of content-types.
+
+Maintenance:
+     --prune-stale   TODO: Delete outdated cached resources.
+     --prune-gone    TODO: Remove resources no longer online.
+     TODO --check-exists
+                     Prune outdated resources or resources that are no longer online.
+
+     TODO --check-encodings
+     TODO --check-languages
+     TODO --check-mediatypes
+                     Use some heurisics to get a better value and replace
+                     previous setting on obvious matches, otherwise prompt user.
+     TODO --x-force-fix
+                     Use first likely value for
+                     check-encodings/languages/mediatypes.
+     TODO --check-dupes
+                     Symlink duplicate content, check by size and hash.
+                     Requires up to data hash index.
                     ''' % locals()
 
 
@@ -123,18 +179,26 @@ for _arg in _args:
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
 
+    elif _arg in ( '-c', '--cache' ):
+        try:
+            CACHE = _args.next()
+        except:
+            sys.exit( 'Error: %s requires an cache type argument' % _arg )
+
     elif _arg in ( '--drop', ):
         try:
             DROP_FILE = os.path.realpath(_args.next())
             assert os.path.exists(DROP_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
+
     elif _arg in ( '--nocache', ):
         try:
             NOCACHE_FILE = os.path.realpath(_args.next())
             assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
+
     elif _arg in ( '--rewrite', ):
         try:
             REWRITE_FILE = os.path.realpath(_args.next())
@@ -158,11 +222,6 @@ for _arg in _args:
         _args.next()
         #except:
         #    sys.exit( 'Error: %s requires argument' % _arg )
-    elif _arg in ( '--cache' ):
-        try:
-            CACHE = _args.next()
-        except:
-            sys.exit( 'Error: %s requires argument' % _arg )
     elif _arg in ( '-t', '--timeout' ):
         try:
             TIMEOUT = int( _args.next() )
@@ -220,6 +279,7 @@ def log(msg, threshold=0):
     if VERBOSE >= threshold:
         print msg
 
+
 def parse_droplist(fpath=DROP_FILE):
     global DROP
     DROP = []
@@ -231,7 +291,6 @@ def parse_nocache(fpath=NOCACHE_FILE):
     NOCACHE = []
     NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
         open(fpath).readlines() if p.strip() and not p.startswith('#')])
-
 
 def parse_joinlist(fpath=JOIN_FILE):
     global JOIN

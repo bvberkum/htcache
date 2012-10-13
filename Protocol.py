@@ -83,6 +83,41 @@ class ProxyProtocol(object):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
 
+# FIXME:
+#        url = request.hostinfo + (request.envelope[1],)
+#        cache_location = '%s:%i/%s' % url
+#        #cache_location = '%s:%i/%s' % (request.hostinfo +
+#        #        (request.envelope[1],))
+#        self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
+#        Params.log('Cache position: %s' % self.cache.path)
+#        Params.log("%i joins"%len(Params.JOIN));
+#        for line, regex in Params.JOIN:
+#            url = request.hostinfo[0] +'/'+ request.envelope[1]
+#            m = regex.match(url)
+#            if m:
+#                Params.log("Rewritten to: %s" % (m.groups(),))
+#            #else:
+#            #    Params.log("No match on %s for %s" % (url, line))
+#        self.descriptors = Resource.get_backend()
+
+        self.request = request
+        resource = request.resource
+
+        #self.descriptors = Resource.init_backend(request)
+        cache_be = Cache.load_backend_type(Params.CACHE)
+        # 
+        #self.cache = request.resource.init(self.descriptors, cache_be)
+        cache_location = '%s:%i%s' % (resource.location.host, resource.location.port, resource.path)
+        self.cache = cache_be(cache_location)
+        Params.log('Cache locator: %s' % self.cache.path)
+
+# FIXME:
+#    def has_descriptor(self):
+#        return self.cache.path in self.descriptors and isinstance(self.get_descriptor(), tuple)
+#
+#    def get_descriptor(self):
+#        return self.descriptors[self.cache.path]
+
         # Track wether response server response was (partially) read
         self.__status, self.__message = None, None
 
@@ -193,6 +228,148 @@ class ProxyProtocol(object):
 #        del self.cache
 
 
+class HTTP:
+
+    OK = 200
+    PARTIAL_CONTENT = 206
+    MULTIPLE_CHOICES = 300 # Variant resource, see alternatives list
+    MOVED_TEMPORARILY = 301 # Located elsewhere
+    FOUND = 302 # Moved permanently
+    SEE_OTHER = 303 # Resource for request located elsewhere using GET
+    NOT_MODIFIED = 304
+    #USE_PROXY = 305
+    _ = 306 # Reserved
+    TEMPORARY_REDIRECT = 307 # Same as 302,
+    # added to explicitly contrast with 302 mistreated as 303
+
+    FORBIDDEN = 403
+    GONE = 410
+    REQUEST_RANGE_NOT_STATISFIABLE = 416
+
+    Entity_Headers =  (
+        # RFC 2616
+        'Allow',
+        'Content-Encoding',
+        'Content-Language',
+        'Content-Length',
+        'Content-Location',
+        'Content-MD5',
+        'Content-Range',
+        'Content-Type',
+        'Expires',
+        'Last-Modified',
+    # extension-header
+    )
+    Request_Headers = (
+        'Cookie',
+        # RFC 2616
+        'Accept',
+        'Accept-Charset',
+        'Accept-Encoding',
+        'Accept-Language',
+        'Authorization',
+        'Expect',
+        'From',
+        'Host',
+        'If-Match',
+        'If-Modified-Since',
+        'If-None-Match',
+        'If-Range',
+        'If-Unmodified-Since',
+        'Max-Forwards',
+        'Proxy-Authorization',
+        'Range',
+        'Referer',
+        'TE',
+        'User-Agent',
+        # RFC 2295
+        'Accept-Features',
+        'Negotiate',
+    )
+    Response_Headers = (
+        'Via',
+        'Set-Cookie',
+        'Location',
+        'Transfer-Encoding',
+        'X-Varnish',
+        # RFC 2616
+        'Accept-Ranges',
+        'Age',
+        'ETag',
+        'Location',
+        'Proxy-Authenticate',
+        'Retry-After',
+        'Server',
+        'Vary',
+        'WWW-Authenticate',
+        # RFC 2295
+        'Alternates',
+        'TCN',
+        'Variant-Vary',
+    )
+    Cache_Headers = Entity_Headers + (
+            'ETag',
+            )
+
+    Message_Headers = Request_Headers +\
+            Response_Headers +\
+            Entity_Headers + \
+            Cache_Headers + (
+                    # Generic headers
+                    # RFC 2616
+                    'Date',
+                    'Cache-Control', # RFC 2616 14.9
+                    'Pragma', # RFC 2616 14.32
+                    'Proxy-Connection',
+                    'Proxy-Authorization',
+                    'Connection',
+                    'Keep-Alive',
+                    # Extension headers
+                    'X-Content-Type-Options',
+                    'X-Powered-By',
+                    'X-Relationship', # used by htcache
+                    'X-Varnish',
+                )
+    """
+    For information on other registered HTTP headers, see RFC 4229.
+    """
+
+    # use these lists to create a mapping to retrieve the properly cased string.
+    Header_Map = dict([(k.lower(), k) 
+        for k in Message_Headers ])
+
+
+#def map_headers_to_resource(headers):
+#    kwds = {}
+#    mapping = {
+#        'allow': 'allow',
+#        'content-encoding': 'content.encodings',
+#        'content-length': 'size',
+#        'content-language': 'language',
+#        'content-location': 'location',
+#        'content-md5': 'content.md5',
+#        #'content-range': '',
+#        #'vary': 'vary',
+#        #'content-type': 'mediatype',
+#        'expires': 'content.expires',
+#        'last-modified': 'last_modified',
+#
+#        'etag': 'etag',
+#    }
+#    for hn, hv in headers.items():
+#        hn, hv = hn.lower(), hv.lower()
+#        if hn == 'content-type':
+#            if ';' in hn:
+#                kwds['mediatype'] = re.search('^[^;]*', hv).group(0).strip()
+#                if 'charset' in hv:
+#                    kwds['charset'] = re.search(';\s*charset=([a-zA-Z0-9]*)',
+#                            hv).group(1)
+#        elif hn.lower() in mapping:
+#            kwds[mapping[hn.lower()]] = hv
+#        else:
+#            print "Warning: ignored", hn
+#    return kwds
+
 class HttpProtocol(ProxyProtocol):
 
     rewrite = None
@@ -219,10 +396,27 @@ class HttpProtocol(ProxyProtocol):
             # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
     
+        path = request.Resource.ref.path
+
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
 
+
         args = request.headers
+        
+        # TODO: filtered_path = "%s/%s" % (host, path)
+        #for pattern, compiled, target in Params.JOIN:
+        #    m = compiled.match(filtered_path)
+        #    if m:
+        #        #arg_dict = dict([(idx, val) for idx, val in enumerate(m.groups())])
+        #        target_path = target % m.groups()
+        #        Params.log('Join downloads by squashing URL %s to %s' %
+        #                (filtered_path, target_path))
+        #        self.cache = Cache.load_backend_type(Params.CACHE)(target_path)
+        #        Params.log('Joined with cache position: %s' % self.cache.path)
+        #        #self.Response = Response.DataResponse
+        #        #return True
+
         args.pop( 'Accept-Encoding', None )
         assert not args.pop( 'Range', None ), \
                 "Req for %s had a range.." % self.requri
@@ -365,7 +559,8 @@ class HttpProtocol(ProxyProtocol):
             self.recv_entity()
             self.resp_data();
 
-        elif self.__status == HTTP.PARTIAL_CONTENT and self.cache.partial():
+        elif self.__status == HTTP.PARTIAL_CONTENT
+                and self.cache.partial():
 
             self.recv_part()
             self.resp_data();
@@ -387,10 +582,26 @@ class HttpProtocol(ProxyProtocol):
         elif self.__status in ( HTTP.FORBIDDEN, \
                     HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) \
                     and self.cache.partial():
-
             Params.log("Warning: Cache corrupted?: %s" % self.requri)
-            self.cache.remove_partial()
+            # FIXME: self.cache.remove_partial()
             self.Response = Response.BlindResponse
+
+# FIXME:
+#        elif self.__status in (HTTP.FOUND, 
+#                    HTTP.MOVED_TEMPORARILY,
+#                    HTTP.TEMPORARY_REDIRECT):
+#            self.cache.remove_partial()
+#            self.Response = Response.BlindResponse
+#            if isinstance(self.request.resource, (Variant, Invariant)):
+#                print 'Variant resource has moved'
+#            #elif isinstance(self.request.resource, Resource):
+#            #    print 'Resource has moved'
+#            elif isinstance(self.request.resource, Relocated):
+#                print 'Relocated has moved'
+#
+#            self.request.resource.update(
+#                    status=self.__status, 
+#                    **map_headers_to_resource(self.__args))
 
         # anything else, XXX: should do more cleanup here, e.g. on 404, etc.
         else:
@@ -400,6 +611,8 @@ class HttpProtocol(ProxyProtocol):
 
 
         # Cache headers
+#        if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
+#            pass # TODO: srcrefs, mediatype, charset, language, 
         if self.cache.full() or self.cache.partial():#cached_resource:
             pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
             #httpentityspec = Resource.HTTPEntity(self.__args)
@@ -497,7 +710,8 @@ class FtpProtocol( ProxyProtocol ):
           return
 
         self.__socket = connect(request.hostinfo)
-        self.__path = request.envelope[1]
+        self.__path = request.Resource.ref.path
+        self.__path_old = request.envelope[1] # XXX
         self.__sendbuf = ''
         self.__recvbuf = ''
         self.__handle = FtpProtocol.__handle_serviceready

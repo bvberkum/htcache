@@ -41,8 +41,9 @@ Tests
             .. 
 
 branches
-    master
-        - XXX:Follows new_stable?
+    master (current)
+        - Follows new_stable
+        - Not in use. Is in a unfinished merge with 0.3.  
         - FIXME: needs a lot of merging to get this right again
     dev
         - New reintegration of previous branches
@@ -51,16 +52,16 @@ branches
         - Work on command line cache maintenance.
 
 Old branches
+    stable
+        - FIXME: Not working
+        - SQL version
+        - TODO: contains unused? CachedResource code , integrate or  remove
+        - Proxy restart command
     new_stable
         - Uses script/res library, out of use for now.
         - Tests pass up to FTP tests.
         - anydbm storage
         - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - Proxy restart command
-    stable
-        - FIXME: Not working
-        - SQL version
-        - TODO: contains unused? CachedResource code , integrate or  remove
         - Proxy restart command
     development-old
         - FIXME: runs somewhat, must make fixes to run all HTTP tests?
