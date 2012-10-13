@@ -1,11 +1,10 @@
 .coverage*
 coverage*
-#*.pyc
+*.pyc
 dist
-#*.sw[op]
+*.sw[op]
 *.log
 htmlcov
-test.log
 tags
 test
 gentags.sh
