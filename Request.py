@@ -112,37 +112,47 @@ class HttpRequest:
         verb, proxied_url, proto = self.envelope
 
         # Accept http and ftp proxy requests
-        if self.__reqpath.startswith( 'http://' ):
-            host = self.__reqpath[ 7: ]
-            port = 80
-            if self.__verb == 'GET':
+        if proxied_url.startswith( 'http://' ):
+            if verb == 'GET':
                 self.Protocol = Protocol.HttpProtocol
             else:
                 self.Protocol = Protocol.BlindProtocol
-        elif self.__reqpath.startswith( 'ftp://' ):
-            assert self.__verb == 'GET', \
-                    '%s request unsupported for ftp' % self.__verb
+            scheme = 'http'
+            host = proxied_url[ 7: ]
+            port = 80
+
+        elif proxied_url.startswith( 'ftp://' ):
+            assert verb == 'GET', \
+                    '%s request unsupported for ftp' % verb
             self.Protocol = Protocol.FtpProtocol
-            host = self.__reqpath[ 6: ]
+            scheme = 'ftp'
+            host = proxied_url[ 6: ]
             port = 21
-        # Accept static requests, and further parse host
+
+        # Accept static requests
         else:
             self.Protocol = Protocol.BlindProtocol
             scheme = ''
             port = 8080
 
-        if scheme: # if proxied URL
-            if '/' in host:
-                host, path = host.split( '/', 1 )
-            else:
-                path = ''
-            if ':' in host:
-                hostinfo = host
-                host, port = host.split( ':' )
-                port = int( port )
-            else:
-                hostinfo = "%s:%s" % (host, port)
+        # Get the path
+        if '/' in host:
+            host, path = host.split( '/', 1 )
+        else:
+            path = ''
 
+        # Parse hostinfo
+        if ':' in host:
+            hostinfo = host
+            host, port = host.split( ':' )
+            port = int( port )
+        else:
+            hostinfo = "%s:%s" % (host, port)
+
+        Params.log('scheme=%s, host=%s, port=%s, path=%s' % (scheme, host, port,
+            path), 3)
+
+        self.__scheme = scheme
         self.__host = host
         self.__port = port
         self.__reqpath = path
@@ -197,27 +207,27 @@ class HttpRequest:
         return '\r\n'.join( lines )
 
     @property
+    def envelope(self):
+        """
+        Used before protocol is determined. After recv finishes parsing
+        Request.url and Request.hostinfo is used instead.
+        """
+        return self.__verb, self.__reqpath, self.__prototag
+
+    @property
     def hostinfo(self):
         return self.__host, self.__port
 
     @property
-    def envelope(self):
-        # XXX: used before protocol is determined,  assert self.Protocol
-        return self.__verb, self.__reqpath, self.__prototag
-
-#FIXME: old master
-#    @property
-#    def hostinfo(self):
-#        return self.resource.location.host, self.resource.location.port
-#
-    @property
     def url(self):
-        return self.__host, self.__port, self.__reqpath
+        assert self.Protocol, "Use request.envelope property. "
+        return self.__scheme, self.__host, self.__port, self.__reqpath
 
     @property
     def headers(self):
         # XXX: used before protocol is determined,  assert self.Protocol
-        assert self.Protocol, "Request has no protocol"
+        if not self.Protocol and self.__parse == self.__parse_args:
+            Params.log("Warning: parsing headers is not finished. ")
         return self.__headers.copy()
 
     def range(self):

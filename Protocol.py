@@ -101,15 +101,16 @@ class ProxyProtocol(object):
 #        self.descriptors = Resource.get_backend()
 
         self.request = request
-        resource = request.resource
+        #resource = request.resource
 
         #self.descriptors = Resource.init_backend(request)
-        cache_be = Cache.load_backend_type(Params.CACHE)
-        # 
+#        cache_be = Cache.load_backend_type(Params.CACHE)
+
         #self.cache = request.resource.init(self.descriptors, cache_be)
-        cache_location = '%s:%i%s' % (resource.location.host, resource.location.port, resource.path)
-        self.cache = cache_be(cache_location)
-        Params.log('Cache locator: %s' % self.cache.path)
+        #cache_location = '%s:%i%s' % (
+        #       resource.location.host, resource.location.port, resource.path)
+#        self.cache = cache_be(cache_location)
+#        Params.log('Cache locator: %s' % self.cache.path)
 
 # FIXME:
 #    def has_descriptor(self):
@@ -396,7 +397,7 @@ class HttpProtocol(ProxyProtocol):
             # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
     
-        path = request.Resource.ref.path
+        #path = request.Resource.ref.path
 
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
@@ -559,7 +560,7 @@ class HttpProtocol(ProxyProtocol):
             self.recv_entity()
             self.resp_data();
 
-        elif self.__status == HTTP.PARTIAL_CONTENT
+        elif self.__status == HTTP.PARTIAL_CONTENT \
                 and self.cache.partial():
 
             self.recv_part()

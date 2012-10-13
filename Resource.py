@@ -403,7 +403,7 @@ def _is_sql(be):
 #            return Params.BACKENDS[name][Params.BD_IDX_TYPE](be)
 #
 #    raise Exception("Unable to find backend type of %r" % be)
-#
+
 def get_cache(hostinfo, req_path):
 
     # Prepare default cache location
@@ -421,6 +421,7 @@ def get_cache(hostinfo, req_path):
     # cache_location is a URL path ref including query-part
     # backend will determine real cache location
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
+    Params.log("%s %s" % (Params.CACHE, cache))
     Params.log('Prepped cache, position: %s' % cache.path, 1)
     cache.descriptor_key = cache_location
     return cache
