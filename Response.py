@@ -64,6 +64,7 @@ class DataResponse:
             descr = protocol.get_descriptor()
             urls, mediatype, charset, languages, metadata, features = descr
             cached_headers = metadata
+        #  Params.log("Descriptor: %s" % pformat(descr))
             #urirefs, cached_args = protocol.get_descriptor()
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
@@ -247,7 +248,7 @@ class BlockedContentResponse:
                         'host': socket.gethostname(), 
                         'port': Params.PORT,
                         'location': '%s:%i/%s' % url,
-                        'software': 'htcache/0.1' }
+                        'software': 'htcache/%s' % Params.VERSION }
 
     def hasdata( self ):
         return bool( self.__sendbuf )

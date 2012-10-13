@@ -212,7 +212,7 @@ class HttpRequest:
         Used before protocol is determined. After recv finishes parsing
         Request.url and Request.hostinfo is used instead.
         """
-        return self.__verb, self.__reqpath, self.__prototag
+        return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
     @property
     def hostinfo(self):
@@ -259,3 +259,4 @@ class HttpRequest:
 
     def __str__(self):
         return "<HttpRequest %s, %s>" % (self.hostinfo, self.envelope)
+

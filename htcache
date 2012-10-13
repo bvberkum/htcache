@@ -301,6 +301,7 @@ while True:
     except Exception, e:
         Params.log(e)
         break
+#Resource.get_backend().close()
 
 Resource.get_backend().close()
 

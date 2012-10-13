@@ -41,12 +41,10 @@ JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-REWRITE = []
-REWRITE_FILE = '/etc/htcache/rules.rewrite'
 #SORT = []
 #SORT_FILE = '/etc/htcache/rules.sort'
-
-# cache backend
+REWRITE = []
+REWRITE_FILE = '/etc/htcache/rules.rewrite'
 CACHE = 'caches.FileTree'
 ARCHIVE = ''
 ENCODE_PATHSEP = ''
@@ -112,7 +110,6 @@ Rules:
                      read line for line from file, default %(DROP_FILE)s.
      --nocache FILE  TODO: bypass caching for requests based on regex pattern.
      --rewrite FILE  Filter any webresource by selecting on URL or 
-
 
 Misc.:
      --check-refs    TODO: iterate cache references.
@@ -198,6 +195,14 @@ for _arg in _args:
             assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
+    elif _arg in ( '-H', '--hash' ):
+        try:
+            ROOT = os.path.realpath( _args.next() ) + os.sep
+            assert os.path.isdir( ROOT )
+        except StopIteration:
+            sys.exit( 'Error: %s requires a directory argument' % _arg )
+        except:
+            sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
 
     elif _arg in ( '--rewrite', ):
         try:
@@ -296,6 +301,49 @@ def parse_joinlist(fpath=JOIN_FILE):
     global JOIN
     JOIN = []
     if os.path.isfile(fpath):
+
+# FIXME: old pandora master
+#<<<<<<< HEAD
+#        JOIN.extend([
+#            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
+#            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
+#                p2.startswith('#') and p2.strip()]
+#            ])
+#
+#def split_csv(line):
+#    line = line.strip()
+#    if not line or line.startswith('#'):
+#        return
+#    values = []
+#    vbuf = ''
+#    Q = ('\'','\"')
+#    inquote = False
+#    for c in line:
+#        if c in Q:
+#            inquote = True
+#        elif inquote:
+#            if c in Q:
+#                inquote = False
+#            else:
+#                vbuf += c
+#        elif c == ',' or c.isspace():
+#            if vbuf:
+#                values.append(vbuf)
+#                vbuf = ''
+#        else:
+#            vbuf += c
+#    if vbuf:
+#        values.append(vbuf)
+#        vbuf = ''
+#    return values
+#
+#def parse_sort(fpath=None):#SORT_FILE):
+#    global SORT
+#    SORT = {}
+#    if os.path.isfile(fpath):
+#        SORT.update([(p[1], re.compile(p[0])) for p in
+#            map(split_csv, open(fpath).readlines()) if p])
+#=======
         JOIN.extend([(p.strip(), re.compile('^'+p.split(' ')[0].strip()+'$')) for p in
             open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
 
@@ -399,4 +447,3 @@ if __name__ == '__main__':
     #parse_joinlist()
     #validate_joinlist()
     parse_rewritelist()
-

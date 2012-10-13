@@ -48,33 +48,9 @@ branches
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
-    dev_cachemaint (current)
+    dev_cachemaint
         - Work on command line cache maintenance.
 
-Old branches
-    stable
-        - FIXME: Not working
-        - SQL version
-        - TODO: contains unused? CachedResource code , integrate or  remove
-        - Proxy restart command
-    new_stable
-        - Uses script/res library, out of use for now.
-        - Tests pass up to FTP tests.
-        - anydbm storage
-        - Sort, Join and Proc rules in addition to NoCache and Drop.
-        - Proxy restart command
-    development-old
-        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
-        - anydbm storage
-        - trying to incoorporate gate.Resource, impl. htache.Resource
-        - started Resource
-        - started fiber.protocol
-        - request.hostinfo()
-        - request.envelope instead of reparsing req
-    new_development
-        - Running
-        - Proxy restart command
-        - request.url()
 
 .. contents::
 
