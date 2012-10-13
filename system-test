@@ -23,7 +23,7 @@ class SystemTest:
         proxies = {}
         data = None
         if proxy:
-            proxies = {'http':'http://dm:8080'}
+            proxies = {'http':'http://localhost:8080'}
         f = urllib.urlopen(self.url, data, proxies)
         r = f.info(), f.read()
         f.close()

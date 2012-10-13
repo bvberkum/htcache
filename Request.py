@@ -151,7 +151,8 @@ class HtRequest:
         else:
             self.Protocol = Protocol.BlindProtocol
             scheme = ''
-            port = 8080
+            host = '' #socket.gethostname()
+            port = Params.PORT
 
         # Get the path
         if '/' in host:
