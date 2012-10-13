@@ -5,3 +5,4 @@ dist
 #*.sw[op]
 *.log
 htmlcov
+test.log
