@@ -357,13 +357,15 @@ class DirectResponse:
 
         lines.append( traceback.format_exc() )
 
-        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n'\
-                '\r\n%s' % ( status, '\n'.join( lines ) )
+        self.__sendbuf = "HTTP/1.1 %s\r\n"\
+            "Access-Control-Allow-Origin: *\r\n"\
+            "Content-Type: text/plain\r\n"\
+            "\r\n%s" % ( status, '\n'.join( lines ) )
       
     def control_proxy(self, status, protocol, request):
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
         req = { 
-                'args': request.header
+                'args': request.headers
             }
         if body:
             try:
