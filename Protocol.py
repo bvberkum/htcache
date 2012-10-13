@@ -10,11 +10,11 @@ DNSCache = {}
 def connect( addr ):
     assert Params.ONLINE, 'operating in off-line mode'
     if addr not in DNSCache:
-        Params.log('Requesting address info for %s:%i' % addr)
+        Params.log('Requesting address info for %s:%i' % addr, 4)
         DNSCache[ addr ] = socket.getaddrinfo(
             addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
     family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
-    Params.log('Connecting to %s:%i' % sockaddr)
+    Params.log('Connecting to %s:%i' % sockaddr,3)
     sock = socket.socket( family, socktype, proto )
     sock.setblocking( 0 )
     sock.connect_ex( sockaddr )
@@ -73,7 +73,7 @@ class ProxyProtocol(object):
                 (request.envelope[1],))
         self.cache = Cache.load_backend_type(Params.CACHE)(cache_location)
         Params.log('Cache position: %s' % self.cache.path)
-        Params.log("%i joins"%len(Params.JOIN));
+        #Params.log("%i join rules"%len(Params.JOIN),3);
         for line, regex in Params.JOIN:
             url = request.hostinfo[0] +'/'+ request.envelope[1]
             m = regex.match(url)
@@ -274,6 +274,8 @@ class HTTP:
                     'X-Powered-By',
                     'X-Relationship', # used by htcache
                     'X-Varnish',
+                    'X-Cache',
+                    'X-Cache-Hit',
                 )
     """
     For information on other registered HTTP headers, see RFC 4229.
@@ -322,7 +324,7 @@ class HttpProtocol(ProxyProtocol):
                 Params.log('Checking complete file in cache: %i bytes, %s' %
                     ( size, mtime ), 1)
                 args[ 'If-Modified-Since' ] = mtime
-        Params.log("Connecting to %s:%s" % request.hostinfo)
+        Params.log("Connecting to %s:%s" % request.hostinfo,2)
         self.__socket = connect(request.hostinfo)
         self.__sendbuf = '\r\n'.join(
             [ head ] + map( ': '.join, args.items() ) + [ '', '' ] )
@@ -472,6 +474,9 @@ class HttpProtocol(ProxyProtocol):
 
         else:
             self.Response = Response.BlindResponse
+
+
+        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked'
 
         # Cache headers
         if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
