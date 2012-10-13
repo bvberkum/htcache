@@ -18,7 +18,7 @@ SRC                 += init.sh $(wildcard *.py) $(wildcard *.rst) \
 TRGT                += $/TODO.list $/htcache.js
 STRGT               += default dist test
 CLN                 += $(wildcard $/*.pyc $/.coverage $/.coverage-*)
-TEST                += test-htcache
+TEST                += test-code test-protocol
 
 # DMK += $/dynamic-makefile.mk
 # DEP += $/generated-dependency
@@ -33,9 +33,13 @@ $/htcache.js: $/HTCache-compile-js.hxml $/HTCache.hx
 $/TODO.list: ./
 	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
-test-htcache::
-	@COVERAGE_PROCESS_START=.coveragerc ./unit-test | tee /tmp/htcache-make.log
-	@echo $$(grep PASSED /tmp/htcache-make.log | wc -l) passed checks, $$(grep ERROR /tmp/htcache-make.log | wc -l) errors
+test-code::
+	@COVERAGE_PROCESS_START=.coveragerc ./unit-test | tee utest.log
+	@echo $$(grep PASSED utest.log | wc -l) passed checks, $$(grep ERROR utest.log | wc -l) errors
+
+test-protocol::
+	@COVERAGE_PROCESS_START=.coveragerc ./system-test | tee systest.log
+	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
 
 
 debug::

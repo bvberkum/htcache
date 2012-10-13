@@ -6,7 +6,7 @@ import difflib
 
 
 
-ignore_header_match = ('date', 'set-cookie')
+ignore_header_match = ('date', 'set-cookie', 'expires')
 proxy_headers = ()#'via')
 
 class SystemTest:
@@ -77,5 +77,8 @@ if __name__ == '__main__':
             'http://catb.org/jargon/index.html',
             'http://catb.org/jargon/html/index.html',
             'http://catb.org/jargon/html/go01.html',
-            'http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js'
+            'http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js',
+"http://www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt",
+"http://jigsaw.w3.org:80/HTTP/ChunkedScript",
+"ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
         ])

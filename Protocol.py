@@ -632,10 +632,6 @@ class HttpProtocol(ProxyProtocol):
                             self.__args[ 'Last-Modified' ])
         if 'Content-Length' in self.__args:
             self.size = int( self.__args[ 'Content-Length' ] )
-        if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
-            self.Response = Response.ChunkedDataResponse
-        else:
-            self.Response = Response.DataResponse
 
     def recv_part(self):
         """
