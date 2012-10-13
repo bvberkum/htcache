@@ -1,5 +1,5 @@
 """ """
-import os, re, anydbm
+import anydbm, datetime, os, re
 
 
 try:
@@ -8,6 +8,16 @@ try:
 except AssertionError:
     from sets import Set as set
 
+import Params
+from error import *
+
+#from gate.util import HeaderDict
+#from sqlalchemy import create_engine
+#from sqlalchemy.orm import sessionmaker
+#from taxus.data import initialize, Resource, Locator, \
+#        Variant, Invariant, Relocated
+#
+#import uriref
 import Params, Cache
 #from script_mpe import res
 #from script_mpe.res import PersistedMetaObject
@@ -56,6 +66,12 @@ class DescriptorStorage(object):
 
     def __setitem__(self, path, value):
         self.shelve
+
+# FIXME: 
+#URL_SCHEMES = ['ftp', 'http']
+
+
+#class CachedResource(object):
 
 #class HTTPEntityHeaders(PersistedMetaObject):
 #    pass

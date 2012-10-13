@@ -95,7 +95,9 @@ class File(object):
 
     def init(self, path):
         assert not path.startswith(os.sep), \
-            "FIXME: implement saving in other roots"
+                "File.init: saving in other roots not supported, only paths relative to Params.ROOT allowed."
+
+
 # FIXME: SORT tags 
 #        for tag, pattern in Params.SORT.items():
 #            if pattern.match(path):

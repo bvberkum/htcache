@@ -371,8 +371,26 @@ class HttpProtocol(ProxyProtocol):
         else:
             # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
+
+        path = request.Resource.ref.path
+        # Prepare request for contact with origin server..
+        head = 'GET /%s HTTP/1.1' % path
+
+        args = request.args()
+        
+        # TODO: filtered_path = "%s/%s" % (host, path)
+        #for pattern, compiled, target in Params.JOIN:
+        #    m = compiled.match(filtered_path)
+        #    if m:
+        #        #arg_dict = dict([(idx, val) for idx, val in enumerate(m.groups())])
+        #        target_path = target % m.groups()
+        #        Params.log('Join downloads by squashing URL %s to %s' %
+        #                (filtered_path, target_path))
+        #        self.cache = Cache.load_backend_type(Params.CACHE)(target_path)
+        #        Params.log('Joined with cache position: %s' % self.cache.path)
+        #        #self.Response = Response.DataResponse
+        #        #return True
     
-        #path = request.Resource.ref.path
 
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
@@ -425,7 +443,7 @@ class HttpProtocol(ProxyProtocol):
                 # FIXME: Validate client validator against cached entry
                 args[ 'If-Modified-Since' ] = mtime
         else: 
-        	# don't gateway conditions, client seems to have cache but this is 
+            # don't gateway conditions, client seems to have cache but this is 
             # a miss for the proxy
             args.pop( 'If-None-Match', None )
             args.pop( 'If-Modified-Since', None )
