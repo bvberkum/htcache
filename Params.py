@@ -323,3 +323,10 @@ descriptor_storage_type = None
 def cn(obj):
     return obj.__class__.__name__
 
+def print_str(s, l = 79):
+    print_line = s.strip()
+    hl = (l-7) / 2
+    if len(print_line) > l:
+        print_line = print_line[:hl] +' [...] '+ print_line[-hl:]
+    return print_line
+

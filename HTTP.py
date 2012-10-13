@@ -116,6 +116,15 @@ class HTTP:
                     'X-Frame-Options',
                     'X-XSS-Protection',
                     'VTag',
+# nujij.nl
+                    'X-Served-By',
+                    'X-Age', # nujij.nl
+                    'X-Request-Backend', # nujij.nl
+                    'X-KUID',
+                    'X-N',
+                    'X-Request-Time',
+# ebay
+                    'RlogId',
                 )
     """
     For information on other registered HTTP headers, see RFC 4229.

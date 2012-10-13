@@ -41,7 +41,8 @@ class HtRequest:
           return 0
 
         line = chunk[ :eol ]
-        Params.log('Client sends '+ line.rstrip(), threshold=1)
+
+        Params.log('Client sends %r'%Params.print_str(line, 96), threshold=1)
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
@@ -68,7 +69,7 @@ class HtRequest:
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known HTTP (request) header"% key, 1)
+                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(key, value.strip()), 1)
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()

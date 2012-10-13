@@ -51,7 +51,7 @@ class DataResponse:
 
     def __init__( self, protocol, request ):
 
-        Params.log("New DataResponse for "+str(request.url))
+        Params.log("New DataResponse for "+str(request.url), 5)
 
         self.__protocol = protocol
         self.__pos, self.__end = request.range()
