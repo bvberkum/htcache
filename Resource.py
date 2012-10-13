@@ -168,7 +168,6 @@ class Descriptor(object):
 
     def from_headers(class_, args):
         for hn in Protocol.HTTP.Cache_Headers:
-            
             pass
 
 
@@ -258,7 +257,7 @@ class AnyDBStorage(object):
 
     def __contains__(self, path):
         path = strip_root(path)
-        return self.has_path(path)
+        return self.has(path)
 
     def __iter__(self):
         return iter(self.__be)
@@ -281,9 +280,7 @@ class AnyDBStorage(object):
     def get(self, path):
         data = self.__be[path]
         value = tuple(Params.json_read(data))
-        return Descriptor(value, be=self)
-# FIXME: current dev
-#        return tuple(Params.json_read(self.__be[path]))
+        return Descriptor(value)#, be=self)
 
     def set(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
