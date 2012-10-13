@@ -1,12 +1,26 @@
+"""
+
+TODO: determine cachability.
+
+
+"""
 import os, socket, time
 
 import Params, Protocol, Resource
-from Protocol import HTTP
-# FIXME from HTTP import HTTP
+from HTTP import HTTP
 
 
 
-class HttpRequest:
+class HtRequest:
+
+    """
+    The single type for requests supported by htcache.
+    This should cover HTTP and FTP.
+
+    HtRequest.recv() wil finish once the entire request has been read,
+    and choose the appropiate Protocol from HttpProtocol, FtpProtocol, or
+    BlindProtocol.
+    """
 
     Protocol = None
 
@@ -16,9 +30,10 @@ class HttpRequest:
         self.__recvbuf = ''
 
     def __parse_head( self, chunk ):
+
         """
         Start parsing request by splitting the envelope or request line,
-        defer to __parse_args.
+        defer to __parse_args once first line has been received.
         """
 
         eol = chunk.find( '\n' ) + 1
@@ -36,6 +51,7 @@ class HttpRequest:
         return eol
 
     def __parse_args( self, chunk ):
+
         """
         Parse request header. Defer to __parse_body if request entity body
         is indicated.
@@ -87,7 +103,9 @@ class HttpRequest:
 
     def recv( self, sock ):
         """
-        Receive request, parsing header and option body, then determine
+        Receive request, parsing header and optional body. Once parsers have
+        finished, determine wether 
+        
         Resource, and prepare Protocol for relaying the request to the content
         origin server.
         """
@@ -258,5 +276,5 @@ class HttpRequest:
         return request1 == request2
 
     def __str__(self):
-        return "<HttpRequest %s, %s>" % (self.hostinfo, self.envelope)
+        return "<%s %s, %s>" % (Params.cn(self), self.hostinfo, self.envelope)
 

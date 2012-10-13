@@ -1,4 +1,10 @@
-""" """
+""" 
+
+Class for descriptor storage.
+
+TODO: filter out unsupported headers, always merge with server headers
+ to client.
+"""
 import anydbm, datetime, os, re
 
 
@@ -418,24 +424,20 @@ def _is_sql(be):
 #    raise Exception("Unable to find backend type of %r" % be)
 
 def get_cache(hostinfo, req_path):
-
+    """
+    req_path is a URL path ref including query-part,
+    the backend will determine real cache location
+    """
     # Prepare default cache location
     cache_location = '%s:%i/%s' % (hostinfo + (req_path,))
-    
     cache_location = cache_location.replace(':80', '')
-    # Try Join rules
-    #if Params.JOIN:
-    #    # FIXME: include hostname:
-    #    loc2 = hostinfo[0] +'/'+ envelope[1]
-    #    loc3 = joinlist_rewrite(loc2)
-    #    if loc2 != loc3:
-    #        cache_location = loc3
-
-    # cache_location is a URL path ref including query-part
-    # backend will determine real cache location
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
+    import os
+    print cache.path, os.path.exists(cache.path)
     Params.log("%s %s" % (Params.CACHE, cache))
     Params.log('Prepped cache, position: %s' % cache.path, 1)
+
+# XXX: use unrewritten path as descriptor key, need unique descriptor per resource
     cache.descriptor_key = cache_location
     return cache
 
@@ -459,6 +461,8 @@ def print_info(*paths):
         print >>sys.stderr, "Found one record"
     else:
         print >>sys.stderr, "No record found"
+    backend.close()
+    print "End of printinfo"; sys.exit(0)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
@@ -480,7 +484,7 @@ def print_media_list(*media):
                 if 'video' in res[1]:
                     print path
     import sys
-    sys.exit()
+    print "end of media-list"; sys.exit()
 
 def find_info(q):
     import sys
@@ -512,7 +516,7 @@ def find_info(q):
 #                    if res[4][k2] == props[k][k2]:
 #                        print path
     backend.close()
-    sys.exit(1)
+    print "End of findinfo"; sys.exit(1)
 
 ## Maintenance functions
 def check_cache(cache, uripathnames, mediatype, d1, d2, meta, features):

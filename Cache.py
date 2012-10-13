@@ -1,5 +1,7 @@
-import time, os, sys
+import time, os, sys, shutil
+
 import Params
+import Rules
 
 
 def load_backend_type(tp):
@@ -20,16 +22,6 @@ def makedirs( path ):
             makedirs( dirpath )
         os.mkdir( dirpath )
 
-
-def joinlist_rewrite(urlref):
-    for line, regex in Params.JOIN:
-        m = regex.match(urlref)
-        if m:
-            capture = True
-            repl = line.split(' ')[-1]
-            urlref = regex.sub(repl, urlref)
-            Params.log("Joined URL matching rule %r" % line, threshold=1)
-    return urlref
 
 def min_pos(*args):
     "Return smallest of all arguments (but >0)"
@@ -78,7 +70,7 @@ class File(object):
             if os.path.exists(rpath + Params.PARTIAL):
                 while os.path.exists('%s.%s%s' % (rpath, i, Params.PARTIAL)):
                     i+=1
-                os.rename(rpath+Params.PARTIAL, '%s.%s%s'
+                shutil.copyfile(rpath+Params.PARTIAL, '%s.%s%s'
                         %(rpath,i,Params.PARTIAL))
                 Params.log("Warning: backed up duplicate incomplete %s" % i)
                 # XXX: todo: keep largest partial only
@@ -89,19 +81,18 @@ class File(object):
         """
         Apply rules for path.
         """
-        if Params.JOIN:
-            return joinlist_rewrite(path)
-        return path
-
-    def init(self, path):
-        assert not path.startswith(os.sep), \
-                "File.init: saving in other roots not supported, only paths relative to Params.ROOT allowed."
-
-
+        path = Rules.Join.rewrite(path)
 # FIXME: SORT tags 
 #        for tag, pattern in Params.SORT.items():
 #            if pattern.match(path):
 #                path = os.path.join(tag, path)
+        return path
+
+    def init(self, path):
+        assert not path.startswith(os.sep), \
+                "File.init: saving in other roots not supported,"\
+                " only paths relative to Params.ROOT allowed."
+
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path

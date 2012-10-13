@@ -3,6 +3,7 @@ import sys, time, weakref
 
 import Params, Protocol, Request, Response, fiber
 import Resource
+import Rules
 
 import os
 import sys
@@ -35,11 +36,11 @@ XXX: This also allows local lookup of resources, ie. to rewrite the cache locati
 to locally stored data.
 """
 
-Params.parse_droplist()
-Params.parse_nocache()
-#Params.parse_sort()
-Params.parse_joinlist()
-Params.parse_rewritelist()
+Rules.parse_droplist()
+Rules.parse_nocache()
+Rules.parse_sort()
+Rules.parse_joinlist()
+Rules.parse_rewritelist()
 
 
 ### Descriptor/Cache Query static entry
@@ -96,6 +97,7 @@ if Params.CMD:
     }
     run[Params.CMD]()
     backend.close()
+
     sys.exit(0)
 
 
@@ -106,12 +108,11 @@ backend = Params.descriptor_storage_type(Params.RESOURCES)
 
 def HTCache_fiber_handler( client, address ):
 
-    Params.log('Accepted request from %s:%i' % address, 1)
-    
-    Params.log('Downloads: %s; +1 (%s:%i)' % ((len(DOWNLOADS),)+ address))
+    Params.log('New Request from %s:%i, downloads: %s; +1' % (
+        address + (len(DOWNLOADS),)))
 
     protocol = None
-    request = Request.HttpRequest()
+    request = Request.HtRequest()
     while not request.Protocol:
         yield fiber.RECV( client, Params.TIMEOUT )
         request.recv( client )
@@ -154,7 +155,7 @@ def HTCache_fiber_handler( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    Params.log('Transaction successfully completed', 1)
+    Params.log('Transaction completed', 1)
 
     if protocol:
         if response:

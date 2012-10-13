@@ -146,6 +146,7 @@ def fork( output, pid_file ):
 
     if pid:
         cpid, status = os.wait()
+        #print "PID, Status: ", cpid, status
         sys.exit( status >> 8 )
 
     try: 
@@ -252,8 +253,9 @@ def spawn( generator, port, debug, log, pid_file ):
                 #print '[ IO ] Sending to', trysend[fileno]
                 trysend[ fileno ].step()
 
-    except KeyboardInterrupt:
-        Params.log('[ DONE ] %s terminated'% (generator.__name__))
+    except KeyboardInterrupt, e:
+        Params.log("Interrupt: %s" % e, 1)
+        Params.log('[ DONE ] %s interrupted'% (generator.__name__))
         sys.exit( 0 )
 
     except Restart:
@@ -270,3 +272,4 @@ def spawn( generator, port, debug, log, pid_file ):
         print '[ DONE ]', generator.__name__, 'crashed', len(fibers)
         traceback.print_exc( file=sys.stdout )
         sys.exit( 1 )
+

@@ -41,8 +41,6 @@ JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-#SORT = []
-#SORT_FILE = '/etc/htcache/rules.sort'
 REWRITE = []
 REWRITE_FILE = '/etc/htcache/rules.rewrite'
 CACHE = 'caches.FileTree'
@@ -276,129 +274,6 @@ def log(msg, threshold=0):
         print msg
 
 
-def parse_droplist(fpath=DROP_FILE):
-    global DROP
-    DROP = []
-    DROP.extend([(p.strip(), re.compile(p.strip())) for p in
-        open(fpath).readlines() if p.strip() and not p.startswith('#')])
-
-def parse_nocache(fpath=NOCACHE_FILE):
-    global NOCACHE
-    NOCACHE = []
-    NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
-        open(fpath).readlines() if p.strip() and not p.startswith('#')])
-
-def parse_joinlist(fpath=JOIN_FILE):
-    global JOIN
-    JOIN = []
-    if os.path.isfile(fpath):
-
-# FIXME: old pandora master
-#<<<<<<< 
-#        JOIN.extend([
-#            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
-#            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
-#                p2.startswith('#') and p2.strip()]
-#            ])
-#
-#def split_csv(line):
-#    line = line.strip()
-#    if not line or line.startswith('#'):
-#        return
-#    values = []
-#    vbuf = ''
-#    Q = ('\'','\"')
-#    inquote = False
-#    for c in line:
-#        if c in Q:
-#            inquote = True
-#        elif inquote:
-#            if c in Q:
-#                inquote = False
-#            else:
-#                vbuf += c
-#        elif c == ',' or c.isspace():
-#            if vbuf:
-#                values.append(vbuf)
-#                vbuf = ''
-#        else:
-#            vbuf += c
-#    if vbuf:
-#        values.append(vbuf)
-#        vbuf = ''
-#    return values
-#
-#def parse_sort(fpath=None):#SORT_FILE):
-#    global SORT
-#    SORT = {}
-#    if os.path.isfile(fpath):
-#        SORT.update([(p[1], re.compile(p[0])) for p in
-#            map(split_csv, open(fpath).readlines()) if p])
-#=======
-        JOIN.extend([(p.strip(), re.compile('^'+p.split(' ')[0].strip()+'$')) for p in
-            open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
-
-def parse_rewritelist(fpath=REWRITE_FILE):
-    global REWRITE
-    REWRITE = []
-    for p in open(fpath).readlines():
-        if not p.strip() or p.strip().startswith('#'):
-            continue
-        match, replace = p.strip().split('\t')
-        REWRITE.append((re.compile(match), replace))
-
-# XXX: first need to see working
-def parse_rewritelist_(fpath=REWRITE_FILE):
-    global REWRITE
-    REWRITE_RULES = []
-    REWRITE = {}
-    for p in open(fpath).readlines():
-        if not p.strip() or p.strip().startswith('#'):
-            continue
-            
-        # Parse line and cleanup, compile rule
-        fields = p.strip().split('\t')
-        patterns = [ re.compile(f) if f != '.*' else None for f in fields[:-1] ]
-
-        mime_pattern, hostinfo_pattern, path_pattern, entity_match = patterns
-        entity_replace = fields[-1]
-      
-        # Get rule number
-        if entity_replace in REWRITE_RULES:
-            idx = REWRITE_RULES.index(entity_replace)
-        else:
-            idx = len(REWRITE_RULES)
-            REWRITE_RULES.append(entity_replace)
-
-        # Store new content rewrite rules
-#        REWRITE[] = 
-        REWRITE.append((
-                mime_pattern,
-                hostinfo_pattern,
-                path_pattern,
-                entity_mathc,
-                entity_replace
-            ))
-
-def match_rewrite(mediatype, hostinfo, path):
-    pass
-#/XXX
-
-def validate_joinlist(fpath=JOIN_FILE):
-    """
-    Read all double commented lines as URLs, use on next first pattern line.
-    """
-    lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
-    for path in lines:
-        match = False
-        for line, regex in JOIN:
-            m = regex.match(path)
-            if m:
-                #print 'Match', path, m.groups()
-                match = True
-        if not match:
-            print "Error: no match for", path
-
 def format_info():
     """
     Return JSON for config.
@@ -434,7 +309,6 @@ def format_info():
 
 descriptor_storage_type = None
 
-if __name__ == '__main__':
-    #parse_joinlist()
-    #validate_joinlist()
-    parse_rewritelist()
+def cn(obj):
+    return obj.__class__.__name__
+

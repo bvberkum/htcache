@@ -79,6 +79,7 @@ class HTTP:
         'Variant-Vary',
         # ???
         'Srv',
+        'P3P',
     )
     Cache_Headers = (
         'ETag',

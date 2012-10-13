@@ -6,6 +6,11 @@ from HTTP import HTTP
 
 class BlindResponse:
 
+    """
+    Like BlindProtocol, BlindResponse tries for graceful
+    recovery in unexpected protocol situations.
+    """
+
     Done = False
 
     def __init__( self, protocol, request ):
@@ -143,14 +148,7 @@ class DataResponse:
 
             chunk = self.__protocol.read( self.__pos, bytecnt )
             if self.__protocol.rewrite:
-                Params.log("Trying to rewrite chunk. ")
-                for regex, repl in Params.REWRITE:
-                    if regex.search(chunk):
-                        new_chunk, count = regex.subn(repl, chunk)
-                        self.__protocol.size += len(new_chunk)-len(chunk)
-                        chunk = new_chunk
-                    else:
-                        Params.log("No match")
+                chunk = Rules.Rewrite.run(chunk)
             try:
                 self.__pos += sock.send( chunk )
             except:
@@ -336,7 +334,7 @@ class DirectResponse:
     def serve_echo(self, status, protocol, request):
         lines = [ 'HTCache: %s' % status, '' ]
         
-        lines.append( 'Requesting:' )
+        lines.append( 'Request echo ing:' )
         lines.append( '' )
 
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
@@ -463,10 +461,16 @@ class DirectResponse:
 class NotFoundResponse( DirectResponse ):
 
     def __init__( self, protocol, request ):
-        DirectResponse.__init__( self, 
-                protocol, request,
-                status='404 Not Found'
-            )
+        if request.url()[0] == 'ftp':
+            DirectResponse.__init__( self, 
+                    protocol, request,
+                    status='550 Not Found'
+                )
+        elif request.url()[0] == 'http':
+            DirectResponse.__init__( self, 
+                    protocol, request,
+                    status='404 Not Found'
+                )
 
 
 class ExceptionResponse( DirectResponse ):

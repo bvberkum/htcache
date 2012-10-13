@@ -33,12 +33,15 @@ $/htcache.js: $/HTCache-compile-js.hxml $/HTCache.hx
 $/TODO.list: ./
 	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
+test-code:: TESTS := 
 test-code::
-	@COVERAGE_PROCESS_START=.coveragerc ./unit-test | tee utest.log
+	@COVERAGE_PROCESS_START=.coveragerc ./unit-test $(TESTS) 2>&1 | tee utest.log
 	@echo $$(grep PASSED utest.log | wc -l) passed checks, $$(grep ERROR utest.log | wc -l) errors
 
 test-protocol::
-	@COVERAGE_PROCESS_START=.coveragerc ./system-test | tee systest.log
+	@sudo ./init.sh start
+	@./system-test 2>&1 | tee systest.log
+	@sudo ./init.sh stop
 	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
 
 
