@@ -1,4 +1,10 @@
-""" """
+""" 
+
+Class for descriptor storage.
+
+TODO: filter out unsupported headers, always merge with server headers
+ to client.
+"""
 import anydbm, datetime, os, re
 
 
@@ -426,6 +432,8 @@ def get_cache(hostinfo, req_path):
     cache_location = '%s:%i/%s' % (hostinfo + (req_path,))
     cache_location = cache_location.replace(':80', '')
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
+    import os
+    print cache.path, os.path.exists(cache.path)
     Params.log("%s %s" % (Params.CACHE, cache))
     Params.log('Prepped cache, position: %s' % cache.path, 1)
 
@@ -454,7 +462,7 @@ def print_info(*paths):
     else:
         print >>sys.stderr, "No record found"
     backend.close()
-    sys.exit(0)
+    print "End of printinfo"; sys.exit(0)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
@@ -476,7 +484,7 @@ def print_media_list(*media):
                 if 'video' in res[1]:
                     print path
     import sys
-    sys.exit()
+    print "end of media-list"; sys.exit()
 
 def find_info(props):
     import sys
@@ -502,7 +510,7 @@ def find_info(props):
                     if res[4][k2] == props[k][k2]:
                         print path
     backend.close()
-    sys.exit(1)
+    print "End of findinfo"; sys.exit(1)
 
 ## Maintenance functions
 def check_cache(cache, uripathnames, mediatype, d1, d2, meta, features):

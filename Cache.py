@@ -1,5 +1,7 @@
-import time, os, sys
+import time, os, sys, shutil
+
 import Params
+import Rules
 
 
 def load_backend_type(tp):
@@ -68,7 +70,7 @@ class File(object):
             if os.path.exists(rpath + Params.PARTIAL):
                 while os.path.exists('%s.%s%s' % (rpath, i, Params.PARTIAL)):
                     i+=1
-                os.rename(rpath+Params.PARTIAL, '%s.%s%s'
+                shutil.copyfile(rpath+Params.PARTIAL, '%s.%s%s'
                         %(rpath,i,Params.PARTIAL))
                 Params.log("Warning: backed up duplicate incomplete %s" % i)
                 # XXX: todo: keep largest partial only
@@ -80,17 +82,17 @@ class File(object):
         Apply rules for path.
         """
         path = Rules.Join.rewrite(path)
-        return path
-
-    def init(self, path):
-        assert not path.startswith(os.sep), \
-                "File.init: saving in other roots not supported, only paths relative to Params.ROOT allowed."
-
-
 # FIXME: SORT tags 
 #        for tag, pattern in Params.SORT.items():
 #            if pattern.match(path):
 #                path = os.path.join(tag, path)
+        return path
+
+    def init(self, path):
+        assert not path.startswith(os.sep), \
+                "File.init: saving in other roots not supported,"\
+                " only paths relative to Params.ROOT allowed."
+
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path

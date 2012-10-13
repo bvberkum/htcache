@@ -1,3 +1,4 @@
+import os
 import re
 
 import Params
@@ -14,51 +15,15 @@ def parse_nocache(fpath=Params.NOCACHE_FILE):
         open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 def parse_joinlist(fpath=Params.JOIN_FILE):
-    Parmas.JOIN = []
+    Params.JOIN = []
     if os.path.isfile(fpath):
 
-# FIXME: old pandora master
-#<<<<<<< HEAD
+# XXX: could put tab back into JOIN rules file
 #        JOIN.extend([
 #            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
 #            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
 #                p2.startswith('#') and p2.strip()]
 #            ])
-#
-#def split_csv(line):
-#    line = line.strip()
-#    if not line or line.startswith('#'):
-#        return
-#    values = []
-#    vbuf = ''
-#    Q = ('\'','\"')
-#    inquote = False
-#    for c in line:
-#        if c in Q:
-#            inquote = True
-#        elif inquote:
-#            if c in Q:
-#                inquote = False
-#            else:
-#                vbuf += c
-#        elif c == ',' or c.isspace():
-#            if vbuf:
-#                values.append(vbuf)
-#                vbuf = ''
-#        else:
-#            vbuf += c
-#    if vbuf:
-#        values.append(vbuf)
-#        vbuf = ''
-#    return values
-#
-#def parse_sort(fpath=None):#SORT_FILE):
-#    global SORT
-#    SORT = {}
-#    if os.path.isfile(fpath):
-#        SORT.update([(p[1], re.compile(p[0])) for p in
-#            map(split_csv, open(fpath).readlines()) if p])
-#=======
         Params.JOIN.extend([
             (
                 '^'+p.split(' ')[0].strip()+'$',
@@ -68,6 +33,39 @@ def parse_joinlist(fpath=Params.JOIN_FILE):
             for p in
             open(fpath).readlines() 
             if p.strip() and not p.strip().startswith('#')])
+
+def split_csv(line):
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return
+    values = []
+    vbuf = ''
+    Q = ('\'','\"')
+    inquote = False
+    for c in line:
+        if c in Q:
+            inquote = True
+        elif inquote:
+            if c in Q:
+                inquote = False
+            else:
+                vbuf += c
+        elif c == ',' or c.isspace():
+            if vbuf:
+                values.append(vbuf)
+                vbuf = ''
+        else:
+            vbuf += c
+    if vbuf:
+        values.append(vbuf)
+        vbuf = ''
+    return values
+
+def parse_sort(fpath=Params.SORT_FILE):
+    Params.SORT = {}
+    if os.path.isfile(fpath):
+        Params.SORT.update([(p[1], re.compile(p[0])) for p in
+            map(split_csv, open(fpath).readlines()) if p])
 
 def parse_rewritelist(fpath=Params.REWRITE_FILE):
     Params.REWRITE = []
@@ -131,7 +129,7 @@ def validate_joinlist(fpath=Params.JOIN_FILE):
 class Join:
 
     @classmethod
-    def rewrite(klass, uriref):
+    def rewrite(klass, pathref):
         if Params.JOIN:
             for pattern, regex, repl in Params.JOIN:
                 m = regex.match(pathref)
@@ -141,4 +139,25 @@ class Join:
                     Params.log("Joined URL matching rule %r" % line, threshold=1)
         return pathref
 
+class Drop:
 
+    @classmethod
+    def match(klass, path):
+        for pattern, compiled in Params.DROP:
+            if compiled.match(path):
+                return pattern
+
+
+class Rewrite:
+
+    @classmethod
+    def rewrite(klass, chunk):
+        Params.log("Trying to rewrite chunk. ", 3)
+        for regex, repl in Params.REWRITE:
+            if regex.search(chunk):
+                new_chunk, count = regex.subn(repl, chunk)
+                self.__protocol.size += len(new_chunk)-len(chunk)
+                chunk = new_chunk
+            else:
+                Params.log("No match on chunk", 4)
+        return chunk

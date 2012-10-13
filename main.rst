@@ -10,10 +10,10 @@ functions are user available.
 
 Tests
     dev*
-        :tests: 
+        :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
-            - (dm) 34 passed checks, 7 errors
+            - (dm) 41 passed checks, 1 errors
     
         dev_cachemaint
             Cache maintenance routines.
@@ -133,7 +133,8 @@ Also create files in /etc/htcache:
 
 Overview
 --------
-htcache client/server flow::
+htcache client/server flow with emphasis on different types
+of request and response sequences::
 
    .                         htcache
                              _______
@@ -148,15 +149,18 @@ htcache client/server flow::
           <------*conditional---'
 
            --*normal----------> o
+                                |--*nocache(8)-------->
                                 ~
            ---rewritten(5)----> o
-                                |--*normal------------>
                                 |---rewritten(6)------>
-                                `--*nocache(7)-------->
+                                |---joined(7)--------->
+                                `--*normal------------>
+           ---not modified----> o 
+                                |---rewritten(6)------>
+                                |---joined(7)--------->
+                                `--*cached------------>
 
-           ---not modified----> o--*cached------------>
-
-           ---error-----------> o---blind------------->
+           ---error-----------> o---blind(8)---------->
 
 
 
@@ -165,20 +169,24 @@ htcache client/server flow::
    * indicates wether there may be partial entity-content transfer
 
 
-Normally a request creates a new cache location and descriptor, static
-responses are always served from cache and conditional requests may be.
+Normally a request creates a new cache location and descriptor, these are
+the normal lines. Static responses are always served from cache, and 
+conditional requests may be (these depend on HTTP cache control).
 
 Beside these messages, also note the following special cases of request
-and response messages.
+and response messages. Not all are implemented.
 
 == ================================================= =======================
                                                      Rules file
 -- ------------------------------------------------- -----------------------
-1. 'Blocked content' message                         rules.drop
-3. Rewritten request message                         rules,filter.req.sort
-4. Rewritten response message (cache rewritten)      rules,filter.res.sort
-5. Rewritten response message (cache original)       rules,filter.resp.sort
-6. Blind response (uncached)                         rules.nocache
+1. Dropped by proxy (blocked url)                    rules.drop
+2. Static resource                                   (db & filesystem)
+3. Direct URL (dynamic proxy resource)               (hardcoded)
+4. Rewritten request message                         (n.i.)
+5. Rewritten response message (cache rewritten)      (n.i.)
+6. Rewritten response message (cache original)       rules.rewrite
+7. Response joined with other resource (cache join)  rules.join
+8. Blind response (uncached)                         rules.nocache
 == ================================================= =======================
 
 See the section `Rule Syntax`_ for the exact syntax.
@@ -188,16 +196,16 @@ Fiber
 HTCache is a fork of http-replicator and the main script follows the same
 implementation using fibers. It has a bit more elaborated message handling::
 
-   HttpRequest ----> ProxyProtocol --------get--> DirectResponse (3)
+   HtRequest ----> ProxyProtocol --------get--> DirectResponse (3)
                       |            `----nocache-> Blocked(Image)ContentResponse (1)
                       |            `--------ok--> DataResponse
-                      |            `--------ok--> RewrittenDataResponse (5,6)
+                      |            `--------ok--> RewrittenDataResponse (6)
                       `- HttpProtocol ------ok--> (Chunked)DataResponse
                       |               `--error--> BlindResponse
                       `- FtpProtocol -----------> DataResponse
                                      `----------> NotFoundResponse
 
-HttpRequest reads incoming request message and determines the protocol for the
+HtRequest reads incoming request message and determines the protocol for the
 rest of the session. Protocol will wrap the incoming data, the parsed request
 header of that data and if needed send the actual message. Upon receiving a
 response it parses the message header and determines the appropiate response.

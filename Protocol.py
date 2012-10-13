@@ -1,6 +1,6 @@
 import calendar, os, time, socket, re, urlparse
 
-import Params, Response, Resource, Cache
+import Params, Response, Resource, Cache, Rules
 from HTTP import HTTP
 
 
@@ -33,6 +33,11 @@ def connect( addr ):
 
 
 class BlindProtocol:
+
+    """
+    Blind protocol is used to aim for gracefull recovery upon unexpected
+    requests.
+    """
 
     Response = None
 
@@ -92,7 +97,7 @@ class ProxyProtocol(object):
             return
 
         self.cache = Resource.get_cache(request.hostinfo, request.envelope[1])
-      
+
         # Get descriptor storage reference
         self.descriptors = Resource.get_backend()
 
@@ -125,16 +130,16 @@ class ProxyProtocol(object):
             assert host in LOCALHOSTS, "Cannot service for %s" % host
             self.Response = Response.DirectResponse
             return True
-        # Respond by writing message as plain text, e.g echo/debug it:
+        # XXX: Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.DirectResponse
         # Filter request by regex from patterns.drop
         filtered_path = "%s/%s" % (host, path)
-        for pattern, compiled in Params.DROP:
-            if compiled.match(filtered_path):
-                self.set_blocked_response(path)
-                Params.log('Dropping connection, '
-                            'request matches pattern: %r.' % pattern)
-                return True
+        m = Rules.Drop.match(filtered_path)
+        if m:
+            self.set_blocked_response(path)
+            Params.log('Dropping connection, '
+                        'request matches pattern: %r.' % m,1)
+            return True
         if Params.STATIC and self.cache.full():
             Params.log('Static mode; serving file directly from cache')
             self.cache.open_full()
@@ -525,10 +530,12 @@ class HttpProtocol(ProxyProtocol):
                 #location = self.__args['Location']
 
             if not self.cache.full():
-                assert not self.cache.partial()
                 Params.log("Warning: Cache miss: %s" % self.requri)
+                assert not self.cache.partial(), self.cache.path
                 self.Response = Response.BlindResponse
             else:
+                Params.log("Reading complete file from cache at %s" % 
+                        self.cache.path)
                 self.cache.open_full()
                 self.Response = Response.DataResponse
 
@@ -563,8 +570,8 @@ class HttpProtocol(ProxyProtocol):
                 self.requri))
             self.Response = Response.BlindResponse
 
-
-        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked'
+        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
+                "Chunked response: %s %s" % (self.__status, self.requri)
 
         # Cache headers
 #        if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
@@ -580,8 +587,13 @@ class HttpProtocol(ProxyProtocol):
         Prepare to receive new entity.
         """
         if self.cache.full():
-            self.cache.open_full()
+            Params.log("HttpProtocol.recv_entity: overwriting cache: %s" %
+                    self.requri,4)
+            self.cache.remove_full()
+            self.cache.open_new()
         else:
+            Params.log("HttpProtocol.recv_entity: new cache : %s" %
+                    self.requri,4)
             self.cache.open_new()
             assert self.cache.partial()
         # FIXME: load http entity, perhaps response headers from shelve
@@ -657,6 +669,7 @@ class FtpProtocol( ProxyProtocol ):
 
         if Params.STATIC and self.cache.full():
           self.__socket = None
+          Params.log("Static FTP cache : %s" % self.requri)
           self.cache.open_full()
           self.Response = Response.DataResponse
           return
@@ -754,6 +767,7 @@ class FtpProtocol( ProxyProtocol ):
         else:
             stat = self.cache.full()
             if stat and stat.st_mtime == self.mtime:
+                Params.log("Unmodified FTP cache : %s" % self.requri)
                 self.cache.open_full()
                 self.Response = Response.DataResponse
             else:

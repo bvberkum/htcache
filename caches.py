@@ -20,6 +20,7 @@ class FileTreeQ(Cache.File):
     """
 
     def init(self, path):  
+        Params.log("FileTreeQ.init %r" % path, 5)
         psep = Params.ENCODE_PATHSEP
         # encode query and/or fragment parts
         sep = Cache.min_pos(path.find('#'), path.find( '?' )) 
@@ -65,6 +66,7 @@ class FileTreeQH(Cache.File):
   """
 
   def init(self, path):
+      Params.log("FileTreeQH.init %r" % path, 5)
       # encode query if present
       sep = path.find( '?' )
       # other encoding in query/fragment part        
@@ -93,6 +95,7 @@ class FileTreeQH(Cache.File):
 
 class PartialMD5Tree(Cache.File):
     def init(self, path):
+        Params.log("PartialMD5Tree.init %r" % path, 5)
         if Params.ARCHIVE:
             path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
         path = os.path.join(Params.ROOT, path)
@@ -104,6 +107,7 @@ class PartialMD5Tree(Cache.File):
 
 class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
     def init(self, path):
+        Params.log("FileTree.init %r" % path, 5)
         path2 = path
         if Params.ARCHIVE:
             path2 = time.strftime( Params.ARCHIVE, time.gmtime() ) + path2
@@ -122,6 +126,7 @@ class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
 class RefHash(Cache.File):
 
     def __init__(self, path):
+        Params.log("RefHash.__init__ %r" % path, 5)
         super(RefHash, self).__init__(path)
         self.refhash = md5(path).hexdigest()
         self.path = Params.ROOT + self.refhash

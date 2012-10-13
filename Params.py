@@ -41,8 +41,8 @@ JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-#SORT = []
-#SORT_FILE = '/etc/htcache/rules.sort'
+SORT = []
+SORT_FILE = '/etc/htcache/rules.sort'
 REWRITE = []
 REWRITE_FILE = '/etc/htcache/rules.rewrite'
 CACHE = 'caches.FileTree'
@@ -319,4 +319,7 @@ def format_info():
         })
 
 descriptor_storage_type = None
+
+def cn(obj):
+    return obj.__class__.__name__
 
