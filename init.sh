@@ -25,7 +25,7 @@ LOG=/var/log/htcache.log
 PID_FILE=/var/run/htcache.pid
 #DATADIR=/var/cache/http/
 DATADIR=/var/cache/www/
-FLAGS="-v -v -v --cache caches.FileTree --nodir , "
+FLAGS="--cache caches.FileTree --nodir , "
 #FLAGS="--cache caches.FileTree -a %Y/%m/%d/%H:%M- --nodir , "
 #--static --offline
 
