@@ -83,15 +83,6 @@ class ProxyProtocol(object):
         "Determine and open cache location, get descriptor backend. "
         super(ProxyProtocol, self).__init__()
 
-# FIXME:
-#        for line, regex in Params.JOIN:
-#            url = request.hostinfo[0] +'/'+ request.envelope[1]
-#            m = regex.match(url)
-#            if m:
-#                Params.log("Rewritten to: %s" % (m.groups(),))
-#            #else:
-#            #    Params.log("No match on %s for %s" % (url, line))
-
         self.request = request
 
         # Track server response
@@ -374,44 +365,10 @@ class HttpProtocol(ProxyProtocol):
             # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
 
-        path = request.Resource.ref.path
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
-
-        args = request.args()
-        
-        # TODO: filtered_path = "%s/%s" % (host, path)
-        #for pattern, compiled, target in Params.JOIN:
-        #    m = compiled.match(filtered_path)
-        #    if m:
-        #        #arg_dict = dict([(idx, val) for idx, val in enumerate(m.groups())])
-        #        target_path = target % m.groups()
-        #        Params.log('Join downloads by squashing URL %s to %s' %
-        #                (filtered_path, target_path))
-        #        self.cache = Cache.load_backend_type(Params.CACHE)(target_path)
-        #        Params.log('Joined with cache position: %s' % self.cache.path)
-        #        #self.Response = Response.DataResponse
-        #        #return True
     
-
-        # Prepare request for contact with origin server..
-        head = 'GET /%s HTTP/1.1' % path
-
-
         args = request.headers
-        
-        # TODO: filtered_path = "%s/%s" % (host, path)
-        #for pattern, compiled, target in Params.JOIN:
-        #    m = compiled.match(filtered_path)
-        #    if m:
-        #        #arg_dict = dict([(idx, val) for idx, val in enumerate(m.groups())])
-        #        target_path = target % m.groups()
-        #        Params.log('Join downloads by squashing URL %s to %s' %
-        #                (filtered_path, target_path))
-        #        self.cache = Cache.load_backend_type(Params.CACHE)(target_path)
-        #        Params.log('Joined with cache position: %s' % self.cache.path)
-        #        #self.Response = Response.DataResponse
-        #        #return True
 
         args.pop( 'Accept-Encoding', None )
         assert not args.pop( 'Range', None ), \

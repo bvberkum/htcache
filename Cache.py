@@ -21,16 +21,6 @@ def makedirs( path ):
         os.mkdir( dirpath )
 
 
-def joinlist_rewrite(urlref):
-    for line, regex in Params.JOIN:
-        m = regex.match(urlref)
-        if m:
-            capture = True
-            repl = line.split(' ')[-1]
-            urlref = regex.sub(repl, urlref)
-            Params.log("Joined URL matching rule %r" % line, threshold=1)
-    return urlref
-
 def min_pos(*args):
     "Return smallest of all arguments (but >0)"
     r = sys.maxint
@@ -89,8 +79,7 @@ class File(object):
         """
         Apply rules for path.
         """
-        if Params.JOIN:
-            return joinlist_rewrite(path)
+        path = Rules.Join.rewrite(path)
         return path
 
     def init(self, path):

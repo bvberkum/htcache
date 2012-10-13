@@ -3,6 +3,7 @@ import sys, time, weakref
 
 import Params, Protocol, Request, Response, fiber
 import Resource
+import Rules
 
 import os
 import sys
@@ -208,7 +209,7 @@ if Params.MODE:
                     fpath = os.path.join(root, f).replace(Params.ROOT,
                             '')
                     fpath2 = fpath.replace(':80','')
-                    fpath3 = Cache.joinlist_rewrite(fpath2)
+                    fpath3 = Rules.Join.rewrite(fpath2)
                     if fpath2 != fpath3:
                         print 'Renaming: ', fpath3, fpath
                         os.stat(fpath)
@@ -216,10 +217,7 @@ if Params.MODE:
                         if not os.path.isdir(dirname):
                             os.makedirs(dirname)
                         os.rename(fpath, fpath3)
-                    #for line, regex in Params.JOIN:
-                    #    if m:
-                    #        m = regex.match(fpath)
-                    #        print 'Match', fpath, m.groups()
+                
     sys.exit(0)
 
 
@@ -230,9 +228,8 @@ backend = Params.descriptor_storage_type(Params.RESOURCES)
 
 def HTCache_fiber_handler( client, address ):
 
-    Params.log('Accepted request from %s:%i' % address, 1)
-    
-    Params.log('Downloads: %s; +1 (%s:%i)' % ((len(DOWNLOADS),)+ address))
+    Params.log('New Request from %s:%i, downloads: %s; +1' % (
+        address + (len(DOWNLOADS),)))
 
     protocol = None
     request = Request.HttpRequest()

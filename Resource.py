@@ -418,24 +418,18 @@ def _is_sql(be):
 #    raise Exception("Unable to find backend type of %r" % be)
 
 def get_cache(hostinfo, req_path):
-
+    """
+    req_path is a URL path ref including query-part,
+    the backend will determine real cache location
+    """
     # Prepare default cache location
     cache_location = '%s:%i/%s' % (hostinfo + (req_path,))
-    
     cache_location = cache_location.replace(':80', '')
-    # Try Join rules
-    #if Params.JOIN:
-    #    # FIXME: include hostname:
-    #    loc2 = hostinfo[0] +'/'+ envelope[1]
-    #    loc3 = joinlist_rewrite(loc2)
-    #    if loc2 != loc3:
-    #        cache_location = loc3
-
-    # cache_location is a URL path ref including query-part
-    # backend will determine real cache location
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
     Params.log("%s %s" % (Params.CACHE, cache))
     Params.log('Prepped cache, position: %s' % cache.path, 1)
+
+# XXX: use unrewritten path as descriptor key, need unique descriptor per resource
     cache.descriptor_key = cache_location
     return cache
 
