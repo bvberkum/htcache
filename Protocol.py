@@ -235,8 +235,9 @@ class HttpProtocol(ProxyProtocol):
         args = request.headers
 
         args.pop( 'Accept-Encoding', None )
-        assert not args.pop( 'Range', None ), \
-                "Req for %s had a range.." % self.requri
+        htrange = args.pop( 'Range', None )
+        assert not htrange,\
+                "Req for %s had a range: %s" % (self.requri, htrange)
 
         # if expires < now: revalidate
         # RFC 2616 14.9.4: Cache revalidation and reload controls
@@ -325,7 +326,7 @@ class HttpProtocol(ProxyProtocol):
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known HTTP (response) header"% key, 1)
+                Params.log("Warning: %r not a known HTTP (response) header (%r)"% (key,value.strip()), 1)
                 key = key.title() # XXX: bad? :)
             if key in self.__args:
               self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
@@ -406,35 +407,34 @@ class HttpProtocol(ProxyProtocol):
             # FIXME: self.cache.remove_partial()
             self.Response = Response.BlindResponse
 
-# FIXME:
-#        elif self.__status in (HTTP.FOUND, 
-#                    HTTP.MOVED_TEMPORARILY,
-#                    HTTP.TEMPORARY_REDIRECT):
+        elif self.__status in (HTTP.FOUND, 
+                    HTTP.MOVED_PERMANENTLY,
+                    HTTP.TEMPORARY_REDIRECT):
+
+# XXX:
 #            self.cache.remove_partial()
-#            self.Response = Response.BlindResponse
+            self.Response = Response.BlindResponse
 #            if isinstance(self.request.resource, (Variant, Invariant)):
 #                print 'Variant resource has moved'
 #            #elif isinstance(self.request.resource, Resource):
 #            #    print 'Resource has moved'
 #            elif isinstance(self.request.resource, Relocated):
 #                print 'Relocated has moved'
-#
+
 #            self.request.resource.update(
 #                    status=self.__status, 
 #                    **map_headers_to_resource(self.__args))
 
-        # anything else, XXX: should do more cleanup here, e.g. on 404, etc.
         else:
-            Params.log("Warning: unhandled: %s, %s" % (self.__status,
-                self.requri))
+            Params.log("Warning: unhandled: %s, %s" % (self.__status, self.requri))
             self.Response = Response.BlindResponse
 
         assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
                 "Chunked response: %s %s" % (self.__status, self.requri)
 
         # Cache headers
+        # XXX:
 #        if self.__status in (HTTP.OK, HTTP.PARTIAL_CONTENT):
-#            pass # TODO: srcrefs, mediatype, charset, language, 
         if self.cache.full() or self.cache.partial():#cached_resource:
             pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
             #httpentityspec = Resource.HTTPEntity(self.__args)
