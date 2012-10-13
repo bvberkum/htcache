@@ -1,35 +1,44 @@
-./.git/logs/HEAD:14:9a411eb3a3780d7eddde55413b7d946ce94b57b5 33284a02ea31762412c57cbbfdff7a99bee37e5e Berend <berend@sam.laptop> 1284541615 +0200	commit: Added TODO and removed SHA1 for time being
-./.git/logs/HEAD:15:33284a02ea31762412c57cbbfdff7a99bee37e5e 1ecb0eb99ff12251eaeb76b1eeb6f8d476f16d16 B. van Berkum <dev@dotmpe.com> 1285618617 +0200	commit: Rename done. Added TODO's. Renamed back to , perhaps alias it. Minor init.sh changes.
-./.git/logs/refs/heads/master:14:9a411eb3a3780d7eddde55413b7d946ce94b57b5 33284a02ea31762412c57cbbfdff7a99bee37e5e Berend <berend@sam.laptop> 1284541615 +0200	commit: Added TODO and removed SHA1 for time being
-./.git/logs/refs/heads/master:15:33284a02ea31762412c57cbbfdff7a99bee37e5e 1ecb0eb99ff12251eaeb76b1eeb6f8d476f16d16 B. van Berkum <dev@dotmpe.com> 1285618617 +0200	commit: Rename done. Added TODO's. Renamed back to , perhaps alias it. Minor init.sh changes.
-./CHANGELOG.rst:1:TODO htcache version 1.0 (planned but non-committed)
-./Cache.py:57:            "FIXME: implement saving in other roots"
-./Params.py:14:ONLINE = True # XXX:bvb: useless..
-./Params.py:37:#TODO CRC, par2?
-./Params.py:64:  TODO --encode query sep                   
-./Params.py:68:  TODO -n --nocache FILE  bypass caching for requests based on regex pattern.
-./Params.py:81:     TODO --prune-stale
-./Params.py:83:     TODO --prune-gone
-./Params.py:94:     FIXME --print-mode line|tree
-./Params.py:95:     TODO --print-url
-./Params.py:96:     TODO --print-path
-./Params.py:107:     TODO --check-exists
-./Params.py:110:     TODO --check-encodings
-./Params.py:111:     TODO --check-languages
-./Params.py:112:     TODO --check-mediatypes
-./Params.py:115:     TODO --x-force-fix
-./Params.py:118:     TODO --check-dupes
-./Protocol.py:150:        # XXX: match on path only
-./Protocol.py:286:            # XXX: title caps improper for acronyms
-./Protocol.py:361:            # FIXME: update last-modified? 
-./README.rst:111:  the first argument being prefixed with '?'. FIXME: does not solve anything?
-./README.rst:140:TODO: a file-based header storage or perhaps even an Apache mod_asis
-./Resource.py:10:# XXX dont use cjson, its buggy, see comments at
-./Resource.py:95:        # XXX: safe headers as features for now..    
-./Resource.py:173:        # TODO: documents 
-./Response.py:48:        # TODO: on/off: self.__hash = hashlib.sha1()
-./Response.py:59:          # TODO: parse mediatype, charset, language..
-./Response.py:132:        # XXX: store hash for new recv'd content
+TODO:
+    - Remove new_stable, new_development, stable-old branches
+    - Get master up to date.
+
+./Protocol.py:252:                # XXX: treat as unspecified end-to-end revalidation
+./Protocol.py:254:                # FIXME: Validate client validator against cached entry
+./Protocol.py:258:        # TODO: Store relationship with referer
+./Protocol.py:312:                key = key.title() # XXX: bad? :)
+./Protocol.py:355:            # FIXME: load http entity, perhaps response headers from shelve
+./Protocol.py:367:                    # XXX: Try again, should make a list of alternate (but invalid) date formats
+./Protocol.py:427:            pass # TODO: self.descriptors.map_path(self.cache.path, uriref)
+./Resource.py:62:            # TODO: srcrefs, mediatype, charset, language, 
+./Resource.py:227:        # TODO: documents
+./CHANGELOG.rst:1:TODO htcache version 1.0 (planned)
+./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
+./Cache.py:53:            "FIXME: implement saving in other roots"
 ./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
 ./init.sh:45:        # TODO: check htcache status before redirecting output to lock
-./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
+./Response.py:55:        # TODO: on/off: 
+./Response.py:70:          # TODO: parse mediatype, charset, language..
+./Response.py:162:        # TODO: store hash for new recv'd content
+./control.rst:21:        May cache and serve. XXX: while fresh?
+./HTCache.hx:34:        // XXX: figure out a way to set global cookie? iframe from proxy?
+./.git/COMMIT_EDITMSG:30:#	modified:   TODO.list
+./Request.py:55:                key = key.title() # XXX: bad? :)
+./Request.py:56:            # XXX: this should join headers like Via handling does later on, but
+./Request.py:115:        # TODO: keep entity headers, strip other message headers from args
+./Request.py:185:        # XXX: used before protocol is determined,  assert self.Protocol
+./htcache:76:# XXX: more neat in fiber than here, move.
+./Params.py:2:# XXX: Dont use cjson, its buggy, see comments at
+./Params.py:26:ONLINE = True # XXX:bvb: useless..
+./Params.py:70:     --limit RATE    FIXME: limit download rate at a fixed K/s
+./Params.py:80:  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+./Params.py:122:        pass # XXX
+./Rules.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
+./Rules.mk:18:TRGT                += $/TODO.list $/htcache.js
+./Rules.mk:33:$/TODO.list: ./
+./Rules.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
+./unit-test:86:# XXX: could not figure out a way to make wget save (headers) for non 200
+./main.rst:15:        - FIXME: Not working!
+./main.rst:17:        - TODO: contains unused? CachedResource code , integrate or  remove
+./main.rst:25:        - FIXME: runs somewhat, must make fixes to run all HTTP tests?
+./main.rst:165:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./main.rst:197:TODO: a file-based header storage or perhaps even an Apache mod_asis

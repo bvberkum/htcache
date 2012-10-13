@@ -4,19 +4,235 @@ import sys, time, weakref
 import Params, Protocol, Request, Response, fiber
 import Resource
 
+import os
+import sys
+import time
+import weakref
+
+from urlparse import urlparse
+
+
+try:
+    import coverage
+    coverage.process_startup()
+except ImportError, e:
+    pass
+
+
+import Params, Cache, Protocol, Request, Response, Resource, fiber
+
+
 
 DOWNLOADS = weakref.WeakValueDictionary()
+"""
+Global set of download sessions, each being a request, protocol mapping.
 
-# XXX:Params.parse_joinlist()
-# XXX:Params.parse_proclist()
+Only one download per resource is needed, just the first request is kept here.
+Each subsequent session will cannot overwrite the file, but can "join" the download 
+by switching to the response fase.
+
+XXX: This also allows local lookup of resources, ie. to rewrite the cache location
+to locally stored data.
+"""
+
 Params.parse_droplist()
 Params.parse_nocache()
-Params.parse_sort()
+#Params.parse_sort()
+Params.parse_joinlist()
+Params.parse_rewritelist()
 
 
-def HTCache( client, address ):
+### Descriptor/Cache Query static entry
 
-    print 'Accepted request from %s:%i' % address
+from fnmatch import fnmatch
+
+def path_ignore(path):
+    for p in ('*.git*','*.sw[pon]','*.py[c]','*Makefile', '*.py', '*.mk'):
+        if fnmatch(path, p):
+            return True
+
+
+# print_args
+if Params.PRINT:
+#_ALLRECORDS:
+    assert not (Params.PRUNE or Params.CHECK)
+    descriptors = Resource.get_backend()
+    if Params.PRINT_RECORD:
+        Resource.print_info(*Params.PRINT_RECORD)
+    elif Params.FIND_RECORDS:
+        Resource.find_info(Params.FIND_RECORDS)
+    elif Params.PRINT_MEDIA:
+        Resource.print_media_list(*Params.PRINT_MEDIA)
+    else:
+        Resource.print_info(*descriptors.keys())
+
+### Descriptor/Cache Maintenance static entry
+
+elif Params.CHECK == 'validate':
+    #if Params.CHECK == 'validate':
+    #    check = Resource.validate_cache
+    pass
+
+elif Params.CHECK == 'files':
+    check = Resource.check_tree
+    if Params.PRUNE:
+        descriptors = Resource.get_backend()
+    else:
+        descriptors = Resource.get_backend(main=False)
+    pcount, rcount = 0, 0
+    Params.log("Iterating paths in cache root location. ")
+    for root, dirs, files in os.walk(Params.ROOT):
+
+        # Ignore files in root
+        if not root[len(Params.ROOT):]:
+            continue
+#        print root[len(Params.ROOT):]
+
+#    	rdir = os.path.join(Params.ROOT, root)
+        for f in dirs + files:
+            f = os.path.join(root, f)
+            #if path_ignore(f):
+            #    continue
+            pcount += 1
+            if f not in descriptors:
+                if os.path.isfile(f):
+                    Params.log("Missing descriptor for %s" % f)
+                    if Params.PRUNE:
+                        size = os.path.getsize(f)
+                        if size < Params.MAX_SIZE_PRUNE:
+                            os.unlink(f)
+                            Params.log("Removed unknown file %s" % f)
+                        else:
+                            Params.log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
+                elif not (os.path.isdir(f) or os.path.islink(f)):
+                    Params.log("Unrecognized path %s" % f)
+            elif f in descriptors:
+                rcount += 1
+                descr = descriptors[f]
+                if not len(descr) != 7:
+                    Params.log("Unknown descriptor for %s" % descr)
+                    continue
+                uriref = descr[0][0]
+                Params.log("Found resource %s" % uriref, threshold=1)
+# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+                port = 80
+                if len(descr[0]) != 1:
+                    Params.log("Multiple references %s" % f)
+                    continue
+                urlparts = urlparse(uriref)
+                hostname = urlparts.netloc
+                pathname = urlparts.path[1:] 
+# XXX: cannot reconstruct--, or should always normalize?
+                if urlparts.query:
+                    #print urlparts
+                    pathname += '?'+urlparts.query
+                hostinfo = hostname, port
+                cache = Resource.get_cache(hostinfo, pathname)
+                #print 'got cache', cache.getsize(), cache.path
+# end
+    Params.log("Finished checking %s cache locations, found %s resources" % (
+        pcount, rcount))
+    descriptors.close()
+    sys.exit(0)
+
+elif Params.CHECK == 'cache':
+    check = Resource.check_cache
+    #term = Resource.TerminalController()
+    #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
+    #pb = Resource.ProgressBar(term, 'Iterating descriptors')
+    if Params.PRUNE:
+        descriptors = Resource.get_backend()
+    else:
+        descriptors = Resource.get_backend(main=False)
+    refs = descriptors.keys()
+    count = len(refs)
+    Params.log("Iterating %s descriptors" % count)
+    for i, ref in enumerate(refs):
+        if Params.VERBOSE > 2:
+            print i, ref
+        descr = descriptors[ref]
+        urirefs, mediatype, d1, d2, meta, features = descr
+        #progress = float(i)/count
+        #pb.update(progress, ref)
+# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+        port = 80
+        if len(urirefs) != 1:
+            Params.log("Multiple references %s" % ref)
+            continue
+        urlparts = urlparse(urirefs[0])
+        hostname = urlparts.netloc
+        pathname = urlparts.path[1:] 
+# XXX: cannot reconstruct--, or should always normalize?
+        if urlparts.query:
+            #print urlparts
+            pathname += '?'+urlparts.query
+        hostinfo = hostname, port
+        cache = Resource.get_cache(hostinfo, pathname)
+# end
+        act = None
+        if not check(cache, *descr):
+            if not Params.PRUNE:
+                continue
+            act = True
+            if cache.full() or cache.partial():
+                path = cache.path
+                if cache.partial():
+                    path += '.incomplete'
+                if os.path.getsize(path) > Params.MAX_SIZE_PRUNE:
+                    if Params.INTERACTIVE:
+                        pass
+                    Params.log("Keeping %s" % path)
+                    continue
+                if os.path.isfile(path):
+                    print 'size=', cache.getsize() / 1024**2
+                    os.unlink(path)
+                    Params.log("Deleted %s" % path)
+                else:
+                    Params.log("Unable to remove dir %s" % path)
+            del descriptors[ref]
+            Params.log("Removed %s" % cache.path)
+    Params.log("Finished checking %s cache descriptors" % count)
+    descriptors.close()
+    #pb.clear()
+    sys.exit(0)
+
+if Params.MODE:
+    for mode in Params.MODE:
+        if mode == 'run-join':
+            os.chdir(Params.ROOT)
+            for root, dirs, files in os.walk(Params.ROOT):
+                for d in dirs:
+                    if d in ['.git']:
+                        dirs.remove(d)
+                for f in files:
+                    fpath = os.path.join(root, f).replace(Params.ROOT,
+                            '')
+                    fpath2 = fpath.replace(':80','')
+                    fpath3 = Cache.joinlist_rewrite(fpath2)
+                    if fpath2 != fpath3:
+                        print 'Renaming: ', fpath3, fpath
+                        os.stat(fpath)
+                        dirname = os.path.dirname(fpath3)
+                        if not os.path.isdir(dirname):
+                            os.makedirs(dirname)
+                        os.rename(fpath, fpath3)
+                    #for line, regex in Params.JOIN:
+                    #    if m:
+                    #        m = regex.match(fpath)
+                    #        print 'Match', fpath, m.groups()
+    sys.exit(0)
+
+
+# Global backend: the cache descriptors storage
+
+backend = Params.descriptor_storage_type(Params.RESOURCES)
+
+
+def HTCache_fiber_handler( client, address ):
+
+    Params.log('Accepted request from %s:%i' % address, 1)
+    
+    Params.log('Downloads: %s; +1 (%s:%i)' % ((len(DOWNLOADS),)+ address))
 
     protocol = None
     request = Request.HttpRequest()
@@ -29,14 +245,13 @@ def HTCache( client, address ):
             protocol = DOWNLOADS[ request ]
             if protocol.Response:
                 if issubclass( protocol.Response, Response.DataResponse ):
-                    print 'Joined running download'
+                    Params.log('Joined running download')
                     break
                 del DOWNLOADS[ request ]
             else:
                 yield fiber.WAIT()
         else:
-            if Params.VERBOSE:
-                print 'Switching to', request.Protocol.__name__
+            Params.log('Switching to %s'% request.Protocol.__name__, 3)
             protocol = DOWNLOADS[ request ] = request.Protocol( request )
             server = protocol.socket()
             while not protocol.Response:
@@ -46,14 +261,12 @@ def HTCache( client, address ):
                 else:
                     yield fiber.RECV( server, Params.TIMEOUT )
                     protocol.recv( server )
-        if Params.VERBOSE:
-            print 'Switching to', protocol.Response.__name__
+        Params.log('Switching to %s'% protocol.Response.__name__, 2)
         response = protocol.Response( protocol, request )
         server = protocol.socket()
     except Exception:
-        if Params.VERBOSE:
-            print 'Switching to ExceptionResponse'
-        response = Response.ExceptionResponse( request )
+        Params.log('Warning: Switching to ExceptionResponse')
+        response = Response.ExceptionResponse( protocol, request )
 
     while not response.Done:
         if response.hasdata():
@@ -65,20 +278,30 @@ def HTCache( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    print 'Transaction successfully completed'
+    Params.log('Transaction successfully completed', 1)
 
     if protocol:
         if response:
             response.finalize(client)
+        #protocol.descriptors.close()
 
+# XXX: more neat in fiber than here, move, but need to couple with backend to do
+# that
 while True:
     try:
-        fiber.spawn( HTCache, Params.PORT, Params.DEBUG, Params.LOG )
+        fiber.spawn( HTCache_fiber_handler, Params.PORT, Params.DEBUG, Params.LOG,
+                Params.PID_FILE )
     except fiber.Restart, e:
         Resource.get_backend().close()
         for mod in (Params, Protocol, Request, Response, Resource, fiber):
             mod = reload(mod)
+        Params.parse_droplist()
+        Params.parse_nocache()
+        Params.parse_joinlist()
     except Exception, e:
+        Params.log(e)
         break
 #Resource.get_backend().close()
+
+Resource.get_backend().close()
 

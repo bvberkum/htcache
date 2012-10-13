@@ -1,29 +1,50 @@
-import os, re, sys, socket
+import os, re, socket, sys
+# XXX: Dont use cjson, its buggy, see comments at
+# http://pypi.python.org/pypi/python-cjson
+# use jsonlib or simplejson
+try:
+    import simplejson as _json
+except:
+    import json as _json
 
+json_read = _json.loads
+json_write = _json.dumps
+
+
+## Main: determine runtime config from constants and ARGV
 
 _args = iter( sys.argv )
+
+VERSION = 0.4
 
 # proxy params
 PROG = _args.next()
 PORT = 8080
 ROOT = os.getcwd() + os.sep
+PID_FILE = '/var/run/htcache.pid'
 VERBOSE = 0
 TIMEOUT = 15
 FAMILY = socket.AF_INET
 STATIC = False
 ONLINE = True # XXX:bvb: useless..
-LIMIT = False
+LIMIT = False # XXX unused
+
+# misc. program params
 LOG = False
 DEBUG = False
+MODE = [] # emtpy for normal operation, function list for maintenance
+
+# proxy rule files
 DROP = []
 DROP_FILE = '/etc/htcache/rules.drop'
 JOIN = []
 JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE = []
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
-HTML_PLACEHOLDER = '/var/lib/htcache/filtered-placeholder.html'
-IMG_PLACEHOLDER = '/var/lib/htcache/forbidden-sign.png'
-#CACHE = 'Cache.File'
+#SORT = []
+#SORT_FILE = '/etc/htcache/rules.sort'
+REWRITE = []
+REWRITE_FILE = '/etc/htcache/rules.rewrite'
 CACHE = 'caches.FileTree'
 ARCHIVE = ''
 ENCODE_PATHSEP = ''
@@ -36,17 +57,33 @@ TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
-BACKEND = 'sqlite:///var/lib/htcache/resource.sqlite'
-SHA1SUM = '/var/cache/sha1sum/'
-# query params
+DATA_DIR = '/var/lib/htcache/'
+RESOURCES = DATA_DIR+'resource.db'
+HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
+IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
+PROXY_INJECT = False
+PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
+PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
+
+# Static mode, query params
+PRINT = None
 PRINT_RECORD = []
 PRINT_ALLRECORDS = False
-FIND_RECORDS = {}
 PRINT_MEDIA = []
 DHTML_CLIENT = True
 
+cache_options = 'ARCHIVE', 'ENCODE_PATHSEP', 'SORT_QUERY_ARGS', 'ENCODE_QUERY'
+
 # maintenance params
 CHECK_DESCRIPTOR = []
+
+#     --flat          flat mode; cache all files in root directory (dangerous!)
+FIND_RECORDS = {}
+
+CHECK = None
+PRUNE = False
+MAX_SIZE_PRUNE = 11*(1024**2)
+INTERACTIVE = False
 
 USAGE = '''usage: %(PROG)s [options]
 
@@ -61,54 +98,31 @@ Proxy:
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
-Plugins:
-  -c --cache TYPE    use module for caching, default %(CACHE)s.
-
 Cache:
   -f RESOURCES
-  -a --archive FMT   prefix cache location by a formatted datetime.
-                     ie. store a new copy every hour, day, etc.
-  -D --nodir SEP     replace unix path separator, ie. don't create a directory
-                     tree. does not encode `archive` prefix.
-  --encode           TODO: query sep
-  -H --hash          TODO: cache location by URL checksum
-
-Rules:
-  -d --drop FILE     filter requests for URI's based on regex patterns.
-     --limit RATE    FIXME: limit download rate at a fixed K/s
-     --daemon LOG    daemonize process and print PID, route output to LOG
-     --debug         switch from gather to debug output module
-
-Plugins:
   -c --cache TYPE    use module for caching, default %(CACHE)s.
-  -b --backend REF   initialize metadata backend from reference, default
-                     %(BACKEND)s.
-
-Cache:
-  -a --archive FMT   prefix cache location by a formatted datetime.
-                     ie. store a new copy every hour, day, etc.
-  -D --nodir SEP     replace unix path separator, ie. don't create a directory
-                     tree. does not encode `archive` prefix.
-  --encode           TODO: query sep
+  FIXME:
+  -b --backend REF   initialize metadata backend from reference,
+  default...
 
 Rules:
-  -d --drop FILE     filter requests for URI's based on regex patterns. 
-                     read line for line from file, default %(DROP)s.
-  -n --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+     --drop FILE     filter requests for URI's based on regex patterns.
+                     read line for line from file, default %(DROP_FILE)s.
+     --nocache FILE  TODO: bypass caching for requests based on regex pattern.
+     --rewrite FILE  Filter any webresource by selecting on URL or 
 
 Misc.:
+     --check-refs    TODO: iterate cache references.
+     --check-sortlist 
+                     TODO: iterate cache references, 
   -t --timeout SEC   break connection after so many seconds of inactivity,
                      default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
-  -s --sha1sum DIR   TODO: maintain an index with the SHA1 checksum for each resource
   -v --verbose       increase output, use twice to show http headers
+
 
 See the documentation in ReadMe regarding configuration of the proxy. The
 following options don't run the proxy but access the cache and descriptor backend::
-
-Maintenance:
-     --prune-stale   TODO: Delete outdated cached resources.
-     --prune-gone    TODO: Remove resources no longer online.
 
 Resources:
      --print-info FILE
@@ -131,6 +145,8 @@ Resources:
                      Search through predefined list of content-types.
 
 Maintenance:
+     --prune-stale   TODO: Delete outdated cached resources.
+     --prune-gone    TODO: Remove resources no longer online.
      TODO --check-exists
                      Prune outdated resources or resources that are no longer online.
 
@@ -152,31 +168,31 @@ for _arg in _args:
 
     if _arg in ( '-h', '--help' ):
         sys.exit( USAGE )
+
     elif _arg in ( '-p', '--port' ):
         try:
             PORT = int( _args.next() )
             assert PORT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
-    elif _arg in ( '-b', '--backend' ):
-        try:
-            BACKEND = _args.next()
-        except:
-            sys.exit( 'Error: %s requires an backend-reference for argument' % _arg )
+
     elif _arg in ( '-c', '--cache' ):
         try:
             CACHE = _args.next()
         except:
             sys.exit( 'Error: %s requires an cache type argument' % _arg )
-    elif _arg in ( '-d', '--drop' ):
+
+    elif _arg in ( '--drop', ):
         try:
-            DROP = os.path.realpath( _args.next() )
+            DROP_FILE = os.path.realpath(_args.next())
+            assert os.path.exists(DROP_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
-    elif _arg in ( '-n', '--nocache' ):
+
+    elif _arg in ( '--nocache', ):
         try:
-            NOCACHE = os.path.realpath( _args.next() )
-            #assert os.path.exists(NOCACHE)
+            NOCACHE_FILE = os.path.realpath(_args.next())
+            assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-H', '--hash' ):
@@ -187,6 +203,14 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a directory argument' % _arg )
         except:
             sys.exit( 'Error: invalid sha1sum directory %s' % ROOT )
+
+    elif _arg in ( '--rewrite', ):
+        try:
+            REWRITE_FILE = os.path.realpath(_args.next())
+            assert os.path.exists(REWRITE_FILE)
+        except:
+            sys.exit( 'Error: %s requires an filename argument' % _arg )
+
     elif _arg in ( '-r', '--root' ):
         try:
             ROOT = os.path.realpath( _args.next() ) + os.sep
@@ -195,12 +219,14 @@ for _arg in _args:
             sys.exit( 'Error: %s requires a directory argument' % _arg )
         except:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
-    elif _arg in ( '-a', '--archive' ):
-        ARCHIVE = _args.next()
-    elif _arg in ( '-D', '--nodir' ):
-        ENCODE_PATHSEP = _args.next()
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
+    elif _arg in ( '--nodir' ):
+        pass # XXX
+        #try:
+        _args.next()
+        #except:
+        #    sys.exit( 'Error: %s requires argument' % _arg )
     elif _arg in ( '-t', '--timeout' ):
         try:
             TIMEOUT = int( _args.next() )
@@ -211,151 +237,213 @@ for _arg in _args:
         FAMILY = socket.AF_UNSPEC
     elif _arg == '--static':
         STATIC = True
-    elif _arg == '--offline':
-        ONLINE = False
-        STATIC = True
-    elif _arg == '--limit':
-        try:
-            LIMIT = float( _args.next() ) * 1024
-        except:
-            sys.exit( 'Error: %s requires a numerical argument' % _arg )
     elif _arg == '--daemon':
         LOG = _args.next()
     elif _arg == '--debug':
         DEBUG = True
     elif _arg == '-f':
         RESOURCES = _args.next()
-# resource queries
-    elif _arg == '--print-info':
+    elif _arg in ('--pid-file',):
+        PID_FILE = _args.next()
+    elif _arg in ('--prune',):
+        PRUNE = True
+    elif _arg in ('--run-join-rules',):
+        MODE.append('run-join')
+
+    elif _arg in ('--print-allrecords',):
+        PRINT = True
+        PRINT_ARGS = None
+    elif _arg in ('--print-record',):
+        PRINT = True
         PRINT_RECORD.append(_args.next())
-    elif _arg == '--print-all-info':
-        PRINT_ALLRECORDS = True
-    #elif '--print-record'
-    #elif '--print-mode'
-    #elif '--print-path'
-    #elif '--print-url'
-    elif _arg == '--find-info':
-        args = _args.next()
-        _find={}
-        for a in args.split(','):
-            p = a.find(':')
-            k, a = a[:p], a[p+1:]
-            if ':' in a and not k == 'srcref':
-                p = a.find(':')
-                k2, a = a[:p], a[p+1:]
-                if k not in _find:
-                    _find[k] = {}
-                _find[k][k2] = a
-            else:
-                _find[k] = a
-        FIND_RECORDS.update(_find)
-    elif _arg.startswith('--print-'):
-        if _arg[8:] == 'documents':
-            PRINT_MEDIA.append('documents')
-        elif _arg[8:] == 'images':
-            PRINT_MEDIA.append('images')
-        elif _arg[8:] == 'audio':
-            PRINT_MEDIA.append('audio')
-        elif _arg[8:] == 'videos':
-            PRINT_MEDIA.append('videos')
+    elif _arg in ('--find-records',):
+        PRINT = True
+        FIND_RECORDS = _args.next()
 
-# cache maintenance
-    elif _arg.startswith('--prune-stale'):
-        pass
+    elif _arg in ('--check-cache',):
+        CHECK = 'cache'
+#    elif _arg in ('--validate-cache',):
+#        CHECK = 'validate'
+    elif _arg in ('--check-files',):
+        CHECK = 'files'
 
-# resource maintenance
-    elif _arg.startswith('--check-'):
-        if _arg[8:] == 'mediatypes':
-            CHECK_DESCRIPTOR.append('mediatypes')
-        elif _arg[8:] == 'encodings':
-            CHECK_DESCRIPTOR.append('encodings')
-        elif _arg[8:] == 'mediatypes':
-            CHECK_DESCRIPTOR.append('mediatypes')
-    #elif _arg == '--force-fix':
+#    elif _arg in ('--check-joinlist',):
+#        MODE.append(check_joinlist)
 
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
 
 
 def log(msg, threshold=0):
-  "Not much of a log.."
-  # see fiber.py which manages stdio
-  if VERBOSE > threshold:
-    print msg
+    """
+    Not much of a log..
+    Output if VERBOSE >= threshold
+    """
+    #assert not threshold == 0
+    # see fiber.py which manages stdio
+    if VERBOSE >= threshold:
+        print msg
 
 
 def parse_droplist(fpath=DROP_FILE):
     global DROP
     DROP = []
-    if os.path.isfile(fpath):
-        DROP.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if not p.startswith('#')])
+    DROP.extend([(p.strip(), re.compile(p.strip())) for p in
+        open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 def parse_nocache(fpath=NOCACHE_FILE):
     global NOCACHE
     NOCACHE = []
-    if os.path.isfile(fpath):
-        NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
-            open(fpath).readlines() if not p.startswith('#')])
-
-#def parse_proclist(fpath=PROC_FILE):
-#    global PROC
-#    PROC = []
-#    if os.path.isfile(fpath):
-#        lines = open(fpath).readlines()
-#        for l in lines:
-#            if not l.strip() or l.startswith('#'):
-#                continue
-#            p = l.find(' ')
-#            if not p:
-#                print "Skipped procline", l
-#                continue
-#            pattern, cmdline = l[:p], l[p+1:]
-#            PROC.append((re.compile("^"+pattern.strip()+"$"),cmdline))
-#        PROC.extend([(p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in [p2.strip().split('\t')
-#            for p2 in open(fpath).readlines() if not p2.startswith('#') and p2.strip()]])
+    NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
+        open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
 def parse_joinlist(fpath=JOIN_FILE):
     global JOIN
     JOIN = []
     if os.path.isfile(fpath):
-        JOIN.extend([
-            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
-            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
-                p2.startswith('#') and p2.strip()]
-            ])
 
-def split_csv(line):
-    line = line.strip()
-    if not line or line.startswith('#'):
-        return
-    values = []
-    vbuf = ''
-    Q = ('\'','\"')
-    inquote = False
-    for c in line:
-        if c in Q:
-            inquote = True
-        elif inquote:
-            if c in Q:
-                inquote = False
-            else:
-                vbuf += c
-        elif c == ',' or c.isspace():
-            if vbuf:
-                values.append(vbuf)
-                vbuf = ''
+# FIXME: old pandora master
+#<<<<<<< HEAD
+#        JOIN.extend([
+#            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
+#            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
+#                p2.startswith('#') and p2.strip()]
+#            ])
+#
+#def split_csv(line):
+#    line = line.strip()
+#    if not line or line.startswith('#'):
+#        return
+#    values = []
+#    vbuf = ''
+#    Q = ('\'','\"')
+#    inquote = False
+#    for c in line:
+#        if c in Q:
+#            inquote = True
+#        elif inquote:
+#            if c in Q:
+#                inquote = False
+#            else:
+#                vbuf += c
+#        elif c == ',' or c.isspace():
+#            if vbuf:
+#                values.append(vbuf)
+#                vbuf = ''
+#        else:
+#            vbuf += c
+#    if vbuf:
+#        values.append(vbuf)
+#        vbuf = ''
+#    return values
+#
+#def parse_sort(fpath=None):#SORT_FILE):
+#    global SORT
+#    SORT = {}
+#    if os.path.isfile(fpath):
+#        SORT.update([(p[1], re.compile(p[0])) for p in
+#            map(split_csv, open(fpath).readlines()) if p])
+#=======
+        JOIN.extend([(p.strip(), re.compile('^'+p.split(' ')[0].strip()+'$')) for p in
+            open(fpath).readlines() if p.strip() and not p.strip().startswith('#')])
+
+def parse_rewritelist(fpath=REWRITE_FILE):
+    global REWRITE
+    REWRITE = []
+    for p in open(fpath).readlines():
+        if not p.strip() or p.strip().startswith('#'):
+            continue
+        match, replace = p.strip().split('\t')
+        REWRITE.append((re.compile(match), replace))
+
+# XXX: first need to see working
+def parse_rewritelist_(fpath=REWRITE_FILE):
+    global REWRITE
+    REWRITE_RULES = []
+    REWRITE = {}
+    for p in open(fpath).readlines():
+        if not p.strip() or p.strip().startswith('#'):
+            continue
+            
+        # Parse line and cleanup, compile rule
+        fields = p.strip().split('\t')
+        patterns = [ re.compile(f) if f != '.*' else None for f in fields[:-1] ]
+
+        mime_pattern, hostinfo_pattern, path_pattern, entity_match = patterns
+        entity_replace = fields[-1]
+      
+        # Get rule number
+        if entity_replace in REWRITE_RULES:
+            idx = REWRITE_RULES.index(entity_replace)
         else:
-            vbuf += c
-    if vbuf:
-        values.append(vbuf)
-        vbuf = ''
-    return values
+            idx = len(REWRITE_RULES)
+            REWRITE_RULES.append(entity_replace)
 
-def parse_sort(fpath=None):#SORT_FILE):
-    global SORT
-    SORT = {}
-    if os.path.isfile(fpath):
-        SORT.update([(p[1], re.compile(p[0])) for p in
-            map(split_csv, open(fpath).readlines()) if p])
+        # Store new content rewrite rules
+#        REWRITE[] = 
+        REWRITE.append((
+                mime_pattern,
+                hostinfo_pattern,
+                path_pattern,
+                entity_mathc,
+                entity_replace
+            ))
 
+def match_rewrite(mediatype, hostinfo, path):
+    pass
+#/XXX
+
+def validate_joinlist(fpath=JOIN_FILE):
+    """
+    Read all double commented lines as URLs, use on next first pattern line.
+    """
+    lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
+    for path in lines:
+        match = False
+        for line, regex in JOIN:
+            m = regex.match(path)
+            if m:
+                #print 'Match', path, m.groups()
+                match = True
+        if not match:
+            print "Error: no match for", path
+
+def format_info():
+    """
+    Return JSON for config.
+    """
+    return json_write({
+        "htcache": { 
+            "runtime": {
+                "program": PROG,
+            },
+            "config": {
+                "port": PORT,
+                "root": ROOT,
+                "pid-file": PID_FILE,
+                "verboseness": VERBOSE,
+                "timeout": TIMEOUT,
+                "socket-family": FAMILY,
+                "cache-type": CACHE,
+                "join-file": JOIN_FILE,
+                "drop-file": DROP_FILE,
+                "nocache-file": NOCACHE_FILE,
+                "rewrite-file": REWRITE_FILE,
+            },
+            "statistics": {
+                "rules": {
+                        "drop": len(DROP),
+                        "join": len(JOIN),
+                        "nocache": len(NOCACHE),
+                        "rewrite": len(REWRITE),
+                    }
+                }
+            }
+        })
+
+descriptor_storage_type = None
+
+if __name__ == '__main__':
+    #parse_joinlist()
+    #validate_joinlist()
+    parse_rewritelist()

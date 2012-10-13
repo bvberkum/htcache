@@ -5,10 +5,7 @@ For better support of some weird URLs the latter is preferable.
 See README for description.
 """
 import time, os
-try:
-    from md5 import md5
-except DeprecationWarning:
-    from hashlib import md5
+from hashlib import md5
 import Cache, Params
 
 
@@ -134,7 +131,7 @@ class RefHash(Cache.File):
 
     def open_new(self):
         self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
-        Params.log('Preparing new file in cache: %s' % self.path)
+        Params.log('Preparing new file in cache: %s' % self.path, 2)
         self.file = open( self.path, 'w+' )
 
     def open_full(self):
@@ -149,12 +146,12 @@ class RefHash(Cache.File):
             assert offset <= self.tell(), 'range does not match file in cache'
             self.file.seek( offset )
             self.file.truncate()
-        Params.log('Resuming partial file in cache at byte %i' % self.tell())
+        Params.log('Resuming partial file in cache at byte %i' % self.tell(), 2)
 
     def remove_partial(self):
         self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
         os.remove( self.path )
-        Params.log("Dropped partial file.")
+        Params.log("Dropped partial file.", 2)
 
     def partial( self ):
         self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
@@ -172,6 +169,6 @@ class RefHash(Cache.File):
             os.utime( self.path, ( self.mtime, self.mtime ) )
         if self.size == size:
             os.rename( self.path, Params.ROOT + self.refhash )
-            Params.log('Finalized %s' % self.path)
+            Params.log('Finalized %s' % self.path, 2)
 
 

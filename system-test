@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+"""
+"""
+import urllib
+import difflib
+
+
+
+ignore_header_match = ('date', 'set-cookie')
+proxy_headers = ()#'via')
+
+class SystemTest:
+
+    def __init__(self, url):
+        self.url = url
+
+    def run(self):
+        self.expected = self.download()
+        self.result = self.download(True)
+        self.compare()
+
+    def download(self, proxy=False):
+        proxies = {}
+        data = None
+        if proxy:
+            proxies = {'http':'http://dm:8080'}
+        f = urllib.urlopen(self.url, data, proxies)
+        r = f.info(), f.read()
+        f.close()
+        return r
+
+    def compare(self):
+        print "="*79
+        print "URL:", self.url
+        for expected_header in self.expected[0]:
+            if expected_header not in self.result[0]:
+                print "Missing header %r" % expected_header
+                continue
+            if expected_header in ignore_header_match:
+                continue
+            expected = self.expected[0][expected_header]
+            result = self.result[0][expected_header]
+            if expected != result:
+                print "Header %s mismatch, expected %r but received %r" % (
+                        expected_header, expected, result)
+            else:
+                del self.result[0][expected_header]
+        for result_header in self.result[0]:
+            if result_header not in self.expected[0] and result_header not in proxy_headers:
+                print "New header %r" % result_header
+        expected_content = self.expected[1]
+        result_content = self.result[1]
+        if expected_content != result_content:
+            print "Unexpected contents: "
+            diff = "\n".join(list(
+                difflib.unified_diff(
+                    expected_content.split('\n'), 
+                    result_content.split('\n'))))
+            print diff
+        print "-"*79
+        
+
+class SystemTestRunner:
+
+    @classmethod
+    def main(klass, urls):
+        for u in urls:
+            SystemTest(u).run()
+
+
+if __name__ == '__main__':
+    SystemTestRunner.main([
+            'http://dotmpe.com/',
+#            'http://ebay.com/',
+            'http://google.com/',
+            'http://viking-z.org/',
+            'http://catb.org/jargon/index.html',
+            'http://catb.org/jargon/html/index.html',
+            'http://catb.org/jargon/html/go01.html'
+        ])
