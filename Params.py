@@ -56,7 +56,6 @@ ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 DATA_DIR = '/var/lib/htcache/'
-RESOURCES = DATA_DIR+'resource.db'
 HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
 PROXY_INJECT = False

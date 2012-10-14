@@ -135,34 +135,34 @@ class HTTP:
     Header_Map = dict([(k.lower(), k) for k in Message_Headers ])
 
 
-#def map_headers_to_resource(headers):
-#    kwds = {}
-#    mapping = {
-#        'allow': 'allow',
-#        'content-encoding': 'content.encodings',
-#        'content-length': 'size',
-#        'content-language': 'language',
-#        'content-location': 'location',
-#        'content-md5': 'content.md5',
-#        #'content-range': '',
-#        #'vary': 'vary',
-#        #'content-type': 'mediatype',
-#        'expires': 'content.expires',
-#        'last-modified': 'last_modified',
-#
-#        'etag': 'etag',
-#    }
-#    for hn, hv in headers.items():
-#        hn, hv = hn.lower(), hv.lower()
-#        if hn == 'content-type':
-#            if ';' in hn:
-#                kwds['mediatype'] = re.search('^[^;]*', hv).group(0).strip()
-#                if 'charset' in hv:
-#                    kwds['charset'] = re.search(';\s*charset=([a-zA-Z0-9]*)',
-#                            hv).group(1)
-#        elif hn.lower() in mapping:
-#            kwds[mapping[hn.lower()]] = hv
-#        else:
-#            print "Warning: ignored", hn
-#    return kwds
+def map_headers_to_resource(headers):
+    kwds = {}
+    mapping = {
+        'allow': 'allow',
+        'content-encoding': 'content.encodings',
+        'content-length': 'size',
+        'content-language': 'language',
+        'content-location': 'location',
+        'content-md5': 'content.md5',
+        #'content-range': '',
+        #'vary': 'vary',
+        #'content-type': 'mediatype',
+        'expires': 'content.expires',
+        'last-modified': 'last_modified',
+
+        'etag': 'etag',
+    }
+    for hn, hv in headers.items():
+        hn, hv = hn.lower(), hv.lower()
+        if hn == 'content-type':
+            if ';' in hn:
+                kwds['mediatype'] = re.search('^[^;]*', hv).group(0).strip()
+                if 'charset' in hv:
+                    kwds['charset'] = re.search(';\s*charset=([a-zA-Z0-9]*)',
+                            hv).group(1)
+        elif hn.lower() in mapping:
+            kwds[mapping[hn.lower()]] = hv
+        else:
+            print "Warning: ignored", hn
+    return kwds
 

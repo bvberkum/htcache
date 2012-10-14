@@ -62,13 +62,11 @@ class DataResponse:
         #if protocol.capture:
         #    self.__hash = hashlib.sha1()
 
-        args = self.__protocol.args()
+        args = protocol.response_headers()
 
         cached_headers = {}
-        if protocol.has_descriptor():
-            descr = protocol.get_descriptor()
-            urls, mediatype, charset, languages, metadata, features = descr
-            cached_headers = metadata
+        if protocol.descriptor:
+            pass
         #  Params.log("Descriptor: %s" % pformat(descr))
             #urirefs, cached_args = protocol.get_descriptor()
           # Abuse feature dict to store headers
@@ -79,10 +77,6 @@ class DataResponse:
           #    args[k] = v
         #else:
         #  Params.log("No descriptor for %s" % protocol.cache.path)
-
-        via = "%s:%i" % (socket.gethostname(), Params.PORT)
-        if args.setdefault('Via', via) != via:
-            args['Via'] += ', '+ via
 # XXX: this may need to be on js serving..
 #        if self.__protocol.rewrite:
 #            args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
