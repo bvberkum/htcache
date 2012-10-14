@@ -18,6 +18,7 @@ _args = list( sys.argv )
 VERSION = 0.4
 
 # proxy params
+HOSTNAME = socket.gethostname()
 PROG = _args.pop(0)
 PORT = 8080
 ROOT = os.getcwd() + os.sep

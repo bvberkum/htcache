@@ -1,7 +1,7 @@
 import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
-import Params, Resource, Rules, HTTP
+import Params, Resource, Rules
 
 
 class BlindResponse:
@@ -246,7 +246,7 @@ class BlockedContentResponse:
         self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\n'\
                 'Content-Type: text/html\r\n\r\n"\
                 + open(Params.HTML_PLACEHOLDER).read() % { 
-                        'host': socket.gethostname(), 
+                        'host': Params.HOSTNAME,
                         'port': Params.PORT,
                         'location': '%s:%i/%s' % url,
                         'software': 'htcache/%s' % Params.VERSION }
