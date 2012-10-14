@@ -26,6 +26,7 @@ Tests
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
+
             - TODO: ``--keep-cache`` mark location revisioning
             - TODO: ``--validate-tree`` resource cache should match size, checksum
             - TODO: ``--validate-joinlist`` resource should have been rewritten
@@ -41,7 +42,11 @@ Tests
             - TODO: ``--print-media`` query
 
         dev_cacherev
-            .. 
+            Revision certain resources, always keeping a requested version.
+
+        dev_relstore
+            Need to get simple relational storage.
+
 
 branches
     master (current)
