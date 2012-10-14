@@ -21,7 +21,7 @@ Tests
         dev_cachemaint
             Cache maintenance routines.
 
-            :tests:
+            :unit-tests:
               - (dandy) 40 passed checks, 3 errors
               - (dm) 21 passed checks, 22 errors
 
