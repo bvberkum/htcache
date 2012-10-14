@@ -101,7 +101,6 @@ class Join:
             for pattern, regex, repl in Params.JOIN:
                 m = regex.match(pathref)
                 if m:
-                    capture = True
                     pathref = regex.sub(repl, pathref)
                     Params.log("Joined URL matching rule %r" % line, threshold=1)
         return pathref

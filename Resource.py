@@ -1,11 +1,8 @@
 """ 
-
 Class for descriptor storage.
-
-TODO: filter out unsupported headers, always merge with server headers
- to client.
 """
 import anydbm, datetime, os, re, urlparse
+from os.path import join
 
 
 try:
@@ -15,6 +12,7 @@ except AssertionError:
     from sets import Set as set
 
 import Params
+import HTTP
 from error import *
 
 #import uriref
@@ -22,30 +20,89 @@ import Params, Cache
 
 
 
-class DescriptorStorage(object):
+class Storage(object):
 
     """
-    Base class.
+    AnyDBM facade.
     """
 
-    shelve = None
-    "Shelved descriptor objects"
+    resources = None
+    """Shelved resource objects::
+    
+        resources = { <res> => <Resource:{
+           
+           host, path, meta, cache
+
+        }> }
+    """
+
+    descriptors = None
+    """Shelved descriptor objects::
+    
+        descriptors = { <path> => <Descriptor:{
+            
+            hash, mediatype, charset, language, size, quality
+
+        }> }
+    """
+
     cachemap = None
-    "Map of uriref to cache locations (forward)"
+    """Map of uriref to cache locations (forward)::
+    
+        cachemap = { <res> => <path> }
+    """
+
     resourcemap = None
-    "Map of cache location to uriref (reverse)"
+    "Map of cache location to uriref (reverse). "
 
-    def __init__(self, path):
-        self.objdb = join(path, 'resources.db')
-        self.cachemapdb = join(path, 'cache_map.db')
-        self.resourcemapdb = join(path, 'resource_map.db')
+    relations_to = None
+    """
+    Qualified relations 'rel' from 'res' to 'ref'::
 
-        self.shelve = dbshelve.open(objdb)
+        relations_to = { <res> => *( <rel>, <ref> ) }
+    """
+    relations_from = None
+    """Reverse mapping::
 
-        self.cachemap = bsddb.hashopen(cachemapdb)
-        self.resourcemap = bsddb.hashopen(resourcemapdb)
+       relations_from = { <ref> => *<res> }
+    """
+
+    def __init__(self, resources, descriptors, cachemap, resourcemap):
+
+        Params.log([
+            resources,
+            descriptors, 
+            cachemap,
+            resourcemap
+        ])
+        self.resources = self.ResourceStorageType(*resources)
+        self.descriptors = self.DescriptorStorageType(*descriptors)
+        self.cachemap = self.CacheMapType(*cachemap)
+        self.resourcemap = self.ResourceMapType(*resourcemap)
+
+        self.__resources = {}
+        self.__descriptors = {}
+        # XXX:
         #chksmdb = join(path, '.cllct/sha1sum.db')
         #self.sha1sum = dbshelve.open(chksmdb)
+
+    def close(self):
+        self.resource.close()
+        self.descriptors.close()
+        self.cachemap.close()
+        self.resourcemap.close()
+
+    def get_descriptor(self, path):
+        if path in self.__descriptors:
+            return self.__descriptors[path]
+        descr = Descriptor(self)
+        if path not in self.descriptors:
+            if os.path.exists(path):
+                Params.log("Data loss recovery: unexpected cache location: %r" % path)
+        else:
+            descr.load_from_storage(path)
+        self.__descriptors[path] = descr
+        return descr
 
     def put(self, uriref, metalink):
         """
@@ -54,7 +111,6 @@ class DescriptorStorage(object):
         self.shelve[uriref]
         if uriref in self.cachemap:
             self.cache[uriref]
-
         pass
 
     def map_path(self, path, uriref):
@@ -95,131 +151,71 @@ class Descriptor(object):
     Item names for each tuple index.
     """
 
-    def __init__(self, data):#, be=None):
-        assert isinstance(data, tuple)
-        if len(data) > len(self.mapping):
-            raise ValueError()
-        self.__data = data
-        self.storage = None
-        #if be != None:
-        #    self.bind(be)
+    def __init__(self, storage):
+        self.path = None
+        self.__data = {}
+        self.storage = storage
 
-    def __getattr__(self, name):
-        if name in self.mapping:
-            idx = self.mapping.index(name)
-            return self[idx]
-        else:
-            return super(Descriptor, self).__getattr__(self, name)
+    def __nonzero__(self):
+        return self.path != None
+
+    def init(self, path, args):
+        self.__data = HTTP.map_headers_to_resource(args)
+        self.path = path
+        assert self.path not in self.storage.descriptors
+        self.storage.descriptors[self.path] = Params.json_write(
+                self.__data)
+        Params.log([ path, self.__data ], 4)
+
+    def update(self, args):
+        newdata = HTTP.map_headers_to_resource(args)
+        for k in newdata:
+            assert k in self.__data,\
+                    "Update to unknown header: %r" % k
+            assert newdata[k] == self.__data[k], \
+                    "XXX: update"
+        Params.log([ 'update', self.path, args, self.__data ], 4)
+#        for k in self.__data:
+#            assert k in newdata, \
+#                    "Missing update to %r" % k
+        # XXX: self.__data.update(newdata)
+
+    def drop(self):
+        del self.storage.descriptors[self.path]
+        Params.log([ 'drop', self.path, self.__data ], 4)
+
+    def load_from_storage(self, path):
+        self.path = path
+        self.__data = Params.json_read(
+                self.storage.descritors[self.path])
+        Params.log(['load_from_storage', self.path, self.__data]);
+
+    def create_for_response(self, protocol, response):
+        pass
 
     @property
     def data(self):
         return self.__data
 
-    def bind(self, location, storage):
-        self.cache_location = location
-        self.storage = storage
-        return self
-
-    def __getitem__(self, idx):
-        if idx >= len(self.data):
-            raise IndexError()
-        #if idx < len(self.data):
-        return self.__data[idx]
-
-    def __setitem__(self, idx, value):
-        self.__data[idx] = value
-
-    def __contains__(self, value):
-        return value in self.__data
-
-    def __iter__(self):
-        return iter(self.__data)
-
-    def update(self, values):# *values, **kwds):
-        if not isinstance(values, Descriptor):
-            assert isinstance(values, tuple), values
-        else:
-            values = values.data
-        _update = ()
-        len_values = len(values)
-        for idx, name in enumerate(self.mapping):
-            if len_values == idx:
-                break
-            if self[idx] != values[idx]:
-                self[idx] = values[idx]
-                _update += (idx,)
-        return _update
-
-    def commit(self):
-        ""
-        self.storage[self.cache_location] = self
-
-    def from_headers(class_, args):
-        for hn in Protocol.HTTP.Cache_Headers:
-            pass
+#    def __getitem__(self, idx):
+#        if idx >= len(self.data):
+#            raise IndexError()
+#        #if idx < len(self.data):
+#        return self.__data[idx]
+#
+#    def __setitem__(self, idx, value):
+#        self.__data[idx] = value
+#
+#    def __contains__(self, key):
+#        return key in self.__data
+#
+#    def __iter__(self):
+#        return iter(self.__data)
+#
+#    def commit(self):
+#        pass
 
 
-class DescriptorStorage(object):
-
-    """
-    Item is the local path to a cached resource.
-    """
-
-    def __init__(self, *params):
-        pass
-
-    def __getitem__(self, path):
-        path = strip_root(path)
-        if path in self:
-            return self.get(path)
-        else:
-            d = Descriptor((None,) * len(Descriptor.mapping))\
-                .bind(path, self)
-            return d
-
-    def __setitem__(self, path, values):
-        if not isinstance(values, Descriptor):
-            assert isinstance(values, tuple)
-        else:
-            values = values.data
-        if path in self:
-            self[path].update(values)
-        else:
-            new_values = self[path]
-            new_values.update(values)
-            self.set(path, new_values)
-
-    def __contains__(self, path):
-        raise AbstractClass()
-
-    def __len__(self):
-        raise AbstractClass()
-
-    def __iter__(self):
-        raise AbstractClass()
-
-    def get(self, path):
-        raise AbstractClass()
-
-    def set(self, path, name, value):
-        raise AbstractClass()
-
-    def commit(self):
-        raise AbstractClass()
-
-    def close(self):
-        raise AbstractClass()
-
-
-class FileStorage(object):
-    def __init__(self):
-        raise "Not implemented: FileStorage"
-    def close(self): pass
-    def update(self, hrds): pass
-
-
-# FIXME: old master
-# class AnyDBStorage(DescriptorStorage):
 class AnyDBStorage(object):
 
     def __init__(self, path, mode='rw'):
@@ -270,7 +266,7 @@ class AnyDBStorage(object):
         value = tuple(Params.json_read(data))
         return Descriptor(value)#, be=self)
 
-    def set(self, path, srcrefs, headers):
+    def set_(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
             (path, srcrefs, headers)
         assert isinstance(path, basestring) and \
@@ -302,6 +298,9 @@ class AnyDBStorage(object):
         self.__be.sync()
 
     def update(self, path, srcrefs, headers):
+        """
+        Merge srcrefs, headers.
+        """
         descr = self.get(path)
         srcrefs = list(set(srcrefs).union(descr[0]))
         headers.update(descr[4])
@@ -331,62 +330,63 @@ class AnyDBStorage(object):
 #                (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
 #                and isinstance(srcrefs[0], str)), srcrefs
 
+def index_factory(storage, path, mode='w'):
 
-if os.path.isdir(Params.RESOURCES):
-    Params.descriptor_storage_type = FileStorage
+    if not os.path.exists(path):
+        assert 'w' in mode
+        try:
+            anydbm.open(path, 'n').close()
+        except Exception, e:
+            raise Exception("Unable to create new resource DB at <%s>: %s" %
+                    (path, e))
+    try:
+        Params.log("Opening %s mode=%s" %(path, mode))
+        return anydbm.open(path, mode)
+    except anydbm.error, e:
+        raise Exception("Unable to access resource DB at <%s>: %s" %
+                (path, e))
 
-elif Params.RESOURCES.endswith('.db'):
-    Params.descriptor_storage_type = AnyDBStorage
-
-backend = None
-
-def get_backend(main=True):
-    global backend
-    if main:
-        if not backend:
-            backend = Params.descriptor_storage_type(Params.RESOURCES)
-        return backend
-    return Params.descriptor_storage_type(Params.RESOURCES, 'r') 
-
-
-class RelationalStorage(DescriptorStorage):
-
-    def __init__(self, dbref):
-        engine = create_engine(dbref)
-        self._session = sessionmaker(bind=engine)()
-
-    def get(self, url):
-        self._session.query(
-                taxus.data.Resource, taxus.data.Locator).join('lctr').filter_by(ref=url).all()
+Storage.ResourceStorageType = index_factory
+Storage.DescriptorStorageType = index_factory
+Storage.ResourceMapType = index_factory
+Storage.CacheMapType = index_factory
 
 
-def _is_db(be):
-    # file -s resource.db | grep -i berkeley
-    return os.path.isdir(os.path.dirname(be)) and be.endswith('.db')
+storage = None
 
-def _is_sql(be):
-    # file -s resource.db | grep -i sqlite
-    return \
-        be.startswith('sqlite:///') or \
-        be.startswith('mysql://') or \
-        be.endswith('.sqlite')
+def open_backend():
+    
+    global storage
+        
+    path = Params.DATA_DIR
 
-#Params.BACKENDS.update(dict(
-#        # TODO: filestorage not implemented
-#        file= (lambda p: os.path.isdir(p), FileStorage),
-#        anydb= (_is_db, AnyDBStorage),
-#        sql= (_is_sql, RelationalStorage)
-#    ))
-#
-# FIXME : old master
-#def init_backend(request, be=Params.BACKEND):
-#
-#    for name in Params.BACKENDS:
-#        if Params.BACKENDS[name][Params.BD_IDX_TEST](be):
-#            return Params.BACKENDS[name][Params.BD_IDX_TYPE](be)
-#
-#    raise Exception("Unable to find backend type of %r" % be)
+    storage = Storage(**dict(
+            resources=(join(path, 'resources.db'),),
+            descriptors=(join(path, 'descriptors.db'),),
+            cachemap=(join(path, 'cache_map.db'),),
+            resourcemap=(join(path, 'resource_map.db'),)
+        ))
 
+
+def for_request(request):
+
+    global storage
+
+    cache = get_cache(request.hostinfo, request.envelope[1])
+    descriptor = storage.get_descriptor(cache.path) 
+
+    if descriptor and not (cache.full() or cache.partial()):
+        Params.log("Warning: stale descriptor")
+        descriptor.drop()
+
+    elif not descriptor and (cache.full() or cache.partial()):
+        Params.log("Error: stale cache %s" % cache.path)
+        # XXX: should load new Descriptor into db here or delete stale files.
+
+    return cache, descriptor
+
+
+# XXX: rewrite to New backend
 def get_cache(hostinfo, req_path):
     """
     req_path is a URL path ref including query-part,
@@ -401,6 +401,12 @@ def get_cache(hostinfo, req_path):
 # XXX: use unrewritten path as descriptor key, need unique descriptor per resource
     cache.descriptor_key = cache_location
     return cache
+
+
+
+
+
+# XXX: rewrite this to Rules or Cmd
 
 
 # psuedo-Main: special command line options allow resource DB queries:
@@ -482,7 +488,6 @@ def find_info(q):
     backend.close()
     print "End of findinfo"; sys.exit(1)
 
-## Maintenance functions
 def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
     References in descriptor cache must exist as file. 
@@ -643,199 +648,5 @@ def check_cache():
     descriptors.close()
     #pb.clear()
     sys.exit(0)
-
-
-
-
-import sys, re
-
-class TerminalController:
-    """
-    A class that can be used to portably generate formatted output to
-    a terminal.  
-    
-    `TerminalController` defines a set of instance variables whose
-    values are initialized to the control sequence necessary to
-    perform a given action.  These can be simply included in normal
-    output to the terminal:
-
-        >>> term = TerminalController()
-        >>> print 'This is '+term.GREEN+'green'+term.NORMAL
-
-    Alternatively, the `render()` method can used, which replaces
-    '${action}' with the string required to perform 'action':
-
-        >>> term = TerminalController()
-        >>> print term.render('This is ${GREEN}green${NORMAL}')
-
-    If the terminal doesn't support a given action, then the value of
-    the corresponding instance variable will be set to ''.  As a
-    result, the above code will still work on terminals that do not
-    support color, except that their output will not be colored.
-    Also, this means that you can test whether the terminal supports a
-    given action by simply testing the truth value of the
-    corresponding instance variable:
-
-        >>> term = TerminalController()
-        >>> if term.CLEAR_SCREEN:
-        ...     print 'This terminal supports clearning the screen.'
-
-    Finally, if the width and height of the terminal are known, then
-    they will be stored in the `COLS` and `LINES` attributes.
-    """
-    # Cursor movement:
-    BOL = ''             #: Move the cursor to the beginning of the line
-    UP = ''              #: Move the cursor up one line
-    DOWN = ''            #: Move the cursor down one line
-    LEFT = ''            #: Move the cursor left one char
-    RIGHT = ''           #: Move the cursor right one char
-
-    # Deletion:
-    CLEAR_SCREEN = ''    #: Clear the screen and move to home position
-    CLEAR_EOL = ''       #: Clear to the end of the line.
-    CLEAR_BOL = ''       #: Clear to the beginning of the line.
-    CLEAR_EOS = ''       #: Clear to the end of the screen
-
-    # Output modes:
-    BOLD = ''            #: Turn on bold mode
-    BLINK = ''           #: Turn on blink mode
-    DIM = ''             #: Turn on half-bright mode
-    REVERSE = ''         #: Turn on reverse-video mode
-    NORMAL = ''          #: Turn off all modes
-
-    # Cursor display:
-    HIDE_CURSOR = ''     #: Make the cursor invisible
-    SHOW_CURSOR = ''     #: Make the cursor visible
-
-    # Terminal size:
-    COLS = None          #: Width of the terminal (None for unknown)
-    LINES = None         #: Height of the terminal (None for unknown)
-
-    # Foreground colors:
-    BLACK = BLUE = GREEN = CYAN = RED = MAGENTA = YELLOW = WHITE = ''
-    
-    # Background colors:
-    BG_BLACK = BG_BLUE = BG_GREEN = BG_CYAN = ''
-    BG_RED = BG_MAGENTA = BG_YELLOW = BG_WHITE = ''
-    
-    _STRING_CAPABILITIES = """
-    BOL=cr UP=cuu1 DOWN=cud1 LEFT=cub1 RIGHT=cuf1
-    CLEAR_SCREEN=clear CLEAR_EOL=el CLEAR_BOL=el1 CLEAR_EOS=ed BOLD=bold
-    BLINK=blink DIM=dim REVERSE=rev UNDERLINE=smul NORMAL=sgr0
-    HIDE_CURSOR=cinvis SHOW_CURSOR=cnorm""".split()
-    _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
-    _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
-
-    def __init__(self, term_stream=sys.stdout):
-        """
-        Create a `TerminalController` and initialize its attributes
-        with appropriate values for the current terminal.
-        `term_stream` is the stream that will be used for terminal
-        output; if this stream is not a tty, then the terminal is
-        assumed to be a dumb terminal (i.e., have no capabilities).
-        """
-        # Curses isn't available on all platforms
-        try: import curses
-        except: return
-
-        # If the stream isn't a tty, then assume it has no capabilities.
-        if not term_stream.isatty(): return
-
-        # Check the terminal type.  If we fail, then assume that the
-        # terminal has no capabilities.
-        try: curses.setupterm()
-        except: return
-
-        # Look up numeric capabilities.
-        self.COLS = curses.tigetnum('cols')
-        self.LINES = curses.tigetnum('lines')
-        
-        # Look up string capabilities.
-        for capability in self._STRING_CAPABILITIES:
-            (attrib, cap_name) = capability.split('=')
-            setattr(self, attrib, self._tigetstr(cap_name) or '')
-
-        # Colors
-        set_fg = self._tigetstr('setf')
-        if set_fg:
-            for i,color in zip(range(len(self._COLORS)), self._COLORS):
-                setattr(self, color, curses.tparm(set_fg, i) or '')
-        set_fg_ansi = self._tigetstr('setaf')
-        if set_fg_ansi:
-            for i,color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
-                setattr(self, color, curses.tparm(set_fg_ansi, i) or '')
-        set_bg = self._tigetstr('setb')
-        if set_bg:
-            for i,color in zip(range(len(self._COLORS)), self._COLORS):
-                setattr(self, 'BG_'+color, curses.tparm(set_bg, i) or '')
-        set_bg_ansi = self._tigetstr('setab')
-        if set_bg_ansi:
-            for i,color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
-                setattr(self, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
-
-    def _tigetstr(self, cap_name):
-        # String capabilities can include "delays" of the form "$<2>".
-        # For any modern terminal, we should be able to just ignore
-        # these, so strip them out.
-        import curses
-        cap = curses.tigetstr(cap_name) or ''
-        return re.sub(r'\$<\d+>[/*]?', '', cap)
-
-    def render(self, template):
-        """
-        Replace each $-substitutions in the given template string with
-        the corresponding terminal control string (if it's defined) or
-        '' (if it's not).
-        """
-        return re.sub(r'\$\$|\${\w+}', self._render_sub, template)
-
-    def _render_sub(self, match):
-        s = match.group()
-        if s == '$$': return s
-        else: return getattr(self, s[2:-1])
-
-class ProgressBar:
-    """
-    A 3-line progress bar, which looks like::
-    
-                                Header
-        20% [===========----------------------------------]
-                           progress message
-
-    The progress bar is colored, if the terminal supports color
-    output; and adjusts to the width of the terminal.
-    """
-    BAR = '%3d%% ${GREEN}[${BOLD}%s%s${NORMAL}${GREEN}]${NORMAL}\n'
-    BAR = '%3d%% ${BOLD}[${BLUE}%s${NORMAL}%s${NORMAL}]${NORMAL}\n'
-    HEADER = '${BOLD}${CYAN}%s${NORMAL}\n\n'
-        
-    def __init__(self, term, header):
-        self.term = term
-        if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
-            raise ValueError("Terminal isn't capable enough -- you "
-                             "should use a simpler progress dispaly.")
-        self.width = self.term.COLS or 75
-        self.bar = term.render(self.BAR)
-        self.header = self.term.render(self.HEADER % header.center(self.width))
-        self.cleared = 1 #: true if we haven't drawn the bar yet.
-        self.update(0, '')
-
-    def update(self, percent, message):
-        if self.cleared:
-            sys.stdout.write(self.header)
-            self.cleared = 0
-        n = int((self.width-10)*percent)
-        sys.stdout.write(
-            self.term.BOL + self.term.UP + self.term.CLEAR_EOL +
-            self.term.BOL + self.term.UP + self.term.CLEAR_EOL +
-            (self.bar % (100*percent, '='*n, '-'*(self.width-10-n))) +
-            self.term.CLEAR_EOL + message.center(self.width))
-
-    def clear(self):
-        if not self.cleared:
-            sys.stdout.write(self.term.BOL + self.term.CLEAR_EOL +
-                             self.term.UP + self.term.CLEAR_EOL +
-                             self.term.UP + self.term.CLEAR_EOL)
-            self.cleared = 1
 
 

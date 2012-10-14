@@ -69,7 +69,8 @@ class HtRequest:
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(key, value.strip()), 1)
+                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(
+                    key, value.strip()), 1)
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
@@ -117,7 +118,8 @@ class HtRequest:
         assert chunk, \
                 'client closed connection before sending a '\
                 'complete message header at %s, ' \
-                'parser: %r, data: %r' % (self.__recvbuflen, self.__parse, self.__recvbuf)
+                'parser: %r, data: %r' % (
+                        self.__recvbuflen, self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
         self.__recvbuflen += len(chunk)
         while self.__parse:
@@ -151,6 +153,7 @@ class HtRequest:
         # Accept static requests
         else:
             self.Protocol = Protocol.BlindProtocol
+            self.Protocol = Protocol.HttpProtocol
             scheme = ''
             host = '' #socket.gethostname()
             port = Params.PORT
@@ -183,19 +186,10 @@ class HtRequest:
         #self.Resource = Resource.Resource(proxied_url, self.args())
 
 # FIXME: old master
-#        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
-#        self.resource = Resource.forRequest(req_url)
-#
-#        if not self.resource:
-#            self.resource = Resource.new(req_url)
-#        
-#        if Params.VERBOSE > 1:
-#            print 'Matched to resource', req_url
-#        
 #        if self.resource and 'Host' not in self.__headers:
 #            # Become HTTP/1.1 compliant
 #            self.__headers['Host'] = self.resource.ref.host
-#
+
         self.__headers[ 'Host' ] = host
         self.__headers[ 'Connection' ] = 'close'
 
@@ -203,12 +197,12 @@ class HtRequest:
         self.__headers.pop( 'Proxy-Connection', None )
         self.__headers.pop( 'Proxy-Authorization', None )
 
-        # Add Date (as per HTTP/1.1 [RFC 2616] 14.18)
+        # Add Date (HTTP/1.1 [RFC 2616] 14.18)
         if 'Date' not in self.__headers:
             self.__headers[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
 
-        # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
+        # Add proxy Via header (HTTP/1.1 [RFC 2616] 14.45)
         via = "1.1 %s:%i (htcache/%s)" % (socket.gethostname(), Params.PORT,
                 Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
@@ -225,6 +219,11 @@ class HtRequest:
         else:
             lines.append( '' )
         return '\r\n'.join( lines )
+
+    def is_conditional(self):
+        return ( 'If-Modified-Since' in self.__headers
+                or 'If-None-Match' in self.__headers )
+        # XXX: If-Range
 
     @property
     def envelope(self):

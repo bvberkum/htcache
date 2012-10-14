@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-import sys, time, weakref
+import sys, time, weakref, traceback
 
 import Params, Protocol, Request, Response, fiber
 import Resource
@@ -156,8 +156,7 @@ if Params.CMDS:
 while True:
     load()
     try:
-        Resource.get_backend()
-
+        Resource.open_backend()
         fiber.spawn( HTCache_fiber_handler, 
                 Params.PORT, 
                 Params.DEBUG, 
@@ -165,11 +164,12 @@ while True:
                 Params.PID_FILE )
 
     except fiber.Restart, e:
-        Resource.get_backend().close()
+        Resource.storage.close()
         for mod in (Params, Protocol, Request, Response, Resource, fiber):
             mod = reload(mod)
 
     except Exception, e:
-        Params.log(e)
+        traceback.print_exc()
+        sys.exit(1)
         break
 
