@@ -23,7 +23,7 @@ Tests
 
             :unit-tests:
               - (dandy) 40 passed checks, 3 errors
-              - (dm) 21 passed checks, 22 errors
+              - (dm) 35 passed checks, 8 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
