@@ -34,29 +34,31 @@ class SystemTest:
         print "URL:", self.url
         for expected_header in self.expected[0]:
             if expected_header not in self.result[0]:
-                print "Missing header %r" % expected_header
+                print " [ERROR] Missing header %r" % expected_header
                 continue
             if expected_header in ignore_header_match:
                 continue
             expected = self.expected[0][expected_header]
             result = self.result[0][expected_header]
             if expected != result:
-                print "Header %s mismatch, expected %r but received %r" % (
+                print " [ERROR] Header %s mismatch, expected %r but received %r" % (
                         expected_header, expected, result)
             else:
                 del self.result[0][expected_header]
         for result_header in self.result[0]:
             if result_header not in self.expected[0] and result_header not in proxy_headers:
-                print "New header %r: %r" % (result_header, self.result[0][result_header])
+                print " [WARNING] New header %r: %r" % (result_header, self.result[0][result_header])
         expected_content = self.expected[1]
         result_content = self.result[1]
         if expected_content != result_content:
-            print "Unexpected contents: "
+            print " [ERROR] Unexpected contents: "
             diff = "\n".join(list(
                 difflib.unified_diff(
                     expected_content.split('\n'), 
                     result_content.split('\n'))))
             print diff
+        else:
+            print " [PASSED] "
         print "-"*79
         
 

@@ -34,33 +34,6 @@ def parse_joinlist(fpath=Params.JOIN_FILE):
             open(fpath).readlines() 
             if p.strip() and not p.strip().startswith('#')])
 
-def split_csv(line):
-    line = line.strip()
-    if not line or line.startswith('#'):
-        return
-    values = []
-    vbuf = ''
-    Q = ('\'','\"')
-    inquote = False
-    for c in line:
-        if c in Q:
-            inquote = True
-        elif inquote:
-            if c in Q:
-                inquote = False
-            else:
-                vbuf += c
-        elif c == ',' or c.isspace():
-            if vbuf:
-                values.append(vbuf)
-                vbuf = ''
-        else:
-            vbuf += c
-    if vbuf:
-        values.append(vbuf)
-        vbuf = ''
-    return values
-
 def parse_rewritelist(fpath=Params.REWRITE_FILE):
     Params.REWRITE = []
     for p in open(fpath).readlines():

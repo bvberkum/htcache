@@ -10,19 +10,24 @@ functions are user available.
 
 Tests
     dev*
+        :system-tests: 
+            - (dandy) 1 passed checks, 70 errors  
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
-            - (dm) 41 passed checks, 1 errors
+            - (dm) 41 passed checks, 2 errors
+            - (dandy) 40 passed checks, 3 errors
     
         dev_cachemaint
             Cache maintenance routines.
 
             :tests:
-              - (dm) 21 passed checks, 22 errors
+              - (dandy) 40 passed checks, 3 errors
+              - (dm) 35 passed checks, 8 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
+
             - TODO: ``--keep-cache`` mark location revisioning
             - TODO: ``--validate-tree`` resource cache should match size, checksum
             - TODO: ``--validate-joinlist`` resource should have been rewritten
@@ -38,7 +43,11 @@ Tests
             - TODO: ``--print-media`` query
 
         dev_cacherev
-            .. 
+            Revision certain resources, always keeping a requested version.
+
+        dev_relstore
+            Need to get simple relational storage.
+
 
 branches
     master (current)
