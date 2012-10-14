@@ -375,35 +375,35 @@ case $1 in
 #    http_proxy=localhost:$PORT download http://$URL_HTTP out
 #    stopserver
 #    ;;
-#  10)
-#    summary "DOWNLOADING NEW FILE, FTP TRANSFER"
-#    startserver
-#    download ftp://$URL_FTP out1
-#    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
-#    check_equal "separate download and served file are equal" out1 out2
-#    check_equal "cached and served file are equal" cache/$URL_FTP out2
-#    stopserver
-#    ;;
-#  11)
-#    summary "SERVING FILE FROM CACHE, FTP TRANSFER"
-#    startserver
-#    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1
-#    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
-#    check_exists "first file cached and finalized" cache/$URL_FTP
-#    check_log "second file served from cache" "Reading complete file from cache"
-#    check_equal "cached and first served file are equal" cache/$URL_FTP out1
-#    check_equal "cached and second served file are equal" cache/$URL_FTP out2
-#    stopserver
-#    ;;
-#  12)
-#    summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
-#    startserver
-#    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1 & abort 1
-#    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
-#    check_log "htcache resumes file" "Resuming partial file in cache"
-#    check_equal "cached and served file are equal" cache/$URL_FTP out2
-#    stopserver
-#    ;;
+  10)
+    summary "DOWNLOADING NEW FILE, FTP TRANSFER"
+    startserver
+    download ftp://$URL_FTP out1
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+    check_equal "separate download and served file are equal" out1 out2
+    check_equal "cached and served file are equal" cache/$URL_FTP out2
+    stopserver
+    ;;
+  11)
+    summary "SERVING FILE FROM CACHE, FTP TRANSFER"
+    startserver
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+    check_exists "first file cached and finalized" cache/$URL_FTP
+    check_log "second file served from cache" "Reading complete file from cache"
+    check_equal "cached and first served file are equal" cache/$URL_FTP out1
+    check_equal "cached and second served file are equal" cache/$URL_FTP out2
+    stopserver
+    ;;
+  12)
+    summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
+    startserver
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1 & abort 1
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+    check_log "htcache resumes file" "Resuming partial file in cache"
+    check_equal "cached and served file are equal" cache/$URL_FTP out2
+    stopserver
+    ;;
 #  10)
 #    summary "RATE CONTROL"
 #    startserver --limit 10

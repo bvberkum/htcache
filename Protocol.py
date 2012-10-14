@@ -1,4 +1,4 @@
-import calendar, os, time, socket, re, urlparse
+import calendar, os, time, socket, re
 
 import Params, Response, Resource, Cache, Rules
 from HTTP import HTTP
@@ -400,11 +400,16 @@ class HttpProtocol(ProxyProtocol):
                 self.Response = Response.DataResponse
 
         # 4xx: client error
-        elif self.__status in ( HTTP.FORBIDDEN, \
-                    HTTP.REQUEST_RANGE_NOT_STATISFIABLE ) \
-                    and self.cache.partial():
-            Params.log("Warning: Cache corrupted?: %s" % self.requri)
-            # FIXME: self.cache.remove_partial()
+        elif self.__status in ( HTTP.FORBIDDEN, ):
+            Params.log("TODO: record forbidden")
+            self.Response = Response.BlindResponse
+
+        elif self.__status in ( HTTP.REQUEST_RANGE_NOT_STATISFIABLE, ):
+            if self.cache.partial():
+                Params.log("Warning: Cache corrupted?: %s" % self.requri)
+                self.cache.remove_partial()
+            elif self.cache.full():
+                self.cache.remove_full()
             self.Response = Response.BlindResponse
 
         elif self.__status in (HTTP.FOUND, 

@@ -101,6 +101,7 @@ class HTTP:
                     # Extension and msc. unsorted headers
                     'X-Server',
                     'X-Cache',
+                    'X-Cache-Lookup',
                     'X-Cache-Hit',
                     'X-Cache-Hits',
                     'X-Content-Type-Options',
