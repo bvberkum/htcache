@@ -85,8 +85,6 @@ class ProxyProtocol(object):
     descriptors = None
     "resource descriptor storage"
 
-    requri = None
-    "requested resource ID, set by subclass"
     Response = None
     "the htcache response class"
     capture = None
@@ -106,6 +104,19 @@ class ProxyProtocol(object):
 
         # Initialize a facade for the data container
         self.cache, self.descriptor = Resource.for_request( request )
+
+    @property
+    def requri( self ):
+        host, port = self.request.hostinfo
+        verb, path, proto = self.request.envelope
+
+        # Prepare requri to identify request
+        if port != 80:
+            hostinfo = "%s:%s" % (host, port)
+        else:
+            hostinfo = host
+
+        return "http://%s/%s" %  (hostinfo, path)
 
     def has_response( self ):
         return self.__status and self.__message
@@ -204,13 +215,6 @@ class HttpProtocol(ProxyProtocol):
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
-        # Prepare requri to identify request
-        if port != 80:
-            hostinfo = "%s:%s" % (host, port)
-        else:
-            hostinfo = host
-        self.requri = "http://%s/%s" %  (hostinfo, path)
-
         # Calling super constructor
         if self.prepare_direct_response(request):
             # don't initialize cache for direct requests, let response class
@@ -221,6 +225,9 @@ class HttpProtocol(ProxyProtocol):
         else:
             # normal caching proxy response
             super(HttpProtocol, self).__init__(request)
+
+        Params.log("Cache partial: %s, full:%s" % (self.cache.partial(),
+            self.cache.full()), 3)
 
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
@@ -357,8 +364,8 @@ class HttpProtocol(ProxyProtocol):
 
         # Header was parsed
 
-        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
-                "Chunked response: %s %s" % (self.__status, self.requri)
+#        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
+#                "Chunked response: %s %s" % ( self.__status, self.requri )
 
         if self.prepare_nocache_response():
             return
@@ -379,7 +386,7 @@ class HttpProtocol(ProxyProtocol):
             self.recv_part()
             assert self.descriptor, \
                 "Should have descriptor for partial content. "
-            self.descriptor.update( self.cache.path, self.__args )
+            self.descriptor.update( self.__args )
             self.set_dataresponse();
 
         # 3xx: redirects
@@ -387,11 +394,10 @@ class HttpProtocol(ProxyProtocol):
                     HTTP.MOVED_PERMANENTLY,
                     HTTP.TEMPORARY_REDIRECT):
 
-            location = self.__args.pop('Location', None)
-
-            if self.descriptor:
-                self.descriptor.moved()
 # XXX:
+            #location = self.__args.pop( 'Location', None )
+            if self.descriptor:
+                self.descriptor.move( self.cache.path, self.__args )
 #            self.cache.remove_partial()
             self.Response = Response.BlindResponse
 
@@ -401,20 +407,31 @@ class HttpProtocol(ProxyProtocol):
                 Params.log("Warning: Cache miss: %s" % self.requri)
                 assert not self.cache.partial(), self.cache.path
                 self.Response = Response.BlindResponse
+
             else:
-                Params.log("Reading complete file from cache at %s" % 
-                        self.cache.path)
-                self.cache.open_full()
-                self.Response = Response.DataResponse
                 assert self.descriptor
-                self.update_descriptor()
+                self.descriptor.update( self.__args )
+                if not self.request.is_conditional():
+                    Params.log("Reading complete file from cache at %s" % 
+                            self.cache.path)
+                    self.cache.open_full()
+                    self.Response = Response.DataResponse
+                else:
+                    self.Response = Response.ProxyResponse
 
         # 4xx: client error
-        elif self.__status in ( HTTP.FORBIDDEN, ):
-            Params.log("TODO: record forbidden")
+        elif self.__status in ( HTTP.FORBIDDEN, HTTP.METHOD_NOT_ALLOWED ):
+
+            Params.log("TODO: record status")
             self.Response = Response.BlindResponse
             if self.descriptor:
-                self.update_descriptor()
+                self.descriptor.update( self.__args )
+
+        elif self.__status in ( HTTP.NOT_FOUND, HTTP.GONE ):
+
+            self.Response = Response.BlindResponse
+            #if self.descriptor:
+            #    self.descriptor.update( self.__args )
 
         elif self.__status in ( HTTP.REQUEST_RANGE_NOT_STATISFIABLE, ):
             if self.cache.partial():
@@ -492,7 +509,7 @@ class HttpProtocol(ProxyProtocol):
         assert self.cache.partial(), "Missing cache but receiving partial entity. "
 
     def set_dataresponse(self):
-        mediatype = self.__args.get('Content-Type', None)
+        mediatype = self.__args.get( 'Content-Type', None )
         if Params.PROXY_INJECT and mediatype and 'html' in mediatype:
             Params.log("XXX: Rewriting HTML resource: "+self.requri)
             self.rewrite = True
@@ -502,9 +519,19 @@ class HttpProtocol(ProxyProtocol):
             self.Response = Response.DataResponse
 
     def recvbuf( self ):
+        return self.print_message()
+
+    def print_message( self, args=None ):
+        if not args:
+            args = self.__args
         return '\r\n'.join(
-            [ 'HTTP/1.1 %i %s' % ( self.__status, self.__message ) ] +
-            map( ': '.join, self.__args.items() ) + [ '', '' ] )
+            [ '%s %i %s' % ( self.request.envelope[2], 
+                self.__status, self.__message ) ] +
+            map( ': '.join, args.items() ) + [ '', '' ] )
+
+    def responsebuf( self ):
+        args = self.response_headers()
+        return self.print_message(args)
 
     def args( self ):
         return self.__args.copy()

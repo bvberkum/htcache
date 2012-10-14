@@ -1,17 +1,5 @@
 """ 
-
 Class for descriptor storage.
-
-TODO: filter out unsupported headers, always merge with server headers
- to client.
-
-XXX: anydb's provide balanced storage & retrieval, O(log n)? 
-  Sets/dicts in python are O(1). However 'fan-out' causes lists
-  with O(n) times; this happens at the opposite side of any many relation.
-h
-
-Changes are commited on close.
-
 """
 import anydbm, datetime, os, re, urlparse
 from os.path import join
@@ -81,6 +69,12 @@ class Storage(object):
 
     def __init__(self, resources, descriptors, cachemap, resourcemap):
 
+        Params.log([
+            resources,
+            descriptors, 
+            cachemap,
+            resourcemap
+        ])
         self.resources = self.ResourceStorageType(*resources)
         self.descriptors = self.DescriptorStorageType(*descriptors)
         self.cachemap = self.CacheMapType(*cachemap)
@@ -101,10 +95,12 @@ class Storage(object):
     def get_descriptor(self, path):
         if path in self.__descriptors:
             return self.__descriptors[path]
-        if path not in self.descriptors:
-            assert not os.path.exists(path), "corruption %r"%path
-            #self.descriptors[path] = None
         descr = Descriptor(self)
+        if path not in self.descriptors:
+            if os.path.exists(path):
+                Params.log("Data loss recovery: unexpected cache location: %r" % path)
+        else:
+            descr.load_from_storage(path)
         self.__descriptors[path] = descr
         return descr
 
@@ -115,7 +111,6 @@ class Storage(object):
         self.shelve[uriref]
         if uriref in self.cachemap:
             self.cache[uriref]
-
         pass
 
     def map_path(self, path, uriref):
@@ -161,85 +156,64 @@ class Descriptor(object):
         self.__data = {}
         self.storage = storage
 
-    def init(self, path, args):
-        Params.log([
-                path, 
-                HTTP.map_headers_to_resource(args)
-            ])
-
     def __nonzero__(self):
         return self.path != None
 
-    def drop(self):
-        pass
+    def init(self, path, args):
+        self.__data = HTTP.map_headers_to_resource(args)
+        self.path = path
+        assert self.path not in self.storage.descriptors
+        self.storage.descriptors[self.path] = Params.json_write(
+                self.__data)
+        Params.log([ path, self.__data ], 4)
 
-    def load_from_storage(self):
-        pass
+    def update(self, args):
+        newdata = HTTP.map_headers_to_resource(args)
+        for k in newdata:
+            assert k in self.__data,\
+                    "Update to unknown header: %r" % k
+            assert newdata[k] == self.__data[k], \
+                    "XXX: update"
+        Params.log([ 'update', self.path, args, self.__data ], 4)
+#        for k in self.__data:
+#            assert k in newdata, \
+#                    "Missing update to %r" % k
+        # XXX: self.__data.update(newdata)
+
+    def drop(self):
+        del self.storage.descriptors[self.path]
+        Params.log([ 'drop', self.path, self.__data ], 4)
+
+    def load_from_storage(self, path):
+        self.path = path
+        self.__data = Params.json_read(
+                self.storage.descritors[self.path])
+        Params.log(['load_from_storage', self.path, self.__data]);
 
     def create_for_response(self, protocol, response):
         pass
-
-    def set(self, data):        
-        if len(data) > len(self.mapping):
-            raise ValueError()
-        self.__data = data
-        self.storage = None
-        #if be != None:
-        #    self.bind(be)
-
-    def __getattr__(self, name):
-        if name in self.mapping:
-            idx = self.mapping.index(name)
-            return self[idx]
-        else:
-            return super(Descriptor, self).__getattr__(self, name)
 
     @property
     def data(self):
         return self.__data
 
-    def bind(self, location, storage):
-        self.cache_location = location
-        self.storage = storage
-        return self
-
-    def __getitem__(self, idx):
-        if idx >= len(self.data):
-            raise IndexError()
-        #if idx < len(self.data):
-        return self.__data[idx]
-
-    def __setitem__(self, idx, value):
-        self.__data[idx] = value
-
-    def __contains__(self, value):
-        return value in self.__data
-
-    def __iter__(self):
-        return iter(self.__data)
-
-    def update(self, values):# *values, **kwds):
-        if not isinstance(values, Descriptor):
-            assert isinstance(values, tuple), values
-        else:
-            values = values.data
-        _update = ()
-        len_values = len(values)
-        for idx, name in enumerate(self.mapping):
-            if len_values == idx:
-                break
-            if self[idx] != values[idx]:
-                self[idx] = values[idx]
-                _update += (idx,)
-        return _update
-
-    def commit(self):
-        ""
-        self.storage[self.cache_location] = self
-
-    def from_headers(class_, args):
-        for hn in Protocol.HTTP.Cache_Headers:
-            pass
+#    def __getitem__(self, idx):
+#        if idx >= len(self.data):
+#            raise IndexError()
+#        #if idx < len(self.data):
+#        return self.__data[idx]
+#
+#    def __setitem__(self, idx, value):
+#        self.__data[idx] = value
+#
+#    def __contains__(self, key):
+#        return key in self.__data
+#
+#    def __iter__(self):
+#        return iter(self.__data)
+#
+#    def commit(self):
+#        pass
 
 
 class AnyDBStorage(object):
@@ -292,7 +266,7 @@ class AnyDBStorage(object):
         value = tuple(Params.json_read(data))
         return Descriptor(value)#, be=self)
 
-    def set(self, path, srcrefs, headers):
+    def set_(self, path, srcrefs, headers):
         assert path and srcrefs and headers, \
             (path, srcrefs, headers)
         assert isinstance(path, basestring) and \
@@ -356,11 +330,26 @@ class AnyDBStorage(object):
 #                (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
 #                and isinstance(srcrefs[0], str)), srcrefs
 
+def index_factory(storage, path, mode='w'):
 
-Storage.ResourceStorageType = AnyDBStorage
-Storage.DescriptorStorageType = AnyDBStorage
-Storage.ResourceMapType = AnyDBStorage
-Storage.CacheMapType = AnyDBStorage
+    if not os.path.exists(path):
+        assert 'w' in mode
+        try:
+            anydbm.open(path, 'n').close()
+        except Exception, e:
+            raise Exception("Unable to create new resource DB at <%s>: %s" %
+                    (path, e))
+    try:
+        Params.log("Opening %s mode=%s" %(path, mode))
+        return anydbm.open(path, mode)
+    except anydbm.error, e:
+        raise Exception("Unable to access resource DB at <%s>: %s" %
+                (path, e))
+
+Storage.ResourceStorageType = index_factory
+Storage.DescriptorStorageType = index_factory
+Storage.ResourceMapType = index_factory
+Storage.CacheMapType = index_factory
 
 
 storage = None
@@ -375,7 +364,8 @@ def open_backend():
             resources=(join(path, 'resources.db'),),
             descriptors=(join(path, 'descriptors.db'),),
             cachemap=(join(path, 'cache_map.db'),),
-            resourcemap=(join(path, 'resource_map.db'),)))
+            resourcemap=(join(path, 'resource_map.db'),)
+        ))
 
 
 def for_request(request):

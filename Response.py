@@ -15,7 +15,10 @@ class BlindResponse:
 
     def __init__( self, protocol, request ):
 
-        self.__sendbuf = protocol.recvbuf()
+        if hasattr(protocol, 'responsebuf'):
+            self.__sendbuf = protocol.responsebuf()
+        else:
+            self.__sendbuf = protocol.recvbuf()
 
     def hasdata( self ):
 
@@ -42,6 +45,11 @@ class BlindResponse:
 
     def finalize(self, client):
         pass
+
+
+class ProxyResponse(BlindResponse):
+
+    pass
 
 
 class DataResponse:
@@ -315,6 +323,7 @@ class DirectResponse:
 
     def __init__( self, protocol, request, status='200 Okeydokey, here it comes', path=None):
         if status[0] == '2':
+            # direct dynamic proxy response
             path = request.envelope[1]
             if '?' in path:
                 path = path.split('?')[0]
@@ -460,6 +469,7 @@ class DirectResponse:
 
     def recv( self ):
         raise AssertionError
+
 
 
 class NotFoundResponse( DirectResponse ):

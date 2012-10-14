@@ -220,6 +220,11 @@ class HtRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
+    def is_conditional(self):
+        return ( 'If-Modified-Since' in self.__headers
+                or 'If-None-Match' in self.__headers )
+        # XXX: If-Range
+
     @property
     def envelope(self):
         """

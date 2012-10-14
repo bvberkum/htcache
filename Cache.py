@@ -146,15 +146,13 @@ class File(object):
         self.mtime = os.stat( self.path ).st_mtime
         self.file = open( self.path, 'r' )
         self.size = self.tell()
-        if Params.VERBOSE:
-            print 'Reading complete file from cache'
 
     def remove_full( self ):
         os.remove( self.path )
-        print 'Removed complete file from cache'
+        Params.log('Removed complete file from cache')
 
     def remove_partial( self ):
-        print 'Removed partial file from cache'
+        Params.log('Removed partial file from cache')
         os.remove( self.path + Params.PARTIAL )
 
     def read( self, pos, size ):
@@ -176,8 +174,9 @@ class File(object):
             os.utime( self.path + Params.PARTIAL, ( self.mtime, self.mtime ) )
         if self.size == size:
             os.rename( self.path + Params.PARTIAL, self.path )
-            if Params.VERBOSE:
-                print 'Finalized', self.path
+            Params.log("Finalized %r" % self.path)
+        else:
+            Params.log("Closed partial %r" % self.path)
 
     def __nonzero__(self):
       return self.partial() or self.full()
