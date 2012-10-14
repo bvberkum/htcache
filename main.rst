@@ -45,6 +45,8 @@ Tests
             Revision certain resources, always keeping a requested version.
 
         dev_relstore
+            - (dandy) 35 passed checks, 8 errors
+
             Need to get simple relational storage.
 
 
