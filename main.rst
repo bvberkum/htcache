@@ -15,7 +15,7 @@ Tests
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
-            - (dm) 41 passed checks, 1 errors
+            - (dm) 41 passed checks, 2 errors
             - (dandy) 40 passed checks, 3 errors
     
         dev_cachemaint
