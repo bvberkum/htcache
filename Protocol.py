@@ -5,7 +5,7 @@ reads this to the client.
 """
 import calendar, os, time, socket, re
 
-import Params, Response, Cache, Rules
+import Params, Response, Resource, Cache, Rules
 from HTTP import HTTP
 
 
@@ -99,28 +99,15 @@ class ProxyProtocol(object):
         # Track server response
         self.__status, self.__message = None, None
 
-        if not prepcache:
-            return
+        if prepcache:
+            self.init_cache()
 
+    def init_cache(self):
         p = self.url.find( ':' ) # find len of scheme-id
         assert self.url[p:p+3] == '://', self.url
         self.cache = Cache.load_backend_type(Params.CACHE)(self.url[p+3:])
-        Params.log("Init cache: %s %s" % (Params.CACHE, cache), 3)
-        Params.log('Prepped cache, position: %s' % cache.path, 2)
-   
-        # Initialize a facade for the data storage
-        global storage
-        if not storage.find(self.cache.path):
-            self.descriptor = storage.prepare_for_request(
-                    self.cache.path, request) 
-
-        if self.descriptor and not (cache.full() or cache.partial()):
-            Params.log("Warning: stale descriptor")
-            self.descriptor.drop()
-
-        elif not self.descriptor and (cache.full() or cache.partial()):
-            Params.log("Error: stale cache %s" % cache.path)
-            # XXX: should load new Descriptor into db here or delete stale files.
+        Params.log("Init cache: %s %s" % (Params.CACHE, self.cache), 3)
+        Params.log('Prepped cache, position: %s' % self.cache.path, 2)
 
     def has_response( self ):
         return self.__status and self.__message
@@ -371,8 +358,24 @@ class HttpProtocol(ProxyProtocol):
 #        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
 #                "Chunked response: %s %s" % ( self.__status, self.url)
 
+        # Check wether to monitor the response based on the request
         if self.prepare_nocache_response():
             return
+   
+        # Initialize a facade for the storage and check for existing data
+        self.descriptor = Resource.storage.find(self.cache.path)
+        if not self.descriptor:
+            self.descriptor = Resource.storage.prepare_for_request(
+                    self.cache.path, self.request) 
+
+        # Sanity checks
+        if self.descriptor and not (self.cache.full() or self.cache.partial()):
+            Params.log("Warning: stale descriptor")
+            self.descriptor.drop()
+
+        elif not self.descriptor and (self.cache.full() or self.cache.partial()):
+            Params.log("Error: stale cache %s" % self.cache.path)
+            # XXX: should load new Descriptor into db here or delete stale files.
 
         # Process and update headers before deferring to response class
         # 2xx
@@ -447,7 +450,7 @@ class HttpProtocol(ProxyProtocol):
             self.Response = Response.BlindResponse
 
         else:
-            Params.log("Warning: unhandled: %s, %s" % (self.__status, self.requri))
+            Params.log("Warning: unhandled: %s, %s" % (self.__status, self.url))
             self.Response = Response.BlindResponse
 
 
@@ -457,12 +460,12 @@ class HttpProtocol(ProxyProtocol):
         """
         if self.cache.full():
             Params.log("HttpProtocol.recv_entity: overwriting cache: %s" %
-                    self.requri,4)
+                    self.url,4)
             self.cache.remove_full()
             self.cache.open_new()
         else:
             Params.log("HttpProtocol.recv_entity: new cache : %s" %
-                    self.requri,4)
+                    self.url,4)
             self.cache.open_new()
             assert self.cache.partial()
         # FIXME: load http entity, perhaps response headers from shelve
@@ -520,6 +523,7 @@ class HttpProtocol(ProxyProtocol):
         else:
             self.Response = Response.DataResponse
 
+    @property
     def url( self ):
         return self.request.url
     
@@ -565,7 +569,7 @@ class FtpProtocol( ProxyProtocol ):
 
         if Params.STATIC and self.cache.full():
           self.__socket = None
-          Params.log("Static FTP cache : %s" % self.requri)
+          Params.log("Static FTP cache : %s" % self.url)
           self.cache.open_full()
           self.Response = Response.DataResponse
           return
@@ -663,7 +667,7 @@ class FtpProtocol( ProxyProtocol ):
         else:
             stat = self.cache.full()
             if stat and stat.st_mtime == self.mtime:
-                Params.log("Unmodified FTP cache : %s" % self.requri)
+                Params.log("Unmodified FTP cache : %s" % self.url)
                 self.cache.open_full()
                 self.Response = Response.DataResponse
             else:

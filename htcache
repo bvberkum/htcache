@@ -157,6 +157,7 @@ while True:
     load()
     try:
         Resource.open_backend()
+        assert Resource.storage
         fiber.spawn( HTCache_fiber_handler, 
                 Params.PORT, 
                 Params.DEBUG, 

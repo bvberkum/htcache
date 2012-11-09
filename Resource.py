@@ -20,38 +20,39 @@ class Storage(object):
 
     """
     AnyDBM facade.
+    To keep descriptor storage and several indices to make it searchable.
     """
 
     resources = None
-    """Shelved resource objects::
+    """Web Resources::
     
-        resources = { <res> => <Resource:{
+        { <res> : <Resource(
            
            host, path, meta, cache
 
-        }> }
+        )> }
     """
 
     brokenmap = None
-    """Map broken loations that cannot be retrieved::
+    """Map of broken loations that could not be retrieved::
 
-        brokenmap = { <res> => <status> }
+        { <res> : <status> }
     """
 
     descriptors = None
-    """Shelved descriptor objects::
+    """Cache descriptors::
     
-        descriptors = { <path> => <Descriptor:{
+        { <path> : <Descriptor(
             
             hash, mediatype, charset, language, size, quality
 
-        }> }
+        ) }
     """
 
     cachemap = None
     """Map of uriref to cache locations (reverse for resources)::
     
-        cachemap = { <path> => <res> }
+        { <path> : <res> }
     """
 
     relations_to = None
@@ -73,10 +74,10 @@ class Storage(object):
             cachemap,
             resourcemap
         ])
-        self.resources = self.ResourceStorageType(*resources)
-        self.descriptors = self.DescriptorStorageType(*descriptors)
-        self.cachemap = self.CacheMapType(*cachemap)
-        self.resourcemap = self.ResourceMapType(*resourcemap)
+        self.resources = self.ResourceStorageFactory(*resources)
+        self.descriptors = self.DescriptorStorageFactory(*descriptors)
+        self.cachemap = self.CacheMapFactory(*cachemap)
+        self.resourcemap = self.ResourceMapFactory(*resourcemap)
 
         self.__resources = {}
         self.__descriptors = {}
@@ -90,11 +91,21 @@ class Storage(object):
         self.cachemap.close()
         self.resourcemap.close()
 
+    def find(self, path):
+        if path not in self.__descriptors:
+            if path in self.descriptors:
+                self.__descriptors[path] = self.descriptors[path]
+            else:
+                return
+        return self.__descriptors[path]
+
     def prepare_for_request(self, path, request):
         if path in self.__descriptors:
             return self.__descriptors[path]
         return 
+
         # XXX: work in progress
+
         descr = Descriptor( self )
         if request.uriref in self.descriptors:
             descr.load_from_storage( uriref )
@@ -158,7 +169,9 @@ class Descriptor(object):
 
     def __init__( self, storage ):
         self.path = None
-        self.__data = {}
+        self.__res_data = {}
+        self.__descr_data = {}
+        self.__res_data = {}
         self.storage = storage
 
     def __nonzero__( self ):
@@ -191,7 +204,7 @@ class Descriptor(object):
         Params.log([ 'drop', self.path, self.__data ], 4)
 
     def create_for_response(self, protocol, response):
-        pass
+        assert False
 
     @property
     def data(self):
@@ -216,10 +229,10 @@ def index_factory(storage, path, mode='w'):
                 (path, e))
 
 
-Storage.ResourceStorageType = index_factory
-Storage.DescriptorStorageType = index_factory
-Storage.ResourceMapType = index_factory
-Storage.CacheMapType = index_factory
+Storage.ResourceStorageFactory = index_factory
+Storage.DescriptorStorageFactory = index_factory
+Storage.ResourceMapFactory = index_factory
+Storage.CacheMapFactory = index_factory
 
 storage = None
 
