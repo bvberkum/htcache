@@ -65,7 +65,7 @@ class BlindProtocol:
 
 
 
-class ProxyProtocol(object):
+class CachingProtocol(object):
 
     """
     Open cache and descriptor index for requested resources.
@@ -86,7 +86,7 @@ class ProxyProtocol(object):
 
     def __init__(self, request, prepcache=True):
         "Determine and open cache location, get descriptor backend. "
-        super(ProxyProtocol, self).__init__()
+        super(CachingProtocol, self).__init__()
 
         self.request = request
 
@@ -203,7 +203,7 @@ class ProxyProtocol(object):
 
 
 
-class HttpProtocol(ProxyProtocol):
+class HttpProtocol(CachingProtocol):
 
     rewrite = None
 
@@ -519,7 +519,7 @@ class HttpProtocol(ProxyProtocol):
         return self.__socket
 
 
-class FtpProtocol( ProxyProtocol ):
+class FtpProtocol( CachingProtocol ):
 
     Response = None
 

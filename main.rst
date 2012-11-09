@@ -196,7 +196,7 @@ Fiber
 HTCache is a fork of http-replicator and the main script follows the same
 implementation using fibers. It has a bit more elaborated message handling::
 
-   HtRequest ----> ProxyProtocol --------get--> DirectResponse (3)
+   HtRequest ----> CachingProtocol --------get--> DirectResponse (3)
                       |            `----nocache-> Blocked(Image)ContentResponse (1)
                       |            `--------ok--> DataResponse
                       |            `--------ok--> RewrittenDataResponse (6)
