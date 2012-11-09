@@ -48,6 +48,9 @@ Tests
         dev_relstore
             Need to get simple relational storage.
 
+        dev_proxyreq
+            Maybe write a lower level protocol to interrogate the proxy about
+            its downloads.
 
 branches
     master (current)
