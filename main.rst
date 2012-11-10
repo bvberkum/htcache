@@ -23,9 +23,9 @@ Tests
         dev_cachemaint
             Cache maintenance routines.
 
-            :tests:
+            :unit-tests:
               - (dandy) 40 passed checks, 3 errors
-              - (dm) 35 passed checks, 8 errors
+              - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
@@ -44,7 +44,8 @@ Tests
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
         dev_proxyreq
-            ..
+            Maybe write a lower level protocol to interrogate the proxy about
+            its downloads. See ProxyProtocol class.
         dev_cacherev
             Revision certain resources, always keeping a once retrieved and
             served version.

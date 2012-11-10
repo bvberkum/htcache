@@ -46,7 +46,7 @@ def path_ignore(path):
             return True
 
 def run_join():
-    assert mode == 'run-join':
+    assert mode == 'run-join', mode
     os.chdir(Params.ROOT)
     for root, dirs, files in os.walk(Params.ROOT):
         for d in dirs:
@@ -151,6 +151,7 @@ if Params.CMD:
 
     sys.exit(0)
 
+
 # XXX: more neat in fiber than here, move, but need to couple with backend to do
 # that
 
@@ -159,24 +160,6 @@ def load():
     Rules.parse_nocache()
     Rules.parse_joinlist()
     Rules.parse_rewritelist()
-
-
-### Descriptor/Cache Maintenance static entry
-
-if Params.CMDS:
-    Params.run({
-        'print-record': Resource.print_info,
-        'find-records': Resource.find_info,
-#        Resource.print_media_list(*Params.PRINT_MEDIA)
-#        'find-videos': Resource,
-#        'find-images': Resource,
-#        'find-texts': Resource,
-        'validate-cache': Resource.validate_cache,
-        'check-files': Resource.check_files,
-        'check-cache': Resource.check_cache,
-        'run-join': run_join
-    })
-    sys.exit(0)
 
 while True:
     load()
@@ -198,4 +181,6 @@ while True:
     except Exception, e:
         Params.log(e)
         break
+
+Resource.get_backend().close()
 
