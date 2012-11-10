@@ -44,17 +44,22 @@ Tests
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
         dev_proxyreq
-            Maybe write a lower level protocol to interrogate the proxy about
-            its downloads. See ProxyProtocol class.
+            - Maybe write a lower level protocol to interrogate the proxy about
+              its downloads. See ProxyProtocol class.
+            - in sync with master, dev_proxyreq, dev_domaindb
         dev_cacherev
-            Revision certain resources, always keeping a once retrieved and
-            served version.
+            - Revision certain resources, always keeping a once retrieved and
+              served version.
         dev_relstore
+            - (dandy) 35 passed checks, 8 errors
+
             Need to get simple relational storage.
         dev_dhtmlui
-            ..
+            - this injects JS, carefil to merge while Params is not externalized/contained.
+            - in sync with master, dev_proxyreq, dev_domaindb
         dev_domaindb
-            ..
+            - add card index for URL's something like a step-up to a bookmark manager
+            - in sync with master, dev_proxyreq
 
 branches
     dev
