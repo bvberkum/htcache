@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import sys, time, weakref
 
-import Params, Protocol, Request, Response, fiber
+import Params, Protocol, Request, Response, Runtime, fiber
 import Resource
 import Rules
 
@@ -23,7 +23,7 @@ import Params, Cache, Protocol, Request, Response, Resource, fiber
 
 
 
-DOWNLOADS = weakref.WeakValueDictionary()
+DOWNLOADS = Runtime.DOWNLOADS = weakref.WeakValueDictionary()
 """
 Global set of download sessions, each being a request, protocol mapping.
 
@@ -109,6 +109,7 @@ def HTCache_fiber_handler( client, address ):
         Params.log('Warning: Switching to ExceptionResponse')
         response = Response.ExceptionResponse( protocol, request )
 
+    # blocks while client has not read data
     while not response.Done:
         if response.hasdata():
             yield fiber.SEND( client, Params.TIMEOUT )
@@ -126,8 +127,6 @@ def HTCache_fiber_handler( client, address ):
             response.finalize(client)
         #protocol.descriptors.close()
 
-# XXX: more neat in fiber than here, move, but need to couple with backend to do
-# that
 
 def load():
     Rules.parse_droplist()
@@ -158,7 +157,8 @@ while True:
     try:
         Resource.get_backend()
 
-        fiber.spawn( HTCache_fiber_handler, 
+        fiber.spawn( 
+                HTCache_fiber_handler, 
                 Params.PORT, 
                 Params.DEBUG, 
                 Params.LOG,
@@ -166,10 +166,12 @@ while True:
 
     except fiber.Restart, e:
         Resource.get_backend().close()
-        for mod in (Params, Protocol, Request, Response, Resource, fiber):
+        for mod in ( Params, Protocol, Request, Response, Resource, fiber ):
             mod = reload(mod)
 
     except Exception, e:
         Params.log(e)
         break
+
+Resource.get_backend().close()
 
