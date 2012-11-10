@@ -9,6 +9,8 @@ for real networked use. Notably there is no proxy authentication planned so all
 functions are user available.
 
 Tests
+    master
+        Trying to keep it steady.
     dev*
         :system-tests: 
             - (dandy) 1 passed checks, 70 errors  
@@ -18,7 +20,7 @@ Tests
             - (dm) 41 passed checks, 2 errors
             - (dandy) 40 passed checks, 3 errors
     
-        dev_cachemaint
+        dev_cachemaint (current)
             Cache maintenance routines.
 
             :unit-tests:
@@ -50,10 +52,6 @@ Tests
 
 
 branches
-    master (current)
-        - Follows new_stable
-        - Not in use. Is in a unfinished merge with 0.3.  
-        - FIXME: needs a lot of merging to get this right again
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
