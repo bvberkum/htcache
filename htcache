@@ -150,7 +150,6 @@ if Params.CMDS:
         'check-cache': Resource.check_cache,
         'run-join': run_join
     })
-
     sys.exit(0)
 
 while True:

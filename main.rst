@@ -10,28 +10,12 @@ functions are user available.
 
 Tests
     master
-        :unit-test:
-            - (dandy) 37 passed checks, 6 errors
-        :system-test:
-            - (dandy) 6 passed checks, 6 errors
-
         - Trying to keep it steady.
         - Does currently not run stable continuously.
 
     dev*
-        :system-tests: 
-            - (dandy) 1 passed checks, 70 errors  
-        :unit-tests: 
-            - (pandora) 42 passed checks, 1 errors
-            - (iris) 40 passed checks, 3 errors
-            - (dm) 41 passed checks, 2 errors
-            - (dandy) 40 passed checks, 3 errors
-    
         dev_cachemaint (current)
             Cache maintenance routines.
-
-            :unit-tests:
-              - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
@@ -61,8 +45,6 @@ Tests
             - Revision certain resources, always keeping a once retrieved and
               served version.
         dev_relstore
-            - (dandy) 35 passed checks, 8 errors
-
             Need to get simple relational storage.
         dev_dhtmlui
             - this injects JS, carefil to merge while Params is not externalized/contained.
