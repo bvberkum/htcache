@@ -129,6 +129,13 @@ def HTCache_fiber_handler( client, address ):
         #protocol.descriptors.close()
 
 
+def load():
+    Rules.parse_droplist()
+    Rules.parse_nocache()
+    Rules.parse_joinlist()
+    Rules.parse_rewritelist()
+
+
 ### Descriptor/Cache Maintenance static entry
 
 if Params.CMDS:
