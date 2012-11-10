@@ -1,0 +1,15 @@
+# Date, Host, Branch, Revision, Testsuite, Passed, Errors
+2012-11-10 15:39:18+01:00, dandy, master, 7954b6376e9da77bd0baafef7efedc43a81d09ee, system, 6, 4
+2012-11-10 15:42:44+01:00, dandy, master, 134e068085340e2d985086a0a537b66eddf71aea, unit, 37, 6
+2012-11-10 15:47:02+01:00, dandy, dev_proxyreq, 4e7e2e0aa2cd775c224490cb4caac0709e042f77, unit, 35, 8
+2012-11-10 15:48:02+01:00, dandy, dev_proxyreq, 4e7e2e0aa2cd775c224490cb4caac0709e042f77, system, 6, 5
+2012-11-10 15:57:47+01:00, dandy, dev_domaindb, bbe26784bfbd13f066ad25ee4d86c0a77b2c56ec, unit, 35, 8
+2012-11-10 16:00:30+01:00, dandy, dev_domaindb, bbe26784bfbd13f066ad25ee4d86c0a77b2c56ec, system, 6, 5
+2012-11-10 16:05:11+01:00, dandy, master, 4cf0ac4a17f51ca923a63b334e6b49751415b74f, unit, 38, 5
+2012-11-10 16:08:28+01:00, dandy, dev_proxyreq, 2a97d7a8ad2f27aa922cb7999f3dfb1d7fbb8bb5, unit, 37, 6
+2012-11-10 16:33:42+01:00, dandy, master, 83e8244a011440acbc9295ada77e9b7b3ff5cdc6, system, 6, 5
+2012-11-10 16:35:09+01:00, dandy, master, 83e8244a011440acbc9295ada77e9b7b3ff5cdc6, unit, 31, 12
+2012-11-10 16:39:02+01:00, dandy, dev_proxyreq, 76d91f20643c9b39b8a1ce71fa48f98df8c85b46, unit, 26, 17
+2012-11-10 16:39:21+01:00, dandy, dev_proxyreq, 76d91f20643c9b39b8a1ce71fa48f98df8c85b46, system, 6, 5
+2012-11-10 16:40:42+01:00, dandy, dev_domaindb, 0cbaa154d231dcf98cfd4fe7df5151e34c742632, system, 6, 5
+2012-11-10 16:41:32+01:00, dandy, dev_domaindb, 0cbaa154d231dcf98cfd4fe7df5151e34c742632, unit, 23, 20

@@ -36,14 +36,29 @@ $/TODO.list: ./
 test-code:: TESTS := 
 test-code::
 	@COVERAGE_PROCESS_START=.coveragerc ./unit-test $(TESTS) 2>&1 | tee utest.log
-	@echo $$(grep PASSED utest.log | wc -l) passed checks, $$(grep ERROR utest.log | wc -l) errors
+	@\
+		DATE=$$(date --rfc-3339=seconds);\
+		HOST=$$(hostname -s);\
+		BRANCH=$$(git status | grep On.branch | sed 's/. On branch //');\
+		REV=$$(git show | grep ^commit | sed 's/commit //');\
+	    PASSED=$$(grep PASSED utest.log | wc -l);\
+        ERRORS=$$(grep ERROR utest.log | wc -l);\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS" >> test-results.tab;\
+        echo $$PASSED passed checks, $$ERRORS errors
 
 test-protocol::
-	@sudo ./init.sh start
 	@./system-test 2>&1 | tee systest.log
-	@sudo ./init.sh stop
-	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
-
+	@\
+		DATE=$$(echo $$(date --rfc-3339=seconds));\
+		HOST=$$(echo $$(hostname -s));\
+		BRANCH=$$(echo $$(git status | grep On.branch | sed 's/. On branch //'));\
+		REV=$$(echo $$(git show | grep ^commit | sed 's/commit //'));\
+		PASSED=$$(echo $$(grep PASSED systest.log | wc -l));\
+		ERRORS=$$(echo $$(grep ERROR systest.log | wc -l));\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS" >> test-results.tab;\
+		echo $$PASSED passed checks, $$ERRORS errors
 
 debug::
 	-mkdir debug-root
