@@ -131,11 +131,6 @@ def HTCache_fiber_handler( client, address ):
             response.finalize(client)
         #protocol.descriptors.close()
 
-Rules.parse_droplist()
-Rules.parse_nocache()
-Rules.parse_joinlist()
-Rules.parse_rewritelist()
-
 
 ### Descriptor/Cache Maintenance static entry
 if Params.CMD:
@@ -160,8 +155,15 @@ if Params.CMD:
 
     sys.exit(0)
 
+
 # XXX: more neat in fiber than here, move, but need to couple with backend to do
 # that
+
+Rules.parse_droplist()
+Rules.parse_nocache()
+Rules.parse_joinlist()
+Rules.parse_rewritelist()
+
 while True:
     try:
         fiber.spawn( 
