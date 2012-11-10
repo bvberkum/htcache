@@ -24,7 +24,7 @@ Tests
             Cache maintenance routines.
 
             :unit-tests:
-              - (dandy) 40 passed checks, 3 errors
+              - (dandy) 28 passed checks, 15 errors
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
