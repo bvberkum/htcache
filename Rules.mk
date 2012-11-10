@@ -43,8 +43,8 @@ test-code::
 		REV=$$(git show | grep ^commit | sed 's/commit //');\
 	    PASSED=$$(grep PASSED utest.log | wc -l);\
         ERRORS=$$(grep ERROR utest.log | wc -l);\
-		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$(( $$PASSED + $$ERRORS )), $$PASSED, $$ERRORS;\
-		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$(( $$PASSED + $$ERRORS )), $$PASSED, $$ERRORS" >> test-results.tab;\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS" >> test-results.tab;\
         echo $$PASSED passed checks, $$ERRORS errors
 
 test-protocol::
@@ -56,8 +56,8 @@ test-protocol::
 		REV=$$(echo $$(git show | grep ^commit | sed 's/commit //'));\
 		PASSED=$$(echo $$(grep PASSED systest.log | wc -l));\
 		ERRORS=$$(echo $$(grep ERROR systest.log | wc -l));\
-		echo $$DATE, $$HOST, $$BRANCH, $$REV, system, $$(( $$PASSED + $$ERRORS )), $$PASSED, $$ERRORS;\
-		echo "$$DATE, $$HOST, $$BRANCH, $$REV, system, $$(( $$PASSED + $$ERRORS )), $$PASSED, $$ERRORS" >> test-results.tab;\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS" >> test-results.tab;\
 		echo $$PASSED passed checks, $$ERRORS errors
 
 debug::
