@@ -9,6 +9,8 @@ for real networked use. Notably there is no proxy authentication planned so all
 functions are user available.
 
 Tests
+    master
+        Trying to keep it steady.
     dev*
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
@@ -41,10 +43,6 @@ Tests
             .. 
 
 branches
-    master (current)
-        - Follows new_stable
-        - Not in use. Is in a unfinished merge with 0.3.  
-        - FIXME: needs a lot of merging to get this right again
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
