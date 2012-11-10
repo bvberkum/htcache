@@ -12,7 +12,7 @@ URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-unittest.$PORT"
 RESOURCES='resources.db'
-WAIT=0.5 
+WAIT=0.5
 
 if test -z "$1"; then
   while $0 $((++i)); do true; done

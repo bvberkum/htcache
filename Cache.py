@@ -114,8 +114,10 @@ class File(object):
     def open_new( self ):
         if Params.VERBOSE:
             print 'Preparing new file in cache'
-        
-        os.makedirs( self.path )
+       
+        tdir = os.path.dirname( self.path )
+        if not os.path.exists( tdir ):
+            os.makedirs( tdir )
 
         try:
             self.file = open( self.path + Params.PARTIAL, 'w+' )

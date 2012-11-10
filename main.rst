@@ -30,9 +30,6 @@ Tests
         dev_cachemaint (current)
             Cache maintenance routines.
 
-            :unit-tests:
-              - (dm) 21 passed checks, 22 errors
-
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
 
