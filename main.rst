@@ -50,7 +50,7 @@ Tests
 
         dev_proxyreq
             Maybe write a lower level protocol to interrogate the proxy about
-            its downloads.
+            its downloads. See ProxyProtocol class.
 
 branches
     master (current)
