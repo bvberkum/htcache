@@ -13,7 +13,7 @@ Tests
         Trying to keep it steady.
     dev*
         :system-tests: 
-            ..
+            - (dandy) 1 passed checks, 70 errors  
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
@@ -23,6 +23,7 @@ Tests
             Cache maintenance routines.
 
             :unit-tests:
+              - (dandy) 40 passed checks, 3 errors
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
@@ -49,6 +50,8 @@ Tests
             - Revision certain resources, always keeping a once retrieved and
               served version.
         dev_relstore
+            - (dandy) 35 passed checks, 8 errors
+
             Need to get simple relational storage.
         dev_dhtmlui
             - this injects JS, carefil to merge while Params is not externalized/contained.
