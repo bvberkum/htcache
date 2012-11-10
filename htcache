@@ -46,7 +46,7 @@ def path_ignore(path):
             return True
 
 def run_join():
-    assert mode == 'run-join':
+    assert mode == 'run-join', mode
     os.chdir(Params.ROOT)
     for root, dirs, files in os.walk(Params.ROOT):
         for d in dirs:
@@ -130,39 +130,6 @@ def HTCache_fiber_handler( client, address ):
 
 
 ### Descriptor/Cache Maintenance static entry
-if Params.CMD:
-#    descriptors = Resource.get_backend()
-#        Resource.print_info(*Params.PRINT_RECORD)
-#        Resource.find_info(Params.FIND_RECORDS)
-#        Resource.print_info(*descriptors.keys())
-    run = {
-        'print-records': Resource,
-        'find-records': Resource,
-#        Resource.print_media_list(*Params.PRINT_MEDIA)
-#        'find-videos': Resource,
-#        'find-images': Resource,
-#        'find-texts': Resource,
-        'validate-cache': Resource.validate_cache,
-        'check-files': Resource.check_files,
-        'check-cache': Resource.check_cache,
-        'run-join': run_join
-    }
-    run[Params.CMD]()
-    backend.close()
-
-    sys.exit(0)
-
-# XXX: more neat in fiber than here, move, but need to couple with backend to do
-# that
-
-def load():
-    Rules.parse_droplist()
-    Rules.parse_nocache()
-    Rules.parse_joinlist()
-    Rules.parse_rewritelist()
-
-
-### Descriptor/Cache Maintenance static entry
 
 if Params.CMDS:
     Params.run({
@@ -199,4 +166,6 @@ while True:
     except Exception, e:
         Params.log(e)
         break
+
+Resource.get_backend().close()
 
