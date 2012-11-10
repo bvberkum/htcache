@@ -13,12 +13,12 @@ json_write = _json.dumps
 
 ## Main: determine runtime config from constants and ARGV
 
-_args = iter( sys.argv )
+_args = list( sys.argv )
 
 VERSION = 0.4
 
 # proxy params
-PROG = _args.next()
+PROG = _args.pop(0)
 PORT = 8080
 ROOT = os.getcwd() + os.sep
 PID_FILE = '/var/run/htcache.pid'
@@ -62,10 +62,8 @@ IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
 PROXY_INJECT = False
 PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
 PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
-
 # Static mode, query params
-CMD = None
-CMD_ARGS = []
+CMDS = {}
 
 PRUNE = False
 MAX_SIZE_PRUNE = 11*(1024**2)
@@ -150,43 +148,44 @@ Maintenance:
      TODO --check-dupes
                      Symlink duplicate content, check by size and hash.
                      Requires up to data hash index.
-                    ''' % locals()
+''' % locals()
 
 
-for _arg in _args:
+while _args:
+    _arg = _args.pop(0)
 
     if _arg in ( '-h', '--help' ):
         sys.exit( USAGE )
 
     elif _arg in ( '-p', '--port' ):
         try:
-            PORT = int( _args.next() )
+            PORT = int( _args.pop(0) )
             assert PORT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
 
     elif _arg in ( '-c', '--cache' ):
         try:
-            CACHE = _args.next()
+            CACHE = _args.pop(0)
         except:
             sys.exit( 'Error: %s requires an cache type argument' % _arg )
 
     elif _arg in ( '--drop', ):
         try:
-            DROP_FILE = os.path.realpath(_args.next())
+            DROP_FILE = os.path.realpath(_args.pop(0))
             assert os.path.exists(DROP_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
 
     elif _arg in ( '--nocache', ):
         try:
-            NOCACHE_FILE = os.path.realpath(_args.next())
+            NOCACHE_FILE = os.path.realpath(_args.pop(0))
             assert os.path.exists(NOCACHE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
     elif _arg in ( '-H', '--hash' ):
         try:
-            ROOT = os.path.realpath( _args.next() ) + os.sep
+            ROOT = os.path.realpath( _args.pop(0) ) + os.sep
             assert os.path.isdir( ROOT )
         except StopIteration:
             sys.exit( 'Error: %s requires a directory argument' % _arg )
@@ -195,14 +194,14 @@ for _arg in _args:
 
     elif _arg in ( '--rewrite', ):
         try:
-            REWRITE_FILE = os.path.realpath(_args.next())
+            REWRITE_FILE = os.path.realpath(_args.pop(0))
             assert os.path.exists(REWRITE_FILE)
         except:
             sys.exit( 'Error: %s requires an filename argument' % _arg )
 
     elif _arg in ( '-r', '--root' ):
         try:
-            ROOT = os.path.realpath( _args.next() ) + os.sep
+            ROOT = os.path.realpath( _args.pop(0) ) + os.sep
             assert os.path.isdir( ROOT )
         except StopIteration:
             sys.exit( 'Error: %s requires a directory argument' % _arg )
@@ -210,15 +209,11 @@ for _arg in _args:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
-    elif _arg in ( '--nodir' ):
-        pass # XXX
-        #try:
-        _args.next()
-        #except:
-        #    sys.exit( 'Error: %s requires argument' % _arg )
+    elif _arg in ( '--nodir', ):
+        _args.pop(0)
     elif _arg in ( '-t', '--timeout' ):
         try:
-            TIMEOUT = int( _args.next() )
+            TIMEOUT = int( _args.pop(0) )
             assert TIMEOUT > 0
         except:
             sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
@@ -227,38 +222,31 @@ for _arg in _args:
     elif _arg == '--static':
         STATIC = True
     elif _arg == '--daemon':
-        LOG = _args.next()
+        LOG = _args.pop(0)
     elif _arg == '--debug':
         DEBUG = True
     elif _arg in ('--pid-file',):
-        PID_FILE = _args.next()
-
+        PID_FILE = _args.pop(0)
     elif _arg in ('-f','--resource'):
-        RESOURCES = _args.next()
+        RESOURCES = _args.pop(0)
     elif _arg in ('--prune',):
         PRUNE = True
-
     elif _arg in ('--print-allrecords',):
-        CMD='print-all-records'
+        CMDS={'print-all-records':None}
     elif _arg in ('--print-record',):
-        CMD='print-record'
-        CMD_ARGS=_args.next()
+        CMDS={'print-record':[_args.pop(0)]}
     elif _arg in ('--find-records',):
-        CMD='find-records'
-        CMD_ARGS=_args.next()
-
+        CMDS={'find-records':[_args.pop(0)]}
 #    elif _arg in ('--check-joinlist',):
 #        MODE.append(check_joinlist)
     elif _arg in ('--run-join-rules',):
-        MODE.append('run-join')
-
+        CMDS={'run-join-rules':None}
     elif _arg in ('--check-cache',):
-        CHECK = 'cache'
+        CMDS={'check-cache':None}
 #    elif _arg in ('--validate-cache',):
 #        CHECK = 'validate'
     elif _arg in ('--check-files',):
-        CHECK = 'files'
-
+        CMDS={'check-files':None}
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
 
@@ -318,4 +306,18 @@ def print_str(s, l = 79):
     if len(print_line) > l:
         print_line = print_line[:hl] +' [...] '+ print_line[-hl:]
     return print_line
+
+def run(cmds={}):
+#    descriptors = Resource.get_backend()
+#        Resource.print_info(*Params.PRINT_RECORD)
+#        Resource.find_info(Params.FIND_RECORDS)
+#        Resource.print_info(*descriptors.keys())
+    for k, a in CMDS.items():
+        if not isinstance(a, (list, tuple)):
+            a = ()
+        cmds[k](*a)
+    backend.close()
+
+    sys.exit(0)
+
 

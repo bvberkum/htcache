@@ -24,13 +24,14 @@ Tests
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
-            - (dm) 41 passed checks, 1 errors
+            - (dm) 41 passed checks, 2 errors
+            - (dandy) 40 passed checks, 3 errors
     
-        dev_cachemaint
+        dev_cachemaint (current)
             Cache maintenance routines.
 
             :unit-tests:
-              - (dandy) 40 passed checks, 3 errors
+              - (dandy) 28 passed checks, 15 errors
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.

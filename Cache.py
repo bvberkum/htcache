@@ -12,17 +12,6 @@ def load_backend_type(tp):
     return getattr( mod, name )
 
 
-def makedirs( path ):
-    dirpath = os.path.dirname( path )
-    if dirpath and not os.path.isdir( dirpath ):
-        if os.path.isfile( dirpath ):
-            print 'directory %s mistaken for file' % dirpath
-            os.remove( dirpath )
-        else:
-            makedirs( dirpath )
-        os.mkdir( dirpath )
-
-
 def min_pos(*args):
     "Return smallest of all arguments (but >0)"
     r = sys.maxint
@@ -125,8 +114,12 @@ class File(object):
     def open_new( self ):
         if Params.VERBOSE:
             print 'Preparing new file in cache'
+       
+        tdir = os.path.dirname( self.path )
+        if not os.path.exists( tdir ):
+            os.makedirs( tdir )
+
         try:
-            makedirs( self.path )
             self.file = open( self.path + Params.PARTIAL, 'w+' )
         except Exception, e:
             print 'Failed to open file:', e

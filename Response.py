@@ -1,7 +1,7 @@
 import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
-import Params, Resource, Rules, HTTP
+import Params, Resource, Rules, HTTP, Runtime
 
 
 class BlindResponse:
@@ -317,11 +317,13 @@ class DirectResponse:
         'page-info': 'serve_descriptor',
         'info': 'serve_params',
         'browse': 'serve_frame',
+        'downloads': 'serve_downloads',
+        'list': 'serve_list',
     }
 
     def __init__( self, protocol, request, status='200 Okeydokey, here it comes', path=None):
         if status[0] == '2':
-            path = request.envelope[1]
+            path = protocol.reqname
             if '?' in path:
                 path = path.split('?')[0]
             if path not in self.urlmap:
@@ -331,6 +333,19 @@ class DirectResponse:
             path = 'echo'
         self.action = self.urlmap[path]
         getattr(self, self.action)(status, protocol, request)
+
+    def serve_list(self, status, protocol, request):
+        self.prepare_response(
+                "200 OK", 
+                "# Downloads \n" 
+                "" + ('\n'.join(map(str,Runtime.DOWNLOADS.keys())))
+            )
+
+    def serve_downloads(self, status, protocol, request):
+        self.prepare_response(
+                "200 OK", 
+                "No data for %r %r %r %r"%request.url
+            )
 
     def serve_echo(self, status, protocol, request):
         lines = [ 'HTCache: %s' % status, '' ]
@@ -357,13 +372,15 @@ class DirectResponse:
 
         lines.append( traceback.format_exc() )
 
-        self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n'\
-                '\r\n%s' % ( status, '\n'.join( lines ) )
+        self.__sendbuf = "HTTP/1.1 %s\r\n"\
+            "Access-Control-Allow-Origin: *\r\n"\
+            "Content-Type: text/plain\r\n"\
+            "\r\n%s" % ( status, '\n'.join( lines ) )
       
     def control_proxy(self, status, protocol, request):
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
         req = { 
-                'args': request.header
+                'args': request.headers
             }
         if body:
             try:
@@ -426,7 +443,7 @@ class DirectResponse:
                     Params.json_write(descr), 
                     mime='application/json')
         else:
-            self.prepare_response("404 No Data", "No data for %s"%protocol.requri)
+            self.prepare_response("404 No Data", "No data for %s %s %s %s"%request.url)
 
     def serve_script(self, status, protocol, request):
         jsdata = open(Params.PROXY_INJECT_JS).read()

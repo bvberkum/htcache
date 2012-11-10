@@ -5,7 +5,7 @@ Class for descriptor storage.
 TODO: filter out unsupported headers, always merge with server headers
  to client.
 """
-import anydbm, datetime, os, re
+import anydbm, datetime, os, re, urlparse
 
 
 try:
@@ -17,16 +17,9 @@ except AssertionError:
 import Params
 from error import *
 
-#from gate.util import HeaderDict
-#from sqlalchemy import create_engine
-#from sqlalchemy.orm import sessionmaker
-#from taxus.data import initialize, Resource, Locator, \
-#        Variant, Invariant, Relocated
-#
 #import uriref
 import Params, Cache
-#from script_mpe import res
-#from script_mpe.res import PersistedMetaObject
+
 
 
 class DescriptorStorage(object):
@@ -73,33 +66,6 @@ class DescriptorStorage(object):
     def __setitem__(self, path, value):
         self.shelve
 
-# FIXME: 
-#URL_SCHEMES = ['ftp', 'http']
-
-
-#class CachedResource(object):
-
-#class HTTPEntityHeaders(PersistedMetaObject):
-#    pass
-#
-#class Metalink(PersistedMetaObject):
-#    pass
-
-            # TODO: srcrefs, mediatype, charset, language, 
-            #if self.has_descriptor():
-            #    urirefs, args = self.get_descriptor()
-            #else:
-            #    urirefs = []
-            #if self.requri not in urirefs:
-            #    urirefs.append(self.requri)
-            #self.descriptors[self.cache.path] = urirefs, self.__args
-            #Params.log(self.descriptors[self.cache.path])
-            #Params.log("Updated descriptor: %s, %s" %
-            #        self.descriptors[self.cache.path])
-
-#class Descriptor(PersistedMetaObject): pass
-    
-#            db = dbshelve.open(filename)
 
 def strip_root(path):
     if path.startswith(Params.ROOT):
@@ -267,7 +233,7 @@ class AnyDBStorage(object):
         try:
             Params.log("Opening %s mode=%s" %(path, mode))
             self.__be = anydbm.open(path, mode)
-        except anydbm.error, e:#bsddb.db.DBAccessError, e:
+        except anydbm.error, e:
             raise Exception("Unable to access resource DB at <%s>: %s" %
                     (path, e))
 
@@ -278,7 +244,7 @@ class AnyDBStorage(object):
         return self.__be.keys()
 
     def __contains__(self, path):
-        path = strip_root(path)
+        #path = strip_root(path)
         return self.has(path)
 
     def __iter__(self):
@@ -366,16 +332,13 @@ class AnyDBStorage(object):
 #                and isinstance(srcrefs[0], str)), srcrefs
 
 
-backend = None
-
-# FIXME: old master global storage
 if os.path.isdir(Params.RESOURCES):
-#    backend =  FileStorage(Params.RESOURCES)
     Params.descriptor_storage_type = FileStorage
 
 elif Params.RESOURCES.endswith('.db'):
     Params.descriptor_storage_type = AnyDBStorage
-#    backend =  FileStorage(Params.RESOURCES)
+
+backend = None
 
 def get_backend(main=True):
     global backend
@@ -384,6 +347,7 @@ def get_backend(main=True):
             backend = Params.descriptor_storage_type(Params.RESOURCES)
         return backend
     return Params.descriptor_storage_type(Params.RESOURCES, 'r') 
+
 
 class RelationalStorage(DescriptorStorage):
 
@@ -433,7 +397,7 @@ def get_cache(hostinfo, req_path):
     cache_location = cache_location.replace(':80', '')
     cache = Cache.load_backend_type(Params.CACHE)(cache_location)
     Params.log("Init cache: %s %s" % (Params.CACHE, cache), 3)
-    Params.log('Prepped cache, position: %s' % cache.path, 1)
+    Params.log('Prepped cache, position: %s' % cache.path, 2)
 # XXX: use unrewritten path as descriptor key, need unique descriptor per resource
     cache.descriptor_key = cache_location
     return cache
@@ -444,9 +408,11 @@ def get_cache(hostinfo, req_path):
 def print_info(*paths):
     import sys
     recordcnt = 0
+    descriptors = get_backend()
     for path in paths:
         if not path.startswith(os.sep):
             path = Params.ROOT + path
+#        path = path.replace(Params.ROOT, '')
         if path not in backend:
             print >>sys.stderr, "Unknown cache location: %s" % path
         else:
@@ -493,6 +459,7 @@ def find_info(q):
         for u in urls:
             if q in u:
                 print path, mime, urls
+# XXX:
 #        for k in props:
 #            if k in ('0','srcref'):
 #                if props[k] in res[0]:
@@ -516,7 +483,7 @@ def find_info(q):
     print "End of findinfo"; sys.exit(1)
 
 ## Maintenance functions
-def check_cache(cache, uripathnames, mediatype, d1, d2, meta, features):
+def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
     References in descriptor cache must exist as file. 
     This checks existence and the size property,  if complete.
@@ -538,10 +505,6 @@ def check_cache(cache, uripathnames, mediatype, d1, d2, meta, features):
     if cache.full() and os.path.getsize(pathname) != length:
         Params.log("Corrupt file: %s, size should be %s" % (pathname, length))
         return
-    #else:
-    #    print pathname, meta
-
-    #print pathname, meta
     return True
 
 def validate_cache(pathname, uripathnames, mediatype, d1, d2, meta, features):
@@ -564,9 +527,9 @@ def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
 
 def check_files():
     if Params.PRUNE:
-        descriptors = Resource.get_backend()
+        descriptors = get_backend()
     else:
-        descriptors = Resource.get_backend(main=False)
+        descriptors = get_backend(main=False)
     pcount, rcount = 0, 0
     Params.log("Iterating paths in cache root location. ")
     for root, dirs, files in os.walk(Params.ROOT):
@@ -574,7 +537,6 @@ def check_files():
         # Ignore files in root
         if not root[len(Params.ROOT):]:
             continue
-#        print root[len(Params.ROOT):]
 
 #    	rdir = os.path.join(Params.ROOT, root)
         for f in dirs + files:
@@ -597,9 +559,7 @@ def check_files():
             elif f in descriptors:
                 rcount += 1
                 descr = descriptors[f]
-                if not len(descr) != 7:
-                    Params.log("Unknown descriptor for %s" % descr)
-                    continue
+                assert isinstance(descr, Descriptor)
                 uriref = descr[0][0]
                 Params.log("Found resource %s" % uriref, threshold=1)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
@@ -607,7 +567,7 @@ def check_files():
                 if len(descr[0]) != 1:
                     Params.log("Multiple references %s" % f)
                     continue
-                urlparts = urlparse(uriref)
+                urlparts = urlparse.urlparse(uriref)
                 hostname = urlparts.netloc
                 pathname = urlparts.path[1:] 
 # XXX: cannot reconstruct--, or should always normalize?
@@ -615,7 +575,7 @@ def check_files():
                     #print urlparts
                     pathname += '?'+urlparts.query
                 hostinfo = hostname, port
-                cache = Resource.get_cache(hostinfo, pathname)
+                cache = get_cache(hostinfo, pathname)
                 #print 'got cache', cache.getsize(), cache.path
 # end
     Params.log("Finished checking %s cache locations, found %s resources" % (
@@ -628,9 +588,9 @@ def check_cache():
     #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
     #pb = Resource.ProgressBar(term, 'Iterating descriptors')
     if Params.PRUNE:
-        descriptors = Resource.get_backend()
+        descriptors = get_backend()
     else:
-        descriptors = Resource.get_backend(main=False)
+        descriptors = get_backend(main=False)
     refs = descriptors.keys()
     count = len(refs)
     Params.log("Iterating %s descriptors" % count)
@@ -638,6 +598,7 @@ def check_cache():
         if Params.VERBOSE > 2:
             print i, ref
         descr = descriptors[ref]
+        Params.log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
         urirefs, mediatype, d1, d2, meta, features = descr
         #progress = float(i)/count
         #pb.update(progress, ref)
@@ -646,7 +607,7 @@ def check_cache():
         if len(urirefs) != 1:
             Params.log("Multiple references %s" % ref)
             continue
-        urlparts = urlparse(urirefs[0])
+        urlparts = urlparse.urlparse(urirefs[0])
         hostname = urlparts.netloc
         pathname = urlparts.path[1:] 
 # XXX: cannot reconstruct--, or should always normalize?
@@ -654,10 +615,10 @@ def check_cache():
             #print urlparts
             pathname += '?'+urlparts.query
         hostinfo = hostname, port
-        cache = Resource.get_cache(hostinfo, pathname)
+        cache = get_cache(hostinfo, pathname)
 # end
         act = None
-        if not check_cache(cache, *descr):
+        if not check_descriptor(cache, *descr):
             if not Params.PRUNE:
                 continue
             act = True
@@ -684,7 +645,6 @@ def check_cache():
     sys.exit(0)
 
 
-#DescriptorStorage(Params.DATA_DIR)
 
 
 import sys, re

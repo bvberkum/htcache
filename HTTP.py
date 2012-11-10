@@ -9,15 +9,17 @@ class HTTP:
     SEE_OTHER = 303 # Resource for request located elsewhere using GET
     NOT_MODIFIED = 304
     #USE_PROXY = 305
-    _ = 306 # Reserved
+    _ = 306 # Reserved (no longer used)
     TEMPORARY_REDIRECT = 307 # Same as 302,
     # added to explicitly contrast with 302 mistreated as 303
 
     FORBIDDEN = 403
+    NOT_FOUND = 404
+    NOT_ALLOWED = 405
     GONE = 410
     REQUEST_RANGE_NOT_STATISFIABLE = 416
 
-    Entity_Headers =  (
+    Entity_Headers = (
         # RFC 2616
         'Allow',
         'Content-Encoding',
@@ -101,6 +103,7 @@ class HTTP:
                     # Extension and msc. unsorted headers
                     'X-Server',
                     'X-Cache',
+                    'X-Cache-Lookup',
                     'X-Cache-Hit',
                     'X-Cache-Hits',
                     'X-Content-Type-Options',

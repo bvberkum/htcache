@@ -43,6 +43,7 @@ htcache_start()
     then
         echo "Starting htcache"
         # TODO: check htcache status before redirecting output to lock
+        echo $DAEMON -r $DATADIR --daemon $LOG $FLAGS --pid-file $PID_FILE
         $DAEMON -r $DATADIR --daemon $LOG $FLAGS --pid-file $PID_FILE
     else
         echo "Found "$PID_FILE", htcache already running? (PID: $PID)"
