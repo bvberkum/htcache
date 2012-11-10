@@ -181,7 +181,6 @@ fi
 
 function check_equal
 {
-
   if test ! -e $PREFIX.$2; then
     check "$1" ERROR "1st file missing" 
   elif test ! -e $PREFIX.$3; then
