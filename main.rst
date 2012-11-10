@@ -13,11 +13,7 @@ Tests
         Trying to keep it steady.
     dev*
         :system-tests: 
-<<<<<<< HEAD
             - (dandy) 1 passed checks, 70 errors  
-=======
-            ..
->>>>>>> master
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
@@ -28,12 +24,8 @@ Tests
             Cache maintenance routines.
 
             :unit-tests:
-<<<<<<< HEAD
               - (dandy) 40 passed checks, 3 errors
-              - (dm) 35 passed checks, 8 errors
-=======
               - (dm) 21 passed checks, 22 errors
->>>>>>> master
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
