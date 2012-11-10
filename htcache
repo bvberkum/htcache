@@ -46,7 +46,7 @@ def path_ignore(path):
             return True
 
 def run_join():
-    assert mode == 'run-join':
+    assert mode == 'run-join', mode
     os.chdir(Params.ROOT)
     for root, dirs, files in os.walk(Params.ROOT):
         for d in dirs:
