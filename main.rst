@@ -43,13 +43,17 @@ Tests
             - TODO: ``--print-record`` query
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
-
+        dev_proxyreq
+            ..
         dev_cacherev
-            Revision certain resources, always keeping a requested version.
-
+            Revision certain resources, always keeping a once retrieved and
+            served version.
         dev_relstore
             Need to get simple relational storage.
-
+        dev_dhtmlui
+            ..
+        dev_domaindb
+            ..
 
 branches
     dev
