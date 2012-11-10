@@ -9,6 +9,8 @@ for real networked use. Notably there is no proxy authentication planned so all
 functions are user available.
 
 Tests
+    master
+        Trying to keep it steady.
     dev*
         :system-tests: 
             - (dandy) 1 passed checks, 70 errors  
@@ -41,22 +43,20 @@ Tests
             - TODO: ``--print-record`` query
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
-
-        dev_cacherev
-            Revision certain resources, always keeping a requested version.
-
-        dev_relstore
-            Need to get simple relational storage.
-
         dev_proxyreq
             Maybe write a lower level protocol to interrogate the proxy about
             its downloads. See ProxyProtocol class.
+        dev_cacherev
+            Revision certain resources, always keeping a once retrieved and
+            served version.
+        dev_relstore
+            Need to get simple relational storage.
+        dev_dhtmlui
+            ..
+        dev_domaindb
+            ..
 
 branches
-    master (current)
-        - Follows new_stable
-        - Not in use. Is in a unfinished merge with 0.3.  
-        - FIXME: needs a lot of merging to get this right again
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
