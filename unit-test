@@ -119,10 +119,8 @@ function abort
   if kill %%; then
   #if kill -int $(cat $PID); then
     echo
-    #sleep 1
   else
     echo "error: download finished unexpectedly soon"
-    #exit 1
   fi
 }
 

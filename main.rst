@@ -10,7 +10,14 @@ functions are user available.
 
 Tests
     master
-        Trying to keep it steady.
+        :unit-test:
+            - (dandy) 37 passed checks, 6 errors
+        :system-test:
+            - (dandy) 6 passed checks, 6 errors
+
+        - Trying to keep it steady.
+        - Does currently not run stable continuously.
+
     dev*
         :system-tests: 
             - (dandy) 1 passed checks, 70 errors  
