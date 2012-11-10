@@ -3,11 +3,14 @@
 """
 import urllib
 import difflib
+import socket
 
 
+hostname = socket.gethostname()
 
-ignore_header_match = ('date', 'set-cookie', 'expires')
-proxy_headers = ()#'via')
+
+ignore_header_match = ('date', 'set-cookie', 'expires', 'x-cache')
+proxy_headers = ('via',)
 
 class SystemTest:
 
@@ -23,40 +26,54 @@ class SystemTest:
         proxies = {}
         data = None
         if proxy:
-            proxies = {'http':'http://localhost:8080'}
+            proxies = {'http':'http://%s:%s' % (hostname, 8081)}
         f = urllib.urlopen(self.url, data, proxies)
         r = f.info(), f.read()
         f.close()
         return r
 
     def compare(self):
+        p = True
         print "="*79
         print "URL:", self.url
         for expected_header in self.expected[0]:
             if expected_header not in self.result[0]:
-                print "Missing header %r" % expected_header
+                p = False
+                print " [ERROR] Missing header %r" % expected_header
                 continue
             if expected_header in ignore_header_match:
                 continue
             expected = self.expected[0][expected_header]
             result = self.result[0][expected_header]
             if expected != result:
-                print "Header %s mismatch, expected %r but received %r" % (
+                p = False
+                print " [ERROR] Header %s mismatch, expected %r but received %r" % (
                         expected_header, expected, result)
             else:
                 del self.result[0][expected_header]
+        _proxy_headers = list(proxy_headers)
         for result_header in self.result[0]:
-            if result_header not in self.expected[0] and result_header not in proxy_headers:
-                print "New header %r: %r" % (result_header, self.result[0][result_header])
+            if result_header in _proxy_headers:
+                _proxy_headers.remove(result_header)
+                continue
+            if result_header not in self.expected[0]:
+                p = False
+                print " [ERROR] New header %r: %r" % (result_header, self.result[0][result_header])
+        if _proxy_headers:
+            p = False
+            print " [ERROR] Missed proxy headers", _proxy_headers
         expected_content = self.expected[1]
         result_content = self.result[1]
         if expected_content != result_content:
-            print "Unexpected contents: "
-            diff = "\n".join(list(
-                difflib.unified_diff(
-                    expected_content.split('\n'), 
-                    result_content.split('\n'))))
-            print diff
+            p = False
+            print " [ERROR] Unexpected contents: "
+            #diff = "\n".join(list(
+            #    difflib.unified_diff(
+            #        expected_content.split('\n'), 
+            #        result_content.split('\n'))))
+            #print diff
+        if p:
+            print " [PASSED] "
         print "-"*79
         
 
@@ -78,7 +95,7 @@ if __name__ == '__main__':
             'http://catb.org/jargon/html/index.html',
             'http://catb.org/jargon/html/go01.html',
             'http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js',
-"http://www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt",
-"http://jigsaw.w3.org:80/HTTP/ChunkedScript",
-"ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
+            "http://www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt",
+            "http://jigsaw.w3.org:80/HTTP/ChunkedScript",
+            "ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
         ])
