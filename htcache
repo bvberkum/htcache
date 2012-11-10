@@ -181,3 +181,5 @@ while True:
         Params.log(e)
         break
 
+Resource.get_backend().close()
+
