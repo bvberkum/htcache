@@ -1,4 +1,4 @@
-import calendar, os, time, socket, re, urlparse
+import calendar, os, time, socket, re
 
 import Params, Response, Resource, Cache, Rules
 from HTTP import HTTP
