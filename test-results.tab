@@ -1,0 +1,3 @@
+# Date, Host, Branch, Revision, Testsuite, Total, Passed, Errors
+2012-11-10 15:39:18+01:00, dandy, master, 7954b6376e9da77bd0baafef7efedc43a81d09ee, system, 10, 6, 4
+2012-11-10 15:42:44+01:00, dandy, master, 134e068085340e2d985086a0a537b66eddf71aea, unit, 43, 37, 6
