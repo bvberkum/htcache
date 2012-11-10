@@ -30,8 +30,10 @@ Tests
         dev_cachemaint (current)
             Cache maintenance routines.
 
+            :test-protocol:
+              - (dandy) 5 passed checks, 21 errors
             :unit-tests:
-              - (dandy) 40 passed checks, 3 errors
+              - (dandy) 31 passed checks, 12 errors
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
