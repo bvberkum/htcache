@@ -30,10 +30,7 @@ Tests
         dev_cachemaint (current)
             Cache maintenance routines.
 
-            :test-protocol:
-              - (dandy) 5 passed checks, 21 errors
             :unit-tests:
-              - (dandy) 31 passed checks, 12 errors
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
@@ -53,6 +50,10 @@ Tests
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
         dev_proxyreq
+            :test-protocol:
+              - (dandy) 5 passed checks, 21 errors
+            :unit-tests:
+              - (dandy) 31 passed checks, 12 errors
             - Maybe write a lower level protocol to interrogate the proxy about
               its downloads. See ProxyProtocol class.
             - in sync with master, dev_proxyreq, dev_domaindb
