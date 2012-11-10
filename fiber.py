@@ -192,7 +192,7 @@ def spawn( generator, port, debug, log, pid_file ):
         myFiber = GatherFiber
 
     Params.log('[ INIT ] %s started at %s:%i' % (generator.__name__,
-        socket.gethostname(), port ), 1)
+        Params.HOSTNAME, port ), 1)
 
     try:
 

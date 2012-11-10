@@ -19,7 +19,7 @@ class DNSLookupException(Exception):
         return "DNS lookup error for %s: %s" % ( self.addr, self.exc )
 
 
-LOCALHOSTS = ( 'localhost', socket.gethostname(), '127.0.0.1', '127.0.1.1' )
+LOCALHOSTS = ( 'localhost', Params.HOSTNAME, '127.0.0.1', '127.0.1.1' )
 DNSCache = {}
 
 def connect( addr ):
@@ -99,24 +99,15 @@ class ProxyProtocol(object):
         # Track server response
         self.__status, self.__message = None, None
 
-        if not prepcache:
-            return
+        if prepcache:
+            self.init_cache()
 
-        # Initialize a facade for the data container
-        self.cache, self.descriptor = Resource.for_request( request )
-
-    @property
-    def requri( self ):
-        host, port = self.request.hostinfo
-        verb, path, proto = self.request.envelope
-
-        # Prepare requri to identify request
-        if port != 80:
-            hostinfo = "%s:%s" % (host, port)
-        else:
-            hostinfo = host
-
-        return "http://%s/%s" %  (hostinfo, path)
+    def init_cache(self):
+        p = self.url.find( ':' ) # find len of scheme-id
+        assert self.url[p:p+3] == '://', self.url
+        self.cache = Cache.load_backend_type(Params.CACHE)(self.url[p+3:])
+        Params.log("Init cache: %s %s" % (Params.CACHE, self.cache), 3)
+        Params.log('Prepped cache, position: %s' % self.cache.path, 2)
 
     def has_response( self ):
         return self.__status and self.__message
@@ -155,8 +146,8 @@ class ProxyProtocol(object):
     def prepare_nocache_response( self ):
         "Blindly respond for NoCache rule matches. "
         for pattern, compiled in Params.NOCACHE:
-            p = self.requri.find( ':' ) # split scheme
-            if compiled.match( self.requri[p+3:] ):
+            p = self.url.find( ':' ) # find len of scheme-id
+            if compiled.match( self.url[p+3:] ):
                 Params.log('Not caching request, matches pattern: %r.' %
                     pattern)
                 self.Response = Response.BlindResponse
@@ -237,7 +228,7 @@ class HttpProtocol(ProxyProtocol):
         args.pop( 'Accept-Encoding', None )
         htrange = args.pop( 'Range', None )
         assert not htrange,\
-                "Req for %s had a range: %s" % (self.requri, htrange)
+                "Req for %s had a range: %s" % (self.url, htrange)
 
         # if expires < now: revalidate
         # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
@@ -276,7 +267,7 @@ class HttpProtocol(ProxyProtocol):
         relationtype = args.pop('X-Relationship', None)
         referer = args.get('Referer', None)
         if referer:
-            #self.descriptors.relate(relationtype, self.requri, referer)
+            #self.descriptors.relate(relationtype, self.url, referer)
             pass
 
         # Prepare Protocol object for server request
@@ -365,10 +356,26 @@ class HttpProtocol(ProxyProtocol):
         # Header was parsed
 
 #        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
-#                "Chunked response: %s %s" % ( self.__status, self.requri )
+#                "Chunked response: %s %s" % ( self.__status, self.url)
 
+        # Check wether to monitor the response based on the request
         if self.prepare_nocache_response():
             return
+   
+        # Initialize a facade for the storage and check for existing data
+        self.descriptor = Resource.storage.find(self.cache.path)
+        if not self.descriptor:
+            self.descriptor = Resource.storage.prepare_for_request(
+                    self.cache.path, self.request) 
+
+        # Sanity checks
+        if self.descriptor and not (self.cache.full() or self.cache.partial()):
+            Params.log("Warning: stale descriptor")
+            self.descriptor.drop()
+
+        elif not self.descriptor and (self.cache.full() or self.cache.partial()):
+            Params.log("Error: stale cache %s" % self.cache.path)
+            # XXX: should load new Descriptor into db here or delete stale files.
 
         # Process and update headers before deferring to response class
         # 2xx
@@ -404,7 +411,7 @@ class HttpProtocol(ProxyProtocol):
         elif self.__status == HTTP.NOT_MODIFIED:
 
             if not self.cache.full():
-                Params.log("Warning: Cache miss: %s" % self.requri)
+                Params.log("Warning: Cache miss: %s" % self.url)
                 assert not self.cache.partial(), self.cache.path
                 self.Response = Response.BlindResponse
 
@@ -422,10 +429,8 @@ class HttpProtocol(ProxyProtocol):
         # 4xx: client error
         elif self.__status in ( HTTP.FORBIDDEN, HTTP.METHOD_NOT_ALLOWED ):
 
-            Params.log("TODO: record status")
+            self.descriptor.set_broken( self.__status )
             self.Response = Response.BlindResponse
-            if self.descriptor:
-                self.descriptor.update( self.__args )
 
         elif self.__status in ( HTTP.NOT_FOUND, HTTP.GONE ):
 
@@ -435,17 +440,17 @@ class HttpProtocol(ProxyProtocol):
 
         elif self.__status in ( HTTP.REQUEST_RANGE_NOT_STATISFIABLE, ):
             if self.cache.partial():
-                Params.log("Warning: Cache corrupted?: %s" % self.requri)
+                Params.log("Warning: Cache corrupted?: %s" % self.url)
                 self.cache.remove_partial()
             elif self.cache.full():
                 self.cache.remove_full()
             if self.descriptor:
                 self.descriptor.drop()
-                Params.log("Dropped descriptor: %s" % self.requri)
+                Params.log("Dropped descriptor: %s" % self.url)
             self.Response = Response.BlindResponse
 
         else:
-            Params.log("Warning: unhandled: %s, %s" % (self.__status, self.requri))
+            Params.log("Warning: unhandled: %s, %s" % (self.__status, self.url))
             self.Response = Response.BlindResponse
 
 
@@ -455,12 +460,12 @@ class HttpProtocol(ProxyProtocol):
         """
         if self.cache.full():
             Params.log("HttpProtocol.recv_entity: overwriting cache: %s" %
-                    self.requri,4)
+                    self.url,4)
             self.cache.remove_full()
             self.cache.open_new()
         else:
             Params.log("HttpProtocol.recv_entity: new cache : %s" %
-                    self.requri,4)
+                    self.url,4)
             self.cache.open_new()
             assert self.cache.partial()
         # FIXME: load http entity, perhaps response headers from shelve
@@ -511,13 +516,17 @@ class HttpProtocol(ProxyProtocol):
     def set_dataresponse(self):
         mediatype = self.__args.get( 'Content-Type', None )
         if Params.PROXY_INJECT and mediatype and 'html' in mediatype:
-            Params.log("XXX: Rewriting HTML resource: "+self.requri)
+            Params.log("XXX: Rewriting HTML resource: "+self.url)
             self.rewrite = True
         if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
             self.Response = Response.ChunkedDataResponse
         else:
             self.Response = Response.DataResponse
 
+    @property
+    def url( self ):
+        return self.request.url
+    
     def recvbuf( self ):
         return self.print_message()
 
@@ -525,8 +534,10 @@ class HttpProtocol(ProxyProtocol):
         if not args:
             args = self.__args
         return '\r\n'.join(
-            [ '%s %i %s' % ( self.request.envelope[2], 
-                self.__status, self.__message ) ] +
+            [ '%s %i %s' % ( 
+                self.request.envelope[2], 
+                self.__status, 
+                self.__message ) ] +
             map( ': '.join, args.items() ) + [ '', '' ] )
 
     def responsebuf( self ):
@@ -539,7 +550,7 @@ class HttpProtocol(ProxyProtocol):
     def response_headers( self ):
         args = self.args()
 
-        via = "%s:%i" % (socket.gethostname(), Params.PORT)
+        via = "%s:%i" % (Params.HOSTNAME, Params.PORT)
         if args.setdefault('Via', via) != via:
             args['Via'] += ', '+ via
 
@@ -558,15 +569,14 @@ class FtpProtocol( ProxyProtocol ):
 
         if Params.STATIC and self.cache.full():
           self.__socket = None
-          Params.log("Static FTP cache : %s" % self.requri)
+          Params.log("Static FTP cache : %s" % self.url)
           self.cache.open_full()
           self.Response = Response.DataResponse
           return
 
         Params.log("FtpProtocol: Connecting to %s:%s" % request.hostinfo, 2)
         self.__socket = connect(request.hostinfo)
-        self.__path = request.Resource.ref.path
-        self.__path_old = request.envelope[1] # XXX
+        self.__path = request.envelope[1]
         self.__sendbuf = ''
         self.__recvbuf = ''
         self.__handle = FtpProtocol.__handle_serviceready
@@ -657,7 +667,7 @@ class FtpProtocol( ProxyProtocol ):
         else:
             stat = self.cache.full()
             if stat and stat.st_mtime == self.mtime:
-                Params.log("Unmodified FTP cache : %s" % self.requri)
+                Params.log("Unmodified FTP cache : %s" % self.url)
                 self.cache.open_full()
                 self.Response = Response.DataResponse
             else:

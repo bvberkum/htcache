@@ -15,14 +15,15 @@ Tests
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
-            - (dm) 41 passed checks, 1 errors
-            - (dandy) 36 passed checks, 7 errors
+            - (dm) 41 passed checks, 2 errors
+            - (dandy) 40 passed checks, 3 errors
     
         dev_cachemaint
             Cache maintenance routines.
 
-            :tests:
-              - (dm) 21 passed checks, 22 errors
+            :unit-tests:
+              - (dandy) 40 passed checks, 3 errors
+              - (dm) 35 passed checks, 8 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
@@ -54,7 +55,7 @@ Tests
 
 branches
     master (current)
-        - Follows new_stable
+        - Started a sort of new Anydbm facade here
         - Not in use. Is in a unfinished merge with 0.3.  
         - FIXME: needs a lot of merging to get this right again
     dev
