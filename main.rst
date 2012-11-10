@@ -9,6 +9,8 @@ for real networked use. Notably there is no proxy authentication planned so all
 functions are user available.
 
 Tests
+    master
+        Trying to keep it steady.
     dev*
         :system-tests: 
             - (dandy) 1 passed checks, 70 errors  
@@ -41,19 +43,21 @@ Tests
             - TODO: ``--print-record`` query
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
-
+        dev_relstore
+            ..
+        dev_proxyreq
+            ..
         dev_cacherev
             Revision certain resources, always keeping a requested version.
 
         dev_relstore
             Need to get simple relational storage.
-
+        dev_dhtmlui
+            ..
+        dev_domaindb
+            ..
 
 branches
-    master (current)
-        - Follows new_stable
-        - Not in use. Is in a unfinished merge with 0.3.  
-        - FIXME: needs a lot of merging to get this right again
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
@@ -205,7 +209,7 @@ Fiber
 HTCache is a fork of http-replicator and the main script follows the same
 implementation using fibers. It has a bit more elaborated message handling::
 
-   HtRequest ----> ProxyProtocol --------get--> DirectResponse (3)
+   HtRequest ----> CachingProtocol --------get--> DirectResponse (3)
                       |            `----nocache-> Blocked(Image)ContentResponse (1)
                       |            `--------ok--> DataResponse
                       |            `--------ok--> RewrittenDataResponse (6)

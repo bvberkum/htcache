@@ -103,7 +103,7 @@ class Join:
                 if m:
                     capture = True
                     pathref = regex.sub(repl, pathref)
-                    Params.log("Joined URL matching rule %r" % line, threshold=1)
+                    Params.log("Joined URL matching rule %r" % pattern, threshold=1)
         return pathref
 
 class Drop:
