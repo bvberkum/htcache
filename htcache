@@ -52,52 +52,28 @@ def path_ignore(path):
             return True
 
 def run_join():
-    if mode == 'run-join':
-        os.chdir(Params.ROOT)
-        for root, dirs, files in os.walk(Params.ROOT):
-            for d in dirs:
-                if d in ['.git']:
-                    dirs.remove(d)
-            for f in files:
-                fpath = os.path.join(root, f).replace(Params.ROOT,
-                        '')
-                fpath2 = fpath.replace(':80','')
-                fpath3 = Cache.joinlist_rewrite(fpath2)
-                if fpath2 != fpath3:
-                    print 'Renaming: ', fpath3, fpath
-                    os.stat(fpath)
-                    dirname = os.path.dirname(fpath3)
-                    if not os.path.isdir(dirname):
-                        os.makedirs(dirname)
-                    os.rename(fpath, fpath3)
-                #for line, regex in Params.JOIN:
-                #    if m:
-                #        m = regex.match(fpath)
-                #        print 'Match', fpath, m.groups()
-
-
-### Descriptor/Cache Maintenance static entry
-if Params.CMD:
-#    descriptors = Resource.get_backend()
-#        Resource.print_info(*Params.PRINT_RECORD)
-#        Resource.find_info(Params.FIND_RECORDS)
-#        Resource.print_info(*descriptors.keys())
-    run = {
-        'print-records': Resource,
-        'find-records': Resource,
-#        Resource.print_media_list(*Params.PRINT_MEDIA)
-#        'find-videos': Resource,
-#        'find-images': Resource,
-#        'find-texts': Resource,
-        'validate-cache': Resource.validate_cache,
-        'check-files': Resource.check_files,
-        'check-cache': Resource.check_cache,
-        'run-join': run_join
-    }
-    run[Params.CMD]()
-    backend.close()
-
-    sys.exit(0)
+    assert mode == 'run-join':
+    os.chdir(Params.ROOT)
+    for root, dirs, files in os.walk(Params.ROOT):
+        for d in dirs:
+            if d in ['.git']:
+                dirs.remove(d)
+        for f in files:
+            fpath = os.path.join(root, f).replace(Params.ROOT,
+                    '')
+            fpath2 = fpath.replace(':80','')
+            fpath3 = Cache.joinlist_rewrite(fpath2)
+            if fpath2 != fpath3:
+                print 'Renaming: ', fpath3, fpath
+                os.stat(fpath)
+                dirname = os.path.dirname(fpath3)
+                if not os.path.isdir(dirname):
+                    os.makedirs(dirname)
+                os.rename(fpath, fpath3)
+            #for line, regex in Params.JOIN:
+            #    if m:
+            #        m = regex.match(fpath)
+            #        print 'Match', fpath, m.groups()
 
 
 # Global backend: the cache descriptors storage
@@ -161,15 +137,43 @@ def HTCache_fiber_handler( client, address ):
             response.finalize(client)
         #protocol.descriptors.close()
 
+
+### Descriptor/Cache Maintenance static entry
+if Params.CMD:
+#    descriptors = Resource.get_backend()
+#        Resource.print_info(*Params.PRINT_RECORD)
+#        Resource.find_info(Params.FIND_RECORDS)
+#        Resource.print_info(*descriptors.keys())
+    run = {
+        'print-records': Resource,
+        'find-records': Resource,
+#        Resource.print_media_list(*Params.PRINT_MEDIA)
+#        'find-videos': Resource,
+#        'find-images': Resource,
+#        'find-texts': Resource,
+        'validate-cache': Resource.validate_cache,
+        'check-files': Resource.check_files,
+        'check-cache': Resource.check_cache,
+        'run-join': run_join
+    }
+    run[Params.CMD]()
+    backend.close()
+
+    sys.exit(0)
+
 # XXX: more neat in fiber than here, move, but need to couple with backend to do
 # that
 while True:
     try:
-        fiber.spawn( HTCache_fiber_handler, Params.PORT, Params.DEBUG, Params.LOG,
+        fiber.spawn( 
+                HTCache_fiber_handler, 
+                Params.PORT, 
+                Params.DEBUG, 
+                Params.LOG,
                 Params.PID_FILE )
     except fiber.Restart, e:
         Resource.get_backend().close()
-        for mod in (Params, Protocol, Request, Response, Resource, fiber):
+        for mod in ( Params, Protocol, Request, Response, Resource, fiber ):
             mod = reload(mod)
         Params.parse_droplist()
         Params.parse_nocache()
