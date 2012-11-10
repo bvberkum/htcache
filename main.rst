@@ -53,7 +53,7 @@ Tests
 
 branches
     master (current)
-        - Follows new_stable
+        - Started a sort of new Anydbm facade here
         - Not in use. Is in a unfinished merge with 0.3.  
         - FIXME: needs a lot of merging to get this right again
     dev
