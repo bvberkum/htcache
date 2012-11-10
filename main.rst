@@ -10,7 +10,14 @@ functions are user available.
 
 Tests
     master
-        Trying to keep it steady.
+        :unit-test:
+            - (dandy) 37 passed checks, 6 errors
+        :system-test:
+            - (dandy) 6 passed checks, 6 errors
+
+        - Trying to keep it steady.
+        - Does currently not run stable continuously.
+
     dev*
         :system-tests: 
             - (dandy) 1 passed checks, 70 errors  
@@ -24,7 +31,6 @@ Tests
             Cache maintenance routines.
 
             :unit-tests:
-              - (dandy) 40 passed checks, 3 errors
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
@@ -44,6 +50,10 @@ Tests
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
         dev_proxyreq
+            :test-protocol:
+              - (dandy) 5 passed checks, 21 errors
+            :unit-tests:
+              - (dandy) 31 passed checks, 12 errors
             - Maybe write a lower level protocol to interrogate the proxy about
               its downloads. See ProxyProtocol class.
             - in sync with master, dev_proxyreq, dev_domaindb
