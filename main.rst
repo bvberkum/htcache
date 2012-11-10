@@ -12,6 +12,8 @@ Tests
     master
         Trying to keep it steady.
     dev*
+        :system-tests: 
+            ..
         :unit-tests: 
             - (pandora) 42 passed checks, 1 errors
             - (iris) 40 passed checks, 3 errors
@@ -20,11 +22,12 @@ Tests
         dev_cachemaint
             Cache maintenance routines.
 
-            :tests:
+            :unit-tests:
               - (dm) 21 passed checks, 22 errors
 
             - ``--check-cache --prune`` remove invalid descriptors.
             - ``--check-tree --prune`` remove files without descriptor.
+
             - TODO: ``--keep-cache`` mark location revisioning
             - TODO: ``--validate-tree`` resource cache should match size, checksum
             - TODO: ``--validate-joinlist`` resource should have been rewritten
@@ -39,12 +42,13 @@ Tests
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
         dev_proxyreq
-            ..
+            Maybe write a lower level protocol to interrogate the proxy about
+            its downloads. See ProxyProtocol class.
         dev_cacherev
             Revision certain resources, always keeping a once retrieved and
             served version.
         dev_relstore
-            ..
+            Need to get simple relational storage.
         dev_dhtmlui
             ..
         dev_domaindb
