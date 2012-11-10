@@ -53,7 +53,7 @@ Tests
             :test-protocol:
               - (dandy) 5 passed checks, 16 errors  
             :unit-tests:
-              - (dandy) 31 passed checks, 12 errors
+              - (dandy) 35 passed checks, 8 errors
             - Maybe write a lower level protocol to interrogate the proxy about
               its downloads. See ProxyProtocol class.
             - in sync with master, dev_proxyreq, dev_domaindb
