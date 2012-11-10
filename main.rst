@@ -46,6 +46,8 @@ Tests
 
         dev_relstore
             - (dandy) 35 passed checks, 8 errors
+            :unit-test:  
+                - (dandy) 36 passed checks, 7 errors  
 
             Need to get simple relational storage.
 
