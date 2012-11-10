@@ -69,11 +69,6 @@ def run_join():
             #        print 'Match', fpath, m.groups()
 
 
-# Global backend: the cache descriptors storage
-
-backend = Params.descriptor_storage_type(Params.RESOURCES)
-
-
 def HTCache_fiber_handler( client, address ):
 
     Params.log('New Request from %s:%i, downloads: %s; +1' % (
@@ -133,7 +128,7 @@ def HTCache_fiber_handler( client, address ):
 
 ### Descriptor/Cache Maintenance static entry
 if Params.CMD:
-#    descriptors = Resource.get_backend()
+    descriptors = Resource.get_backend()
 #        Resource.print_info(*Params.PRINT_RECORD)
 #        Resource.find_info(Params.FIND_RECORDS)
 #        Resource.print_info(*descriptors.keys())
@@ -150,7 +145,7 @@ if Params.CMD:
         'run-join': run_join
     }
     run[Params.CMD]()
-    backend.close()
+    descriptors.close()
 
     sys.exit(0)
 
