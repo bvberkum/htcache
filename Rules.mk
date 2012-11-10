@@ -39,9 +39,7 @@ test-code::
 	@echo $$(grep PASSED utest.log | wc -l) passed checks, $$(grep ERROR utest.log | wc -l) errors
 
 test-protocol::
-	@sudo ./init.sh start
 	@./system-test 2>&1 | tee systest.log
-	@sudo ./init.sh stop
 	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
 
 
