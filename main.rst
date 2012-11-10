@@ -38,9 +38,16 @@ Tests
             - TODO: ``--print-record`` query
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
-
+        dev_relstore
+            ..
+        dev_proxyreq
+            ..
         dev_cacherev
             .. 
+        dev_dhtmlui
+            ..
+        dev_domaindb
+            ..
 
 branches
     dev
