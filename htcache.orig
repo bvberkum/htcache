@@ -1,0 +1,209 @@
+#! /usr/bin/env python
+import sys, time, weakref
+
+import Params, Protocol, Request, Response, Runtime, fiber
+import Resource
+import Rules
+
+import os
+import sys
+import time
+import weakref
+
+
+
+try:
+    import coverage
+    coverage.process_startup()
+except ImportError, e:
+    pass
+
+
+import Params, Cache, Protocol, Request, Response, Resource, fiber
+
+
+
+DOWNLOADS = Runtime.DOWNLOADS = weakref.WeakValueDictionary()
+"""
+Global set of download sessions, each being a request, protocol mapping.
+
+Only one download per resource is needed, just the first request is kept here.
+Each subsequent session will cannot overwrite the file, but can "join" the download 
+by switching to the response fase.
+
+XXX: This also allows local lookup of resources, ie. to rewrite the cache location
+to locally stored data.
+"""
+
+
+### Descriptor/Cache Query static entry
+
+from fnmatch import fnmatch
+
+def path_ignore(path):
+    for p in ('*.git*','*.sw[pon]','*.py[c]','*Makefile', '*.py', '*.mk'):
+        if fnmatch(path, p):
+            return True
+
+def run_join():
+<<<<<<< HEAD
+=======
+    assert mode == 'run-join':
+>>>>>>> master
+    os.chdir(Params.ROOT)
+    for root, dirs, files in os.walk(Params.ROOT):
+        for d in dirs:
+            if d in ['.git']:
+                dirs.remove(d)
+        for f in files:
+            fpath = os.path.join(root, f).replace(Params.ROOT,
+                    '')
+            fpath2 = fpath.replace(':80','')
+            fpath3 = Cache.joinlist_rewrite(fpath2)
+            if fpath2 != fpath3:
+                print 'Renaming: ', fpath3, fpath
+                os.stat(fpath)
+                dirname = os.path.dirname(fpath3)
+                if not os.path.isdir(dirname):
+                    os.makedirs(dirname)
+                os.rename(fpath, fpath3)
+            #for line, regex in Params.JOIN:
+            #    if m:
+            #        m = regex.match(fpath)
+            #        print 'Match', fpath, m.groups()
+
+
+
+def HTCache_fiber_handler( client, address ):
+
+    Params.log('New Request from %s:%i, downloads: %s; +1' % (
+        address + (len(DOWNLOADS),)))
+
+    protocol = None
+    request = Request.HtRequest()
+    while not request.Protocol:
+        yield fiber.RECV( client, Params.TIMEOUT )
+        request.recv( client )
+
+    try:
+        while request in DOWNLOADS:
+            protocol = DOWNLOADS[ request ]
+            if protocol.Response:
+                if issubclass( protocol.Response, Response.DataResponse ):
+                    Params.log('Joined running download')
+                    break
+                del DOWNLOADS[ request ]
+            else:
+                yield fiber.WAIT()
+        else:
+            Params.log('Switching to %s'% request.Protocol.__name__, 3)
+            protocol = DOWNLOADS[ request ] = request.Protocol( request )
+            server = protocol.socket()
+            while not protocol.Response:
+                if protocol.hasdata():
+                    yield fiber.SEND( server, Params.TIMEOUT )
+                    protocol.send( server )
+                else:
+                    yield fiber.RECV( server, Params.TIMEOUT )
+                    protocol.recv( server )
+        Params.log('Switching to %s'% protocol.Response.__name__, 2)
+        response = protocol.Response( protocol, request )
+        server = protocol.socket()
+    except Exception:
+        Params.log('Warning: Switching to ExceptionResponse')
+        response = Response.ExceptionResponse( protocol, request )
+
+    # blocks while client has not read data
+    while not response.Done:
+        if response.hasdata():
+            yield fiber.SEND( client, Params.TIMEOUT )
+            response.send( client )
+        elif response.needwait():
+            yield fiber.WAIT( response.needwait() )
+        else:
+            yield fiber.RECV( server, Params.TIMEOUT )
+            response.recv( server )
+
+    Params.log('Transaction completed', 1)
+
+    if protocol:
+        if response:
+            response.finalize(client)
+        #protocol.descriptors.close()
+
+
+### Descriptor/Cache Maintenance static entry
+if Params.CMD:
+#    descriptors = Resource.get_backend()
+#        Resource.print_info(*Params.PRINT_RECORD)
+#        Resource.find_info(Params.FIND_RECORDS)
+#        Resource.print_info(*descriptors.keys())
+    run = {
+        'print-records': Resource,
+        'find-records': Resource,
+#        Resource.print_media_list(*Params.PRINT_MEDIA)
+#        'find-videos': Resource,
+#        'find-images': Resource,
+#        'find-texts': Resource,
+        'validate-cache': Resource.validate_cache,
+        'check-files': Resource.check_files,
+        'check-cache': Resource.check_cache,
+        'run-join': run_join
+    }
+    run[Params.CMD]()
+    backend.close()
+
+    sys.exit(0)
+
+# XXX: more neat in fiber than here, move, but need to couple with backend to do
+# that
+
+def load():
+    Rules.parse_droplist()
+    Rules.parse_nocache()
+    Rules.parse_joinlist()
+    Rules.parse_rewritelist()
+
+
+### Descriptor/Cache Maintenance static entry
+
+if Params.CMDS:
+    Params.run({
+        'print-record': Resource.print_info,
+        'find-records': Resource.find_info,
+#        Resource.print_media_list(*Params.PRINT_MEDIA)
+#        'find-videos': Resource,
+#        'find-images': Resource,
+#        'find-texts': Resource,
+        'validate-cache': Resource.validate_cache,
+        'check-files': Resource.check_files,
+        'check-cache': Resource.check_cache,
+        'run-join': run_join
+    })
+    sys.exit(0)
+
+while True:
+    load()
+    try:
+<<<<<<< HEAD
+        Resource.get_backend()
+
+        fiber.spawn( HTCache_fiber_handler, 
+=======
+        fiber.spawn( 
+                HTCache_fiber_handler, 
+>>>>>>> master
+                Params.PORT, 
+                Params.DEBUG, 
+                Params.LOG,
+                Params.PID_FILE )
+
+    except fiber.Restart, e:
+        Resource.get_backend().close()
+        for mod in ( Params, Protocol, Request, Response, Resource, fiber ):
+            mod = reload(mod)
+
+    except Exception, e:
+        Params.log(e)
+        break
+

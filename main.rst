@@ -20,7 +20,7 @@ Tests
             - (dm) 41 passed checks, 2 errors
             - (dandy) 40 passed checks, 3 errors
     
-        dev_cachemaint
+        dev_cachemaint (current)
             Cache maintenance routines.
 
             :unit-tests:
