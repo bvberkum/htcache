@@ -31,57 +31,57 @@ function startserver
     test -e $PID && rm $PID
     exit 1
   else
-      echo Started server at $(cat $PID)
+    echo Started server at $(cat $PID)
   fi
 }
 
 function sortheaders
 {
-    mv $1 $1.tmp
-    sort $1.tmp > $1
-    rm $1.tmp
+  mv $1 $1.tmp
+  sort $1.tmp > $1
+  rm $1.tmp
 }
 
 function splitheaders
 {
-    for f in $PREFIX.$1.entity.headers $PREFIX.$1.headers;
-    do [ -e "$f" ] && rm $f; done
-    mv $PREFIX.$1 $PREFIX.tmp
-    ENVELOPE=$(head -n 1 $PREFIX.tmp)
-    HEADERS_RECEIVED=$([ "${ENVELOPE:0:8}" = "HTTP/1.1" ] && echo 0 || echo 1)
-    LINE=0
-    if [ $HEADERS_RECEIVED = 0 ]
-    then
-        while read L
-        do
-            LINE=$(($LINE + 1))
-            if [ $LINE = 1 ]
-            then
-                # dot not want to compare statusline b/c protocol version
-                echo $L > $PREFIX.$1.headers
-                continue
-            fi
-            if [ "$L" = "$(printf '\r\n')" ]; then
-                break
-            fi
-            STRIP=$(echo $L | grep -v '^\(Connection\|Accept-\|P3P\|Via\|X-\|Cache-\|Date\|Expires\)')
-            if [ -n "$STRIP" ]
-            then
-                # Keep entity headers for comparison
-                echo $L >> $PREFIX.$1.entity.headers
-            fi
-            # Keep all headers for other checks
-            echo $L >> $PREFIX.$1.headers
-        done < $PREFIX.tmp
-    fi
-    LINE=$(($LINE + 1))
-    # rest of lines is message contents
-    tail -n +$LINE $PREFIX.tmp > $PREFIX.$1
+  for f in $PREFIX.$1.entity.headers $PREFIX.$1.headers;
+  do [ -e "$f" ] && rm $f; done
+  mv $PREFIX.$1 $PREFIX.tmp
+  ENVELOPE=$(head -n 1 $PREFIX.tmp)
+  HEADERS_RECEIVED=$([ "${ENVELOPE:0:8}" = "HTTP/1.1" ] && echo 0 || echo 1)
+  LINE=0
+  if [ $HEADERS_RECEIVED = 0 ]
+  then
+    while read L
+    do
+      LINE=$(($LINE + 1))
+      if [ $LINE = 1 ]
+      then
+        # dot not want to compare statusline b/c protocol version
+        echo $L > $PREFIX.$1.headers
+        continue
+      fi
+      if [ "$L" = "$(printf '\r\n')" ]; then
+        break
+      fi
+      STRIP=$(echo $L | grep -v '^\(Connection\|Accept-\|P3P\|Via\|X-\|Cache-\|Date\|Expires\)')
+      if [ -n "$STRIP" ]
+      then
+        # Keep entity headers for comparison
+        echo $L >> $PREFIX.$1.entity.headers
+      fi
+      # Keep all headers for other checks
+      echo $L >> $PREFIX.$1.headers
+    done < $PREFIX.tmp
+  fi
+  LINE=$(($LINE + 1))
+  # rest of lines is message contents
+  tail -n +$LINE $PREFIX.tmp > $PREFIX.$1
 
-    sortheaders $PREFIX.$1.headers
-    sortheaders $PREFIX.$1.entity.headers
+  sortheaders $PREFIX.$1.headers
+  sortheaders $PREFIX.$1.entity.headers
 
-    [ -e $PREFIX.tmp ] && rm $PREFIX.tmp
+  [ -e $PREFIX.tmp ] && rm $PREFIX.tmp
 }
 
 # XXX: could not figure out a way to make wget save (headers) for non 200
@@ -116,7 +116,7 @@ function abort
 {
   sleep $1
   if kill %%; then
-  #if kill -int $(cat $PID); then
+    #if kill -int $(cat $PID); then
     echo
     sleep 1
   else
@@ -254,10 +254,10 @@ case $1 in
     http_proxy=localhost:$PORT download http://$URL_HTTP cached & abort 1.5
     check_log "aborted client read" "Error writing to client"
     check_exists "file cached, not finalized" cache/$URL_HTTP.incomplete
-# XXX: No headers are ever present, need to check if older versions did
-#    splitheaders cached
-#    check_equal "headers are equal" normal.entity.headers cached.entity.headers
-#    check_headers cached "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    # XXX: No headers are ever present, need to check if older versions did
+    #    splitheaders cached
+    #    check_equal "headers are equal" normal.entity.headers cached.entity.headers
+    #    check_headers cached "served HTTP v1.1 OK" "HTTP/1.1 200 "
     stopserver
     ;;
   3)
@@ -305,9 +305,9 @@ case $1 in
     http_proxy=localhost:$PORT download http://$URL_HTTP out1 & abort 1.5
     http_proxy=localhost:$PORT download http://$URL_HTTP out2
     check_log "htcache asks for missing part" \
-        "Requesting resume of partial file in cache"
+      "Requesting resume of partial file in cache"
     check_log "received partial file" \
-        "Server responds HTTP/1.1 206 Partial Content"
+      "Server responds HTTP/1.1 206 Partial Content"
     check_equal "cached and served file are equal" cache/$URL_HTTP out2
     stopserver
     ;;
@@ -353,12 +353,12 @@ case $1 in
     stopserver
     rm $PREFIX-rules.drop
     ;;
-#  10)
-#    summary "JOINED PROXY RESPONSE"
-#    startserver --join rules.join
-#    http_proxy=localhost:$PORT download http://$URL_HTTP out
-#    stopserver
-#    ;;
+  #  10)
+    #    summary "JOINED PROXY RESPONSE"
+    #    startserver --join rules.join
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    #    stopserver
+    #    ;;
   11)
     summary "BLIND PROXY RESPONSE"
     echo "[^/]*w3\.org\/Protocols\/HTTP.*" > $PREFIX-rules.drop
@@ -369,12 +369,12 @@ case $1 in
     stopserver
     rm $PREFIX-rules.drop
     ;;
-#  12)
-#    summary "POST-PROCESSED PROXY RESPONSE"
-#    startserver --proc rules.proc
-#    http_proxy=localhost:$PORT download http://$URL_HTTP out
-#    stopserver
-#    ;;
+  #  12)
+    #    summary "POST-PROCESSED PROXY RESPONSE"
+    #    startserver --proc rules.proc
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    #    stopserver
+    #    ;;
   10)
     summary "DOWNLOADING NEW FILE, FTP TRANSFER"
     startserver
@@ -404,30 +404,30 @@ case $1 in
     check_equal "cached and served file are equal" cache/$URL_FTP out2
     stopserver
     ;;
-#  10)
-#    summary "RATE CONTROL"
-#    startserver --limit 10
-#    http_proxy=localhost:$PORT download http://$URL_HTTP out
-#    check "download speed; should be approximately 10240" CHECK
-#    check_equal "cached and served file are equal" cache/$URL_HTTP out
-#    stopserver
-#    ;;
-#  11)
-#    startserver --static
-#    http_proxy=localhost:$PORT download http://$URL_HTTP out1
-#    http_proxy=localhost:$PORT download http://$URL_HTTP out2
-#    summary "STATIC MODE"
-#    check_log "serving directly from cache without consulting server" "Static mode; serving file directly from cache"
-#    check_equal "cached and served file are equal" cache/$URL_HTTP out2
-#    stopserver
-#    ;;
-#  12)
-#    startserver --offline
-#    http_proxy=localhost:$PORT download http://$URL_HTTP out
-#    summary "OFF-LINE MODE"
-#    check_log "refusing to connect to server" "AssertionError: operating in off-line mode"
-#    stopserver
-#    ;;
+  #  10)
+    #    summary "RATE CONTROL"
+    #    startserver --limit 10
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    #    check "download speed; should be approximately 10240" CHECK
+    #    check_equal "cached and served file are equal" cache/$URL_HTTP out
+    #    stopserver
+    #    ;;
+  #  11)
+    #    startserver --static
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out1
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    #    summary "STATIC MODE"
+    #    check_log "serving directly from cache without consulting server" "Static mode; serving file directly from cache"
+    #    check_equal "cached and served file are equal" cache/$URL_HTTP out2
+    #    stopserver
+    #    ;;
+  #  12)
+    #    startserver --offline
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    #    summary "OFF-LINE MODE"
+    #    check_log "refusing to connect to server" "AssertionError: operating in off-line mode"
+    #    stopserver
+    #    ;;
 
   11)
     coveragereport

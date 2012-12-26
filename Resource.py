@@ -261,7 +261,7 @@ def open_backend(read_only=False):
             resourcemap=(join(path, 'resource_map.db'), mode,)
         ))
 
-def get_backend(read_only):
+def get_backend(read_only=False):
     global backend
     if not backend:
         open_backend(read_only)

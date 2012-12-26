@@ -56,7 +56,7 @@ test-code::
 
 test-system:: TESTS := 
 test-system::
-	@COVERAGE_PROCESS_START=.coveragerc ./system-test $(TESTS) 2>&1 | tee systest.log
+	@COVERAGE_PROCESS_START=.coveragerc ./system-test $(TESTS) 2>&1 | tee systemtest.log
 	@\
 		DATE=$$(echo $$(date --rfc-3339=seconds));\
 		HOST=$$(echo $$(hostname -s));\
