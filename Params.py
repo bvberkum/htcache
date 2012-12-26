@@ -316,7 +316,7 @@ def run(cmds={}):
         if not isinstance(a, (list, tuple)):
             a = ()
         cmds[k](*a)
-    backend.close()
+    #backend.close()
 
     sys.exit(0)
 

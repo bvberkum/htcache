@@ -52,12 +52,11 @@ def run_join():
             if d in ['.git']:
                 dirs.remove(d)
         for f in files:
-            fpath = os.path.join(root, f).replace(Params.ROOT,
-                    '')
+            fpath = os.path.join(root, f).replace(Params.ROOT, '')
             fpath2 = fpath.replace(':80','')
-            fpath3 = Cache.joinlist_rewrite(fpath2)
+            fpath3 = Rules.Join.rewrite(fpath2)
             if fpath2 != fpath3:
-                print 'Renaming: ', fpath3, fpath
+                print 'Renaming: ', fpath2, fpath
                 os.stat(fpath)
                 dirname = os.path.dirname(fpath3)
                 if not os.path.isdir(dirname):
@@ -148,7 +147,7 @@ if Params.CMDS:
         'validate-cache': Resource.validate_cache,
         'check-files': Resource.check_files,
         'check-cache': Resource.check_cache,
-        'run-join': run_join
+        'run-join-rules': run_join
     })
     sys.exit(0)
 
