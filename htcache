@@ -132,7 +132,7 @@ def HTCache_fiber_handler( client, address ):
 def load():
     Rules.parse_droplist()
     Rules.parse_nocache()
-    Rules.parse_joinlist()
+    Rules.Join.parse()
     Rules.parse_rewritelist()
 
 

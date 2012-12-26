@@ -16,26 +16,6 @@ def parse_nocache(fpath=Params.NOCACHE_FILE):
     Params.NOCACHE.extend([(p.strip(), re.compile(p.strip())) for p in
         open(fpath).readlines() if p.strip() and not p.startswith('#')])
 
-def parse_joinlist(fpath=Params.JOIN_FILE):
-    Params.JOIN = []
-    if os.path.isfile(fpath):
-
-# XXX: could put tab back into JOIN rules file
-#        JOIN.extend([
-#            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
-#            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
-#                p2.startswith('#') and p2.strip()]
-#            ])
-        Params.JOIN.extend([
-            (
-                '^'+p.split(' ')[0].strip()+'$',
-                re.compile('^'+p.split(' ')[0].strip()+'$'),
-                p.split(' ')[1].strip()
-            ) 
-            for p in
-            open(fpath).readlines() 
-            if p.strip() and not p.strip().startswith('#')])
-
 def parse_rewritelist(fpath=Params.REWRITE_FILE):
     Params.REWRITE = []
     for p in open(fpath).readlines():
@@ -80,33 +60,81 @@ def match_rewrite(mediatype, hostinfo, path):
     pass
 #/XXX
 
-def validate_joinlist(fpath=Params.JOIN_FILE):
-    """
-    Read all double commented lines as URLs, use on next first pattern line.
-    """
-    lines = [path[2:].strip() for path in open(fpath).readlines() if path.strip() and path.strip()[1]=='#']
-    for path in lines:
-        match = False
-        for pattern, regex, repl in JOIN:
-            m = regex.match(path)
-            if m:
-                #print 'Match', path, m.groups()
-                match = True
-        if not match:
-            print "Error: no match for", path
-
 
 class Join:
 
+    rules = []
+    files = []
+
     @classmethod
     def rewrite(klass, pathref):
-        if Params.JOIN:
-            for pattern, regex, repl in Params.JOIN:
+        if klass.rules:
+            for pattern, regex, repl in klass.rules:
                 m = regex.match(pathref)
                 if m:
                     pathref = regex.sub(repl, pathref)
-                    Params.log("Joined URL matching rule %r" % line, threshold=1)
+                    Params.log("Joined URL matching rule %r" % pattern, threshold=1)
         return pathref
+
+    @classmethod
+    def parse(klass, fpath=None):
+        if not fpath:
+            fpath = Params.JOIN_FILE
+        if fpath != Params.JOIN_FILE:
+            klass.rules = []
+            klass.files = []
+        else:
+            if fpath in klass.files:
+                return
+        if os.path.isfile(fpath):
+            klass.files.append(fpath)
+# XXX: could put tab back into JOIN rules file
+#        JOIN.extend([
+#            (p.strip(), re.compile("^"+p.strip()+"$"),r.strip()) for p,r in 
+#            [p2.strip().split('\t') for p2 in open(fpath).readlines() if not
+#                p2.startswith('#') and p2.strip()]
+#            ])
+            klass.rules.extend([
+                (
+                    '^'+p.split(' ')[0].strip()+'$',
+                    re.compile('^'+p.split(' ')[0].strip()+'$'),
+                    p.split(' ')[1].strip()
+                ) 
+                for p in
+                open(fpath).readlines() 
+                if p.strip() and not p.strip().startswith('#')])
+        else:
+            Params.log("No such file: %s" % fpath, Params.LOG_ALERT)
+
+    @classmethod
+    def validate(klass):
+        """
+        Read all double commented lines as URLs, use on next first pattern line.
+        """
+        if not klass.rules:
+            return
+        ok = True
+        lines = []
+        for fpath in klass.files:
+            try:
+                # filter test lines from join-file(s)
+                lines.extend([path[2:].strip() for path in
+                    open(fpath).readlines() if len(path.strip()) > 1 and
+                    path.strip()[1]=='#'])
+            except Exception, e:
+                Params.log("Parsing exception: %s" % e, Params.LOG_ERR)
+                return
+        for path in lines:
+            match = False
+            for pattern, regex, repl in klass.rules:
+                m = regex.match(path)
+                if m:
+                    #print 'Match', path, m.groups()
+                    match = True
+            if not match:
+                print "Error: no match for", path
+                ok = False
+        return ok
 
 
 class Drop:

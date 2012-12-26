@@ -242,15 +242,15 @@ Storage.DescriptorStorageFactory = index_factory
 Storage.ResourceMapFactory = index_factory
 Storage.CacheMapFactory = index_factory
 
-storage = None
+storage = backend = None
 
 def open_backend():
     
-    global storage
+    global storage, backend
         
     path = Params.DATA_DIR
 
-    storage = Storage(**dict(
+    storage = backend = Storage(**dict(
             resources=(join(path, 'resources.db'),),
             descriptors=(join(path, 'descriptors.db'),),
             cachemap=(join(path, 'cache_map.db'),),

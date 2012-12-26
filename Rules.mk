@@ -17,7 +17,7 @@ SRC                 += init.sh $(wildcard *.py) $(wildcard *.rst) \
 	HTCache.hx
 TRGT                += $/TODO.list $/htcache.js
 STRGT               += default dist test
-CLN                 += $(wildcard $/*.pyc $/.coverage $/.coverage-*)
+CLN                 += $(wildcard $/*.pyc $/.coverage $/.coverage-* $/test/*.pyc $/*.log)
 TEST                += test-code test-system test-protocol
 
 # DMK += $/dynamic-makefile.mk
