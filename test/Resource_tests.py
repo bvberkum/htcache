@@ -46,6 +46,6 @@ class Resource_backend(unittest.TestCase):
 
     def test_(self):
         self.assertTrue(Resource.backend == None)
-        Resource.open_backend()
+        Resource.open_backend(True)
         self.assertTrue(isinstance(Resource.backend, Resource.Storage))
 
