@@ -31,7 +31,14 @@ $/htcache.js: $/HTCache-compile-js.hxml $/HTCache.hx
 	@haxe $(HX) $^
 
 $/TODO.list: ./
-	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
+	@GREP_F="-r -I -n --exclude *Rules.mk --exclude $@ --exclude Makefile";\
+	grep $$GREP_F "FIXME" ./ > $@;\
+	echo >> $@;\
+	grep $$GREP_F "TODO" ./ >> $@;\
+	echo >> $@;\
+	grep $$GREP_F "XXX" ./ >> $@;\
+	echo >> $@;\
+	echo >> $@
 
 test-code:: TESTS := 
 test-code::

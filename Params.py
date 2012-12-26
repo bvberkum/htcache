@@ -91,13 +91,13 @@ Proxy:
   -r --root DIR      set cache root directory, default current: %(ROOT)s
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
-     --limit RATE    FIXME: limit download rate at a fixed K/s
+     --limit RATE    TODO: limit download rate at a fixed K/s
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
 Cache:
   -c --cache TYPE    use module for caching, default %(CACHE)s.
-  FIXME:
+  TODO:
   -b --backend REF   initialize metadata backend from reference,
   default...
 

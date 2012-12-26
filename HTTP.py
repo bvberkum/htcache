@@ -1,4 +1,5 @@
-# FIXME: merge from Protocol
+
+
 class HTTP:
 
     OK = 200
