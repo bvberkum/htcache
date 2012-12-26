@@ -18,7 +18,7 @@ SRC                 += init.sh $(wildcard *.py) $(wildcard *.rst) \
 TRGT                += $/TODO.list $/htcache.js
 STRGT               += default dist test
 CLN                 += $(wildcard $/*.pyc $/.coverage $/.coverage-*)
-TEST                += test-code test-protocol
+TEST                += test-code test-system test-protocol
 
 # DMK += $/dynamic-makefile.mk
 # DEP += $/generated-dependency
@@ -35,14 +35,19 @@ $/TODO.list: ./
 
 test-code:: TESTS := 
 test-code::
-	@COVERAGE_PROCESS_START=.coveragerc ./unit-test $(TESTS) 2>&1 | tee utest.log
-	@echo $$(grep PASSED utest.log | wc -l) passed checks, $$(grep ERROR utest.log | wc -l) errors
+	@COVERAGE_PROCESS_START=.coveragerc ./unit-test $(TESTS) 2>&1 | tee unittest.log
+	@echo $$(grep PASSED unittest.log | wc -l) passed checks, $$(grep ERROR unittest.log | wc -l) errors
+
+test-system:: TESTS := 
+test-system::
+	@COVERAGE_PROCESS_START=.coveragerc ./system-test $(TESTS) 2>&1 | tee systest.log
+	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
 
 test-protocol::
 	@sudo ./init.sh start
-	@./system-test 2>&1 | tee systest.log
+	@./protocol-test 2>&1 | tee protocoltest.log.log
 	@sudo ./init.sh stop
-	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
+	@echo $$(grep PASSED protocoltest.log.log | wc -l) passed checks, $$(grep ERROR protocoltest.log.log | wc -l) errors
 
 
 debug::
