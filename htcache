@@ -147,9 +147,9 @@ if Params.CMDS:
 #        'find-images': Resource,
 #        'find-texts': Resource,
         'validate-cache': Resource.validate_cache,
-        'check-files': Resource.check_files,
+        'run-join-rules': run_join,
         'check-cache': Resource.check_cache,
-        'run-join': run_join
+        'check-files': Resource.check_files,
     })
     sys.exit(0)
 

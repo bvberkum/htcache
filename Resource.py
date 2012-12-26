@@ -86,10 +86,13 @@ class Storage(object):
         #self.sha1sum = dbshelve.open(chksmdb)
 
     def close(self):
-        self.resource.close()
+        self.resources.close()
         self.descriptors.close()
         self.cachemap.close()
         self.resourcemap.close()
+
+    def __contains__(self, path):
+        return self.find(path)
 
     def find(self, path):
         if path not in self.__descriptors:
@@ -212,10 +215,15 @@ class Descriptor(object):
 
 
 
-def index_factory(storage, path, mode='w'):
+def index_factory(storage, path, mode='r'):
+    """
+    Modes:
+        r: read only
+        w: read and write, create if needed
+    """
 
     if not os.path.exists(path):
-        assert 'w' in mode
+        assert 'w' in mode, "Missing resource DB, no file at <%s>" % path
         try:
             anydbm.open(path, 'n').close()
         except Exception, e:
@@ -257,17 +265,18 @@ def open_backend():
 # psuedo-Main: special command line options allow resource DB queries:
 
 def print_info(*paths):
+    global storage
+    open_backend()
     import sys
     recordcnt = 0
-    descriptors = get_backend()
     for path in paths:
         if not path.startswith(os.sep):
             path = Params.ROOT + path
 #        path = path.replace(Params.ROOT, '')
-        if path not in backend:
-            print >>sys.stderr, "Unknown cache location: %s" % path
+        if path not in storage:
+            Params.log("Unknown cache location: %s" % path, Params.LOG_CRIT)
         else:
-            print path, backend[path]
+            print path, storage.find(path)
             recordcnt += 1
     if recordcnt > 1:
         print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
@@ -275,8 +284,9 @@ def print_info(*paths):
         print >>sys.stderr, "Found one record"
     else:
         print >>sys.stderr, "No record found"
-    backend.close()
-    print "End of printinfo"; sys.exit(0)
+    storage.close()
+    Params.log("End of printinfo", Params.LOG_DEBUG)
+    sys.exit(0)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
@@ -331,7 +341,8 @@ def find_info(q):
 #                    if res[4][k2] == props[k][k2]:
 #                        print path
     backend.close()
-    print "End of findinfo"; sys.exit(1)
+    Params.log("End of findinfo", Params.LOG_DEBUG)
+    sys.exit(1)
 
 def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
@@ -376,10 +387,12 @@ def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
 def check_files():
-    if Params.PRUNE:
-        descriptors = get_backend()
-    else:
-        descriptors = get_backend(main=False)
+    global storage
+# XXX old
+    #if Params.PRUNE:
+    #    descriptors = get_backend()
+    #else:
+    #    descriptors = get_backend(main=False)
     pcount, rcount = 0, 0
     Params.log("Iterating paths in cache root location. ")
     for root, dirs, files in os.walk(Params.ROOT):
@@ -394,7 +407,7 @@ def check_files():
             #if path_ignore(f):
             #    continue
             pcount += 1
-            if f not in descriptors:
+            if f not in storage.descriptors:
                 if os.path.isfile(f):
                     Params.log("Missing descriptor for %s" % f)
                     if Params.PRUNE:
@@ -406,9 +419,9 @@ def check_files():
                             Params.log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
                 elif not (os.path.isdir(f) or os.path.islink(f)):
                     Params.log("Unrecognized path %s" % f)
-            elif f in descriptors:
+            elif f in storage.descriptors:
                 rcount += 1
-                descr = descriptors[f]
+                descr = storage.descriptors[f]
                 assert isinstance(descr, Descriptor)
                 uriref = descr[0][0]
                 Params.log("Found resource %s" % uriref, threshold=1)
@@ -430,24 +443,24 @@ def check_files():
 # end
     Params.log("Finished checking %s cache locations, found %s resources" % (
         pcount, rcount))
-    descriptors.close()
+    storage.close()
     sys.exit(0)
 
 def check_cache():
     #term = Resource.TerminalController()
     #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
     #pb = Resource.ProgressBar(term, 'Iterating descriptors')
-    if Params.PRUNE:
-        descriptors = get_backend()
-    else:
-        descriptors = get_backend(main=False)
-    refs = descriptors.keys()
+#    if Params.PRUNE:
+#        descriptors = get_backend()
+#    else:
+#        descriptors = get_backend(main=False)
+    global storage
+    refs = storage.descriptors.keys()
     count = len(refs)
     Params.log("Iterating %s descriptors" % count)
     for i, ref in enumerate(refs):
-        if Params.VERBOSE > 2:
-            print i, ref
-        descr = descriptors[ref]
+        Params.log("%i, %s" % (i, ref), Params.LOG_DEBUG)
+        descr = storage.descriptors[ref]
         Params.log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
         urirefs, mediatype, d1, d2, meta, features = descr
         #progress = float(i)/count
@@ -487,10 +500,10 @@ def check_cache():
                     Params.log("Deleted %s" % path)
                 else:
                     Params.log("Unable to remove dir %s" % path)
-            del descriptors[ref]
+            del storage.descriptors[ref]
             Params.log("Removed %s" % cache.path)
     Params.log("Finished checking %s cache descriptors" % count)
-    descriptors.close()
+    storage.close()
     #pb.clear()
     sys.exit(0)
 

@@ -11,11 +11,24 @@ json_read = _json.loads
 json_write = _json.dumps
 
 
-## Main: determine runtime config from constants and ARGV
+
+### Main: determine runtime config from constants and ARGV
 
 _args = list( sys.argv )
 
+### Constants
+
 VERSION = 0.4
+LOG_EMERG, \
+LOG_ALERT, \
+LOG_CRIT, \
+LOG_ERR, \
+LOG_WARN, \
+LOG_NOTE, \
+LOG_INFO, \
+LOG_DEBUG = range(0, 8)
+
+## Variable settings
 
 # proxy params
 HOSTNAME = socket.gethostname()
@@ -23,7 +36,7 @@ PROG = _args.pop(0)
 PORT = 8080
 ROOT = os.getcwd() + os.sep
 PID_FILE = '/var/run/htcache.pid'
-VERBOSE = 0
+VERBOSE = 3 # error
 TIMEOUT = 15
 FAMILY = socket.AF_INET
 STATIC = False
@@ -209,6 +222,9 @@ while _args:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
+    elif _arg in ( '-q', '--quiet' ):
+        VERBOSE = 0 # FIXME: should have another threshold for logger perhaps,
+        # and/or force warn or err and above to go somewhere.. syslog?
     elif _arg in ( '--nodir', ):
         _args.pop(0)
     elif _arg in ( '-t', '--timeout' ):
@@ -251,10 +267,11 @@ while _args:
         sys.exit( 'Error: invalid option %r' % _arg )
 
 
-def log(msg, threshold=0):
+def log(msg, threshold=5):
     """
     Not much of a log..
     Output if VERBOSE >= threshold
+    Use (r)syslog integer levels.
     """
     #assert not threshold == 0
     # see fiber.py which manages stdio

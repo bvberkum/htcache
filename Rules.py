@@ -1,3 +1,5 @@
+"""
+"""
 import os
 import re
 
@@ -93,6 +95,7 @@ def validate_joinlist(fpath=Params.JOIN_FILE):
         if not match:
             print "Error: no match for", path
 
+
 class Join:
 
     @classmethod
@@ -104,6 +107,7 @@ class Join:
                     pathref = regex.sub(repl, pathref)
                     Params.log("Joined URL matching rule %r" % line, threshold=1)
         return pathref
+
 
 class Drop:
 
