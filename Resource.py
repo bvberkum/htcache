@@ -246,7 +246,6 @@ Storage.CacheMapFactory = index_factory
 backend = None
 
 def open_backend(read_only=False):
-    
     global backend
         
     path = Params.DATA_DIR
@@ -262,10 +261,17 @@ def open_backend(read_only=False):
             resourcemap=(join(path, 'resource_map.db'), mode,)
         ))
 
+def get_backend(read_only):
+    global backend
+    if not backend:
+        open_backend(read_only)
+# FIXME: should know if opened backend is read or write
+#    if read_only:
+#        assert backend.mode = 'r'
+    return backend
 
 
-# XXX: rewrite this to Rules or Cmd
-
+# FIXME: rewrite this to Rules or Cmd
 
 # psuedo-Main: special command line options allow resource DB queries:
 

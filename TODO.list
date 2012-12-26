@@ -1,38 +1,74 @@
+./Resource.py:268:# FIXME: should know if opened backend is read or write
+./Resource.py:274:# FIXME: rewrite this to Rules or Cmd
 ./Protocol.py:258:                # FIXME: Validate client validator against cached entry
 ./Protocol.py:471:        # FIXME: load http entity, perhaps response headers from shelve
-./Request.py:183:# FIXME: write a test for this
+./Request.py:193:# FIXME: write a test for this
+./Protocol.py.orig:271:                # FIXME: Validate client validator against cached entry
+./Protocol.py.orig:484:        # FIXME: load http entity, perhaps response headers from shelve
+./Rules.mk.LOCAL.29728.mk:35:	grep $$GREP_F "FIXME" ./ > $@;\
+./Request.py.orig:196:# FIXME: write a test for this
 ./protocol-test:4:- FIXME: should cover a good deal of HTTP stuff.
-./main.rst:60:        - FIXME: needs a lot of merging to get this right again
-./main.rst:273:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./main.rst:274:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./Rules.mk.BACKUP.29728.mk:35:	grep $$GREP_F "FIXME" ./ > $@;\
+./main.rst.orig:66:        - FIXME: needs a lot of merging to get this right again
+./main.rst.orig:281:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./Rules.mk.REMOTE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 ./Params.py:134:     FIXME --print-mode line|tree
 ./Params.py:230:        VERBOSE = 0 # FIXME: should have another threshold for logger perhaps,
 ./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
+./Rules.mk.BASE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
 ./Resource.py:209:        raise "TODO"
 ./Resource.py:216:        raise "TODO"
-./Resource.py:299:        # TODO: documents
+./Resource.py:305:        # TODO: documents
 ./Protocol.py:234:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
 ./Protocol.py:266:        # TODO: Store relationship with referer
 ./Request.py:3:TODO: determine cachability.
-./main.rst:31:            - TODO: ``--keep-cache`` mark location revisioning
-./main.rst:32:            - TODO: ``--validate-tree`` resource cache should match size, checksum
-./main.rst:33:            - TODO: ``--validate-joinlist`` resource should have been rewritten
-./main.rst:34:            - TODO: ``--validate-joinlist --auto`` rename if possible
-./main.rst:35:            - TODO: ``--validate-lists`` 
-./main.rst:36:            - TODO: ``--check-joinlist`` run testlines from JOIN,  
-./main.rst:37:            - TODO: ``--check-lists``
-./main.rst:38:            - TODO: abstract, refactor query/maintenance mode handling. Allow
-./main.rst:40:            - TODO: ``--print-allrecords`` simply dump?
-./main.rst:41:            - TODO: ``--print-record`` query
-./main.rst:42:            - TODO: ``--print-records`` query
-./main.rst:43:            - TODO: ``--print-media`` query
-./main.rst:226:TODO: Rewriting and content filtering is not implemented.
-./main.rst:309:TODO: a file-based header storage or perhaps even an Apache mod_asis
+./Protocol.py.orig:247:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+./Protocol.py.orig:279:        # TODO: Store relationship with referer
+./Rules.mk.LOCAL.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
+./Rules.mk.LOCAL.29728.mk:33:$/TODO.list: ./
+./Rules.mk.LOCAL.29728.mk:37:	grep $$GREP_F "TODO" ./ >> $@;\
+./Request.py.orig:3:TODO: determine cachability.
+./main.rst:28:            - TODO: ``--keep-cache`` mark location revisioning
+./main.rst:29:            - TODO: ``--validate-tree`` resource cache should match size, checksum
+./main.rst:30:            - TODO: ``--validate-joinlist`` resource should have been rewritten
+./main.rst:31:            - TODO: ``--validate-joinlist --auto`` rename if possible
+./main.rst:32:            - TODO: ``--validate-lists`` 
+./main.rst:33:            - TODO: ``--check-joinlist`` run testlines from JOIN,  
+./main.rst:34:            - TODO: ``--check-lists``
+./main.rst:35:            - TODO: abstract, refactor query/maintenance mode handling. Allow
+./main.rst:37:            - TODO: ``--print-allrecords`` simply dump?
+./main.rst:38:            - TODO: ``--print-record`` query
+./main.rst:39:            - TODO: ``--print-records`` query
+./main.rst:40:            - TODO: ``--print-media`` query
+./main.rst:227:TODO: Rewriting and content filtering is not implemented.
+./main.rst:310:TODO: a file-based header storage or perhaps even an Apache mod_asis
+./Rules.mk.BACKUP.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
+./Rules.mk.BACKUP.29728.mk:33:$/TODO.list: ./
+./Rules.mk.BACKUP.29728.mk:37:	grep $$GREP_F "TODO" ./ >> $@;\
+./main.rst.orig:28:            - TODO: ``--keep-cache`` mark location revisioning
+./main.rst.orig:29:            - TODO: ``--validate-tree`` resource cache should match size, checksum
+./main.rst.orig:30:            - TODO: ``--validate-joinlist`` resource should have been rewritten
+./main.rst.orig:31:            - TODO: ``--validate-joinlist --auto`` rename if possible
+./main.rst.orig:32:            - TODO: ``--validate-lists`` 
+./main.rst.orig:33:            - TODO: ``--check-joinlist`` run testlines from JOIN,  
+./main.rst.orig:34:            - TODO: ``--check-lists``
+./main.rst.orig:35:            - TODO: abstract, refactor query/maintenance mode handling. Allow
+./main.rst.orig:37:            - TODO: ``--print-allrecords`` simply dump?
+./main.rst.orig:38:            - TODO: ``--print-record`` query
+./main.rst.orig:39:            - TODO: ``--print-records`` query
+./main.rst.orig:40:            - TODO: ``--print-media`` query
+./main.rst.orig:234:TODO: Rewriting and content filtering is not implemented.
+./main.rst.orig:317:TODO: a file-based header storage or perhaps even an Apache mod_asis
 ./CHANGELOG.rst:1:TODO htcache version 1.0 (planned)
 ./Response.py:69:        # TODO: on/off: 
 ./Response.py:81:          # TODO: parse mediatype, charset, language..
 ./Response.py:168:        # TODO: store hash for new recv'd content
-./Response.py:377:        # TODO: echos only
+./Response.py:393:        # TODO: echos only
+./Rules.mk.REMOTE.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
+./Rules.mk.REMOTE.29728.mk:33:$/TODO.list: ./
+./Rules.mk.REMOTE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 ./Params.py:94:     --limit RATE    TODO: limit download rate at a fixed K/s
 ./Params.py:100:  TODO:
 ./Params.py:107:     --nocache FILE  TODO: bypass caching for requests based on regex pattern.
@@ -49,19 +85,25 @@
 ./Params.py:162:     TODO --x-force-fix
 ./Params.py:165:     TODO --check-dupes
 ./init.sh:45:        # TODO: check htcache status before redirecting output to lock
+./Rules.mk.BASE.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
+./Rules.mk.BASE.29728.mk:33:$/TODO.list: ./
+./Rules.mk.BASE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
+./Response.py.orig:73:        # TODO: on/off: 
+./Response.py.orig:85:          # TODO: parse mediatype, charset, language..
+./Response.py.orig:172:        # TODO: store hash for new recv'd content
+./Response.py.orig:402:        # TODO: echos only
 
 ./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
-./Cache.py:76:                # XXX: todo: keep largest partial only
+./Cache.py:65:                # XXX: todo: keep largest partial only
 ./Resource.py:84:        # XXX:
 ./Resource.py:108:        # XXX: work in progress
 ./Resource.py:199:                    "XXX: update"
-./Resource.py:267:# XXX: rewrite this to Rules or Cmd
-./Resource.py:328:# XXX:
-./Resource.py:396:# XXX old
-./Resource.py:433:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:441:# XXX: cannot reconstruct--, or should always normalize?
-./Resource.py:473:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:481:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:334:# XXX:
+./Resource.py:402:# XXX old
+./Resource.py:439:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:447:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:479:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:487:# XXX: cannot reconstruct--, or should always normalize?
 ./Protocol.py:91:    "XXX: old indicator to track hashsum of response entity."
 ./Protocol.py:130:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
 ./Protocol.py:256:                # XXX: treat as unspecified end-to-end revalidation
@@ -70,11 +112,31 @@
 ./Protocol.py:404:# XXX:
 ./Protocol.py:483:                # XXX: Try again, should make a list of alternate (but invalid) date formats
 ./Protocol.py:519:            Params.log("XXX: Rewriting HTML resource: "+self.url)
-./Request.py:222:        # XXX: If-Range
-./Request.py:255:        # XXX: used before protocol is determined,  assert self.Protocol
+./Request.py:165:            # XXX self.Protocol = Protocol.BlindProtocol
+./Request.py:232:        # XXX: If-Range
+./Request.py:265:        # XXX: used before protocol is determined,  assert self.Protocol
+./Protocol.py.orig:96:    "XXX: old indicator to track hashsum of response entity."
+./Protocol.py.orig:139:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
+./Protocol.py.orig:269:                # XXX: treat as unspecified end-to-end revalidation
+./Protocol.py.orig:335:                key = key.title() # XXX: bad? :)
+./Protocol.py.orig:391:            # XXX: should load new Descriptor into db here or delete stale files.
+./Protocol.py.orig:417:# XXX:
+./Protocol.py.orig:496:                # XXX: Try again, should make a list of alternate (but invalid) date formats
+./Protocol.py.orig:532:            Params.log("XXX: Rewriting HTML resource: "+self.url)
 ./control.rst:21:        May cache and serve. XXX: while fresh?
+./Rules.mk.LOCAL.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
+./Rules.mk.LOCAL.29728.mk:39:	grep $$GREP_F "XXX" ./ >> $@;\
+./unit-test:107:# XXX: could not figure out a way to make wget save (headers) for non 200
+./unit-test:279:# XXX: No headers are ever present, need to check if older versions did
 ./HTCache.hx:34:        // XXX: figure out a way to set global cookie? iframe from proxy?
+./htcache.orig:34:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
+./Request.py.orig:235:        # XXX: If-Range
+./Request.py.orig:268:        # XXX: used before protocol is determined,  assert self.Protocol
+./Rules.mk.BACKUP.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
+./Rules.mk.BACKUP.29728.mk:39:	grep $$GREP_F "XXX" ./ >> $@;\
 ./Response.py:88:# XXX: this may need to be on js serving..
+./Rules.mk.REMOTE.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
+./Rules.mk.REMOTE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 ./Terminal.py:1:# XXX: unintegrated ANSI terminal wrapper
 ./Rules.py:27:# XXX: first need to see working
 ./Rules.py:61:#/XXX
@@ -82,9 +144,11 @@
 ./Params.py:2:# XXX: Dont use cjson, its buggy, see comments at
 ./Params.py:43:ONLINE = True # XXX:bvb: useless..
 ./Params.py:44:LIMIT = False # XXX unused
-./system-test:87:# XXX: could not figure out a way to make wget save (headers) for non 200
-./system-test:257:# XXX: No headers are ever present, need to check if older versions did
+./system-test:88:# XXX: could not figure out a way to make wget save (headers) for non 200
+./system-test:258:# XXX: No headers are ever present, need to check if older versions did
+./Rules.mk.BASE.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
+./Rules.mk.BASE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
+./Response.py.orig:92:# XXX: this may need to be on js serving..
 ./htcache:34:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
-./htcache:129:# XXX: more neat in fiber than here, move, but need to couple with backend to do
 
 

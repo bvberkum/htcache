@@ -72,7 +72,7 @@ class BlindProtocol:
         pass
 
 
-class ProxyProtocol(object):
+class CachingProtocol(object):
 
     """
     Open cache and descriptor index for requested resources.
@@ -92,7 +92,7 @@ class ProxyProtocol(object):
 
     def __init__( self, request, prepcache=True ):
         "Determine and open cache location, get descriptor backend. "
-        super( ProxyProtocol, self ).__init__()
+        super(CachingProtocol, self).__init__()
 
         self.request = request
 
@@ -198,7 +198,7 @@ class ProxyProtocol(object):
 
 
 
-class HttpProtocol(ProxyProtocol):
+class HttpProtocol(CachingProtocol):
 
     rewrite = None
 
@@ -560,7 +560,7 @@ class HttpProtocol(ProxyProtocol):
         return self.__socket
 
 
-class FtpProtocol( ProxyProtocol ):
+class FtpProtocol( CachingProtocol ):
 
     Response = None
 
@@ -689,5 +689,45 @@ class FtpProtocol( ProxyProtocol ):
         assert code == 150, \
             'server sends %i; expected 150 (file ok)' % code
         self.Response = Response.DataResponse
+
+
+class ProxyProtocol:
+
+    """
+    """
+
+    Response = Response.DirectResponse
+
+    def __init__( self, request ):
+        method, reqname, proto = request.envelope
+        assert reqname.startswith('/'), reqname
+        self.reqname = reqname[1:]
+        self.status = HTTP.OK
+        if method is not 'GET':
+            self.status = HTTP.METHOD_NOT_ALLOWED
+        if self.reqname not in Response.DirectResponse.urlmap.keys():
+            self.status = HTTP.NOT_FOUND
+        assert proto in ('', 'HTTP/1.0', 'HTTP/1.1'), proto
+
+    def socket( self ):
+        return None
+
+    def recvbuf( self ):
+        return ''
+
+    def hasdata( self ):
+        return True
+
+    def send( self, sock ):
+        bytecnt = sock.send( self.__sendbuf )
+        self.__sendbuf = self.__sendbuf[ bytecnt: ]
+        if not self.__sendbuf:
+            self.Response = Response.BlindResponse
+
+    def done( self ):
+        pass
+
+    def has_response(self):
+        return False
 
 

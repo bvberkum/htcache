@@ -46,6 +46,7 @@ class HtRequest:
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
+        assert self.__reqpath, fields
         self.__headers = {}
         self.__parse = self.__parse_args
 
@@ -132,6 +133,11 @@ class HtRequest:
         # Headers are parsed, determine target server and resource
         verb, proxied_url, proto = self.envelope
 
+        scheme = ''
+        host = ''
+        port = Params.PORT
+        path = ''
+
         # Accept http and ftp proxy requests
         if proxied_url.startswith( 'http://' ):
             if verb == 'GET':
@@ -150,9 +156,13 @@ class HtRequest:
             host = proxied_url[ 6: ]
             port = 21
 
-        # Accept static requests
+        elif proxied_url.startswith( '/' ):
+            path = proxied_url
+            host = socket.gethostname()
+            self.Protocol = Protocol.ProxyProtocol
+
         else:
-            self.Protocol = Protocol.BlindProtocol
+            # XXX self.Protocol = Protocol.BlindProtocol
             self.Protocol = Protocol.HttpProtocol
             scheme = ''
             host = '' 
@@ -161,8 +171,8 @@ class HtRequest:
         # Get the path
         if '/' in host:
             host, path = host.split( '/', 1 )
-        else:
-            path = ''
+#        else:
+#            path = ''
 
         # Parse hostinfo
         if ':' in host:
@@ -172,8 +182,8 @@ class HtRequest:
         else:
             hostinfo = "%s:%s" % (host, port)
 
-        Params.log('scheme=%s, host=%s, port=%s, path=%s' % (scheme, host, port,
-            path), 3)
+        Params.log('scheme=%s, host=%s, port=%s, path=%s' % 
+                (scheme, host, port, path), 3)
 
         self.__scheme = scheme
         self.__host = host

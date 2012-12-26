@@ -43,19 +43,43 @@ $/TODO.list: ./
 test-code:: TESTS := 
 test-code::
 	@COVERAGE_PROCESS_START=.coveragerc ./unit-test $(TESTS) 2>&1 | tee unittest.log
-	@echo $$(grep PASSED unittest.log | wc -l) passed checks, $$(grep ERROR unittest.log | wc -l) errors
+	@\
+		DATE=$$(date --rfc-3339=seconds);\
+		HOST=$$(hostname -s);\
+		BRANCH=$$(git status | grep On.branch | sed 's/. On branch //');\
+		REV=$$(git show | grep ^commit | sed 's/commit //');\
+	    PASSED=$$(grep PASSED unittest.log | wc -l);\
+        ERRORS=$$(grep ERROR unittest.log | wc -l);\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS" >> test-results.tab;\
+        echo $$PASSED passed checks, $$ERRORS errors
 
 test-system:: TESTS := 
 test-system::
 	@COVERAGE_PROCESS_START=.coveragerc ./system-test $(TESTS) 2>&1 | tee systest.log
-	@echo $$(grep PASSED systest.log | wc -l) passed checks, $$(grep ERROR systest.log | wc -l) errors
+	@\
+		DATE=$$(echo $$(date --rfc-3339=seconds));\
+		HOST=$$(echo $$(hostname -s));\
+		BRANCH=$$(echo $$(git status | grep On.branch | sed 's/. On branch //'));\
+		REV=$$(echo $$(git show | grep ^commit | sed 's/commit //'));\
+		PASSED=$$(echo $$(grep PASSED systemtest.log | wc -l));\
+		ERRORS=$$(echo $$(grep ERROR systemtest.log | wc -l));\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS" >> test-results.tab;\
+		echo $$PASSED passed checks, $$ERRORS errors
 
 test-protocol::
-	@sudo ./init.sh start
-	@./protocol-test 2>&1 | tee protocoltest.log.log
-	@sudo ./init.sh stop
-	@echo $$(grep PASSED protocoltest.log.log | wc -l) passed checks, $$(grep ERROR protocoltest.log.log | wc -l) errors
-
+	@./protocol-test 2>&1 | tee protocoltest.log
+	@\
+		DATE=$$(echo $$(date --rfc-3339=seconds));\
+		HOST=$$(echo $$(hostname -s));\
+		BRANCH=$$(echo $$(git status | grep On.branch | sed 's/. On branch //'));\
+		REV=$$(echo $$(git show | grep ^commit | sed 's/commit //'));\
+		PASSED=$$(echo $$(grep PASSED protocoltest.log | wc -l));\
+		ERRORS=$$(echo $$(grep ERROR protocoltest.log | wc -l));\
+		echo $$DATE, $$HOST, $$BRANCH, $$REV, protocol, $$PASSED, $$ERRORS;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, protocol, $$PASSED, $$ERRORS" >> test-results.tab;\
+		echo $$PASSED passed checks, $$ERRORS errors
 
 debug::
 	-mkdir debug-root
