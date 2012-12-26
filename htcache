@@ -157,7 +157,7 @@ while True:
     load()
     try:
         Resource.open_backend()
-        assert Resource.storage
+        assert Resource.backend
         fiber.spawn( HTCache_fiber_handler, 
                 Params.PORT, 
                 Params.DEBUG, 
@@ -165,7 +165,7 @@ while True:
                 Params.PID_FILE )
 
     except fiber.Restart, e:
-        Resource.storage.close()
+        Resource.backend.close()
         for mod in (Params, Protocol, Request, Response, Resource, fiber):
             mod = reload(mod)
 

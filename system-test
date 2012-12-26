@@ -11,7 +11,6 @@ URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt
 URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
-RESOURCES='resources.db'
 
 if test -z "$1"; then
   while $0 $((++i)); do true; done
@@ -26,8 +25,9 @@ function startserver
   [ -e .coverage ] && rm .coverage
   test -e $PID && kill -int `cat $PID`
   rm -rf $PREFIX.*
+  mkdir $PREFIX.data
   mkdir $PREFIX.cache
-  if ! ./htcache -p $PORT -r $PREFIX.cache -f $RESOURCES -v -v -v -v -v $@ --daemon $PREFIX.log --pid-file $PID; then
+  if ! ./htcache -p $PORT -r $PREFIX.cache --data-dir $PREFIX.data -v $@ --daemon $PREFIX.log --pid-file $PID; then
     test -e $PID && rm $PID
     exit 1
   else

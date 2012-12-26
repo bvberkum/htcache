@@ -363,9 +363,9 @@ class HttpProtocol(ProxyProtocol):
             return
    
         # Initialize a facade for the storage and check for existing data
-        self.descriptor = Resource.storage.find(self.cache.path)
+        self.descriptor = Resource.backend.find(self.cache.path)
         if not self.descriptor:
-            self.descriptor = Resource.storage.prepare_for_request(
+            self.descriptor = Resource.backend.prepare_for_request(
                     self.cache.path, self.request) 
 
         # Sanity checks

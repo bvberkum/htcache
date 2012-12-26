@@ -96,7 +96,6 @@ Proxy:
      --debug         switch from gather to debug output module
 
 Cache:
-  -f RESOURCES
   -c --cache TYPE    use module for caching, default %(CACHE)s.
   FIXME:
   -b --backend REF   initialize metadata backend from reference,
@@ -143,6 +142,11 @@ Resources:
      --print-audio
      --print-images
                      Search through predefined list of content-types.
+
+    --data-dir
+                    Change location of var datafiles. Note: cannot change
+                    location of built-in files, only of storages.
+
 
 Maintenance:
      --prune-stale   TODO: Delete outdated cached resources.
@@ -243,8 +247,6 @@ while _args:
         DEBUG = True
     elif _arg in ('--pid-file',):
         PID_FILE = _args.pop(0)
-    elif _arg in ('-f','--resource'):
-        RESOURCES = _args.pop(0)
     elif _arg in ('--prune',):
         PRUNE = True
     elif _arg in ('--print-allrecords',):
@@ -263,6 +265,10 @@ while _args:
 #        CHECK = 'validate'
     elif _arg in ('--check-files',):
         CMDS={'check-files':None}
+    elif _arg in ('--data-dir',):
+        path = _args.pop(0)
+        assert os.path.isdir(path), path
+        DATA_DIR = path + os.sep
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
 

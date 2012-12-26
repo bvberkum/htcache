@@ -105,8 +105,6 @@ class Storage(object):
     def prepare_for_request(self, path, request):
         if path in self.__descriptors:
             return self.__descriptors[path]
-        return 
-
         # XXX: work in progress
 
         descr = Descriptor( self )
@@ -208,11 +206,14 @@ class Descriptor(object):
 
     def create_for_response(self, protocol, response):
         assert False
+        raise "TODO"
 
     @property
     def data(self):
         return self.__data
 
+    def set_broken(self):
+        raise "TODO"
 
 
 def index_factory(storage, path, mode='r'):
@@ -242,19 +243,23 @@ Storage.DescriptorStorageFactory = index_factory
 Storage.ResourceMapFactory = index_factory
 Storage.CacheMapFactory = index_factory
 
-storage = backend = None
+backend = None
 
-def open_backend():
+def open_backend(read_only=False):
     
-    global storage, backend
+    global backend
         
     path = Params.DATA_DIR
 
-    storage = backend = Storage(**dict(
-            resources=(join(path, 'resources.db'),),
-            descriptors=(join(path, 'descriptors.db'),),
-            cachemap=(join(path, 'cache_map.db'),),
-            resourcemap=(join(path, 'resource_map.db'),)
+    mode = 'w'
+    if read_only:
+        mode = 'r'
+
+    backend = Storage(**dict(
+            resources=(join(path, 'resources.db'), mode),
+            descriptors=(join(path, 'descriptors.db'), mode,),
+            cachemap=(join(path, 'cache_map.db'), mode),
+            resourcemap=(join(path, 'resource_map.db'), mode,)
         ))
 
 
@@ -265,18 +270,18 @@ def open_backend():
 # psuedo-Main: special command line options allow resource DB queries:
 
 def print_info(*paths):
-    global storage
-    open_backend()
+    global backend
+    open_backend(True)
     import sys
     recordcnt = 0
     for path in paths:
         if not path.startswith(os.sep):
             path = Params.ROOT + path
 #        path = path.replace(Params.ROOT, '')
-        if path not in storage:
+        if path not in backend:
             Params.log("Unknown cache location: %s" % path, Params.LOG_CRIT)
         else:
-            print path, storage.find(path)
+            print path, backend.find(path)
             recordcnt += 1
     if recordcnt > 1:
         print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
@@ -284,7 +289,7 @@ def print_info(*paths):
         print >>sys.stderr, "Found one record"
     else:
         print >>sys.stderr, "No record found"
-    storage.close()
+    backend.close()
     Params.log("End of printinfo", Params.LOG_DEBUG)
     sys.exit(0)
 
@@ -387,7 +392,7 @@ def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
 def check_files():
-    global storage
+    global backend
 # XXX old
     #if Params.PRUNE:
     #    descriptors = get_backend()
@@ -407,7 +412,7 @@ def check_files():
             #if path_ignore(f):
             #    continue
             pcount += 1
-            if f not in storage.descriptors:
+            if f not in backend.descriptors:
                 if os.path.isfile(f):
                     Params.log("Missing descriptor for %s" % f)
                     if Params.PRUNE:
@@ -419,9 +424,9 @@ def check_files():
                             Params.log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
                 elif not (os.path.isdir(f) or os.path.islink(f)):
                     Params.log("Unrecognized path %s" % f)
-            elif f in storage.descriptors:
+            elif f in backend.descriptors:
                 rcount += 1
-                descr = storage.descriptors[f]
+                descr = backend.descriptors[f]
                 assert isinstance(descr, Descriptor)
                 uriref = descr[0][0]
                 Params.log("Found resource %s" % uriref, threshold=1)
@@ -443,7 +448,7 @@ def check_files():
 # end
     Params.log("Finished checking %s cache locations, found %s resources" % (
         pcount, rcount))
-    storage.close()
+    backend.close()
     sys.exit(0)
 
 def check_cache():
@@ -454,13 +459,13 @@ def check_cache():
 #        descriptors = get_backend()
 #    else:
 #        descriptors = get_backend(main=False)
-    global storage
-    refs = storage.descriptors.keys()
+    global backend
+    refs = backend.descriptors.keys()
     count = len(refs)
     Params.log("Iterating %s descriptors" % count)
     for i, ref in enumerate(refs):
         Params.log("%i, %s" % (i, ref), Params.LOG_DEBUG)
-        descr = storage.descriptors[ref]
+        descr = backend.descriptors[ref]
         Params.log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
         urirefs, mediatype, d1, d2, meta, features = descr
         #progress = float(i)/count
@@ -500,10 +505,10 @@ def check_cache():
                     Params.log("Deleted %s" % path)
                 else:
                     Params.log("Unable to remove dir %s" % path)
-            del storage.descriptors[ref]
+            del backend.descriptors[ref]
             Params.log("Removed %s" % cache.path)
     Params.log("Finished checking %s cache descriptors" % count)
-    storage.close()
+    backend.close()
     #pb.clear()
     sys.exit(0)
 
