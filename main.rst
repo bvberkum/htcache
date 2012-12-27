@@ -39,6 +39,10 @@ Tests
             - TODO: ``--print-records`` query
             - TODO: ``--print-media`` query
         dev_proxyreq
+            :test-protocol:
+              - (dandy) 5 passed checks, 16 errors  
+            :unit-tests:
+              - (dandy) 35 passed checks, 8 errors
             - Maybe write a lower level protocol to interrogate the proxy about
               its downloads. See ProxyProtocol class.
             - in sync with master, dev_proxyreq, dev_domaindb
@@ -55,6 +59,8 @@ Tests
             - this injects JS, carefil to merge while Params is not externalized/contained.
             - in sync with master, dev_proxyreq, dev_domaindb
         dev_domaindb
+            :system-test:
+                - (dandy) 4 passed checks, 23 errors
             - add card index for URL's something like a step-up to a bookmark manager
             - in sync with master, dev_proxyreq
 
