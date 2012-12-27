@@ -13,7 +13,12 @@ Tests
         - Trying to keep it steady.
         - Does currently not run stable continuously.
 
+    test
+        - Must make this unstable branch.
+
     dev*
+        - Main dev is integration of other development.
+
         dev_cachemaint (current)
             Cache maintenance routines.
 
@@ -45,6 +50,10 @@ Tests
             - Revision certain resources, always keeping a once retrieved and
               served version.
         dev_relstore
+            - (dandy) 35 passed checks, 8 errors
+            :unit-test:  
+                - (dandy) 36 passed checks, 7 errors  
+
             Need to get simple relational storage.
         dev_dhtmlui
             - this injects JS, carefil to merge while Params is not externalized/contained.

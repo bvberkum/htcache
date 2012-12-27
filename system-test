@@ -1,100 +1,432 @@
-#!/usr/bin/env python
-"""
-"""
-import urllib
-import difflib
-import socket
+#! /bin/bash
+# 
+# Unit tests originally for HTCache, 
+# adapted for htcache. Public domain.
+# 
 
+PORT=8888
+NUM="$1"
+PREFIX="/tmp/htcache-systemtest$NUM"
+URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
+URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
+URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
+PID="/tmp/htcache-systemtest.$PORT"
+WAIT=0.5
 
-hostname = socket.gethostname()
+if test -z "$1"; then
+  while $0 $((++i)); do true; done
+  exit 0
+fi
 
-ignore_header_match = ('date', 'set-cookie', 'expires', 'x-cache')
-proxy_headers = ('via',)
+########## AUXILIARY FUNCTIONS ################################################
 
-class SystemTest:
+function startserver
+{
+  echo "Starting server at $PORT"
+  [ -e .coverage ] && rm .coverage
+  test -e $PID && kill -int `cat $PID`
+  rm -rf $PREFIX.*
+  mkdir $PREFIX.data
+  mkdir $PREFIX.cache
+  if ! ./htcache -p $PORT -r $PREFIX.cache --data-dir $PREFIX.data -v $@ --daemon $PREFIX.log --pid-file $PID; then
+    test -e $PID && rm $PID
+    exit 1
+  else
+    echo Started server at $(cat $PID)
+  fi
+}
 
-    def __init__(self, url):
-        self.url = url
+function sortheaders
+{
+  mv $1 $1.tmp
+  sort $1.tmp > $1
+  rm $1.tmp
+}
 
-    def run(self):
-        self.expected = self.download()
-        self.result = self.download(True)
-        self.compare()
+function splitheaders
+{
+  for f in $PREFIX.$1.entity.headers $PREFIX.$1.headers;
+  do [ -e "$f" ] && rm $f; done
+  mv $PREFIX.$1 $PREFIX.tmp
+  ENVELOPE=$(head -n 1 $PREFIX.tmp)
+  HEADERS_RECEIVED=$([ "${ENVELOPE:0:8}" = "HTTP/1.1" ] && echo 0 || echo 1)
+  LINE=0
+  if [ $HEADERS_RECEIVED = 0 ]
+  then
+    while read L
+    do
+      LINE=$(($LINE + 1))
+      if [ $LINE = 1 ]
+      then
+        # dot not want to compare statusline b/c protocol version
+        echo $L > $PREFIX.$1.headers
+        continue
+      fi
+      if [ "$L" = "$(printf '\r\n')" ]; then
+        break
+      fi
+      STRIP=$(echo $L | grep -v '^\(Connection\|Accept-\|P3P\|Via\|X-\|Cache-\|Date\|Expires\)')
+      if [ -n "$STRIP" ]
+      then
+        # Keep entity headers for comparison
+        echo $L >> $PREFIX.$1.entity.headers
+      fi
+      # Keep all headers for other checks
+      echo $L >> $PREFIX.$1.headers
+    done < $PREFIX.tmp
+  fi
+  LINE=$(($LINE + 1))
+  # rest of lines is message contents
+  tail -n +$LINE $PREFIX.tmp > $PREFIX.$1
 
-    def download(self, proxy=False):
-        proxies = {}
-        data = None
-        if proxy:
-            proxies = {'http':'http://%s:%s' % (hostname, 8081)}
-        f = urllib.urlopen(self.url, data, proxies)
-        r = f.info(), f.read()
-        f.close()
-        return r
+  sortheaders $PREFIX.$1.headers
+  sortheaders $PREFIX.$1.entity.headers
 
-    def compare(self):
-        p = True
-        print "="*79
-        print "URL:", self.url
-        for expected_header in self.expected[0]:
-            if expected_header not in self.result[0]:
-                p = False
-                print " [ERROR] Missing header %r" % expected_header
-                continue
-            if expected_header in ignore_header_match:
-                continue
-            expected = self.expected[0][expected_header]
-            result = self.result[0][expected_header]
-            if expected != result:
-                p = False
-                print " [ERROR] Header %s mismatch, expected %r but received %r" % (
-                        expected_header, expected, result)
-            else:
-                del self.result[0][expected_header]
-        _proxy_headers = list(proxy_headers)
-        for result_header in self.result[0]:
-            if result_header in _proxy_headers:
-                _proxy_headers.remove(result_header)
-                continue
-            if result_header not in self.expected[0]:
-                p = False
-                print " [ERROR] New header %r: %r" % (result_header, self.result[0][result_header])
-        if _proxy_headers:
-            p = False
-            print " [ERROR] Missed proxy headers", _proxy_headers
-        expected_content = self.expected[1]
-        result_content = self.result[1]
-        if expected_content != result_content:
-            p = False
-            print " [ERROR] Unexpected contents: "
-            #diff = "\n".join(list(
-            #    difflib.unified_diff(
-            #        expected_content.split('\n'), 
-            #        result_content.split('\n'))))
-            #print diff
-        if p:
-            print " [PASSED] "
-        print "-"*79
-        
+  [ -e $PREFIX.tmp ] && rm $PREFIX.tmp
+}
 
-class SystemTestRunner:
+# XXX: could not figure out a way to make wget save (headers) for non 200
+#if which wget > /dev/null; then
+#  function download
+#  {
+#    echo Downloading $2 $1
+#    if test -e $PREFIX.$2; then
+#      WGETARGS="-c"
+#    fi
+#    wget --save-headers -O $PREFIX.$2 $1 $WGETARGS
+#    #1>&2
+#    splitheaders $2
+#  }
+#el
+if which curl > /dev/null; then
+  function download
+  {
+    echo Downloading $2 $1
+    if test -e $PREFIX.$2; then
+      CURLARGS="-C -"
+    fi
+    curl -s -S -i -o $PREFIX.$2 $CURLARGS $1 1>&2
+    splitheaders $2
+  }
+else
+  echo "error: no download tool available, install curl"
+  exit 1
+fi
 
-    @classmethod
-    def main(klass, urls):
-        for u in urls:
-            SystemTest(u).run()
+function abort
+{
+  sleep $1
+  if kill %%; then
+    #if kill -int $(cat $PID); then
+    echo
+    sleep 1
+  else
+    echo "error: download finished unexpectedly soon"
+    exit 1
+  fi
+}
 
+function touchfile
+{
+  FILENAME=$PREFIX.$1
+  shift
+  mkdir -p `dirname $FILENAME`
+  touch $@ $FILENAME
+}
 
-if __name__ == '__main__':
-    SystemTestRunner.main([
-            'http://dotmpe.com/',
-#            'http://ebay.com/',
-#            'http://google.com/',
-            'http://viking-z.org/',
-            'http://catb.org/jargon/index.html',
-            'http://catb.org/jargon/html/index.html',
-            'http://catb.org/jargon/html/go01.html',
-            'http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js',
-            "http://www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt",
-            "http://jigsaw.w3.org:80/HTTP/ChunkedScript",
-            "ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
-        ])
+function summary
+{
+  sleep .5
+  #echo "============================================================================="
+  echo " UNIT-TEST $NUM: $1"
+  #echo " ---------------------------------------------------------------------------"
+}
+
+function check
+{
+  printf " * %-67s %5s %s\n" "$1" "$2" "$3"
+}
+
+function check_exists
+{
+  if test -e $PREFIX.$2; then
+    check "$1" PASSED
+  else
+    check "$1" ERROR
+  fi
+}
+
+if which md5 > /dev/null; then
+  function checksum
+  {
+    md5 -q $1
+  }
+elif which md5sum cut > /dev/null; then
+  function checksum
+  {
+    md5sum $1 | cut -d ' ' -f 1
+  }
+else
+  echo "error: no checksum tool available"
+  exit 1
+fi
+
+function check_equal
+{
+  if test ! -e $PREFIX.$2; then
+    check "$1" ERROR "1st file missing" 
+  elif test ! -e $PREFIX.$3; then
+    check "$1" ERROR "2nd file missing"
+  elif test `checksum $PREFIX.$2` != `checksum $PREFIX.$3`; then
+    check "$1" ERROR "files not equal"
+  else
+    check "$1" PASSED
+  fi
+}
+
+function check_log
+{
+  if grep -q "$2" $PREFIX.log; then
+    check "$1" PASSED
+  else
+    check "$1" ERROR
+  fi
+}
+
+function check_headers
+{
+  if grep -q "$3" $PREFIX.$1.headers; then
+    check "$2" PASSED
+  else
+    check "$2" "ERROR"
+  fi
+}
+
+function stopserver
+{
+  if test -e $PID; then
+    kill -int `cat $PID`
+    echo "Killed server at $(cat $PID)"
+    rm $PID
+  fi
+  #ps aux | grep htcache\ .p | grep -v grep
+  echo "-----------------------------------------------------------------------------"
+  echo
+}
+
+function coveragereport
+{
+  [ -z "$COVERAGE_PROCESS_START" ] && return
+  echo Generating coverage report
+  coverage combine
+  coverage html
+  #echo "============================================================================="
+}
+
+########## UNIT TESTS #########################################################
+
+set -m
+case $1 in
+  0)
+    summary "TEST"
+    startserver
+    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    stopserver
+    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    ;;
+
+  1)
+    summary "DOWNLOADING NEW FILE"
+    startserver
+    download http://$URL_HTTP out1
+    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    check_exists "file cached and finalized" cache/$URL_HTTP
+    check_equal "separate download and served file are equal" out1 out2
+    check_equal "cached and served file are equal" cache/$URL_HTTP out2
+    check_equal "normal and served entity headers are equal" out1.entity.headers out2.entity.headers
+    check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    check_headers out2 "served via proxy" "Via:\ [a-z\.-]\+:$PORT"
+    stopserver
+    ;;
+  2)
+    summary "LEAVING PARTIAL FILE IN CACHE"
+    startserver
+    download http://$URL_HTTP normal
+    http_proxy=localhost:$PORT download http://$URL_HTTP cached & abort $WAIT
+    check_log "Aborted client read" "Interrupt" # Error writing to client"
+    check_exists "file cached, not finalized" cache/$URL_HTTP.incomplete
+    # XXX: No headers are ever present, need to check if older versions did
+    #    splitheaders cached
+    #    check_equal "headers are equal" normal.entity.headers cached.entity.headers
+    #    check_headers cached "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    stopserver
+    ;;
+  3)
+    summary "SERVING FILE FROM CACHE"
+    startserver
+    download http://$URL_HTTP out
+    http_proxy=localhost:$PORT download http://$URL_HTTP out1
+    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    check_exists "first file cached and finalized" cache/$URL_HTTP
+    check_equal "cached and normal file are equal" cache/$URL_HTTP out
+    check_headers out1 "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    check_log "second file served from cache" "Reading complete file from cache"
+    check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    check_equal "cached and first served file are equal" cache/$URL_HTTP out1
+    check_equal "cached and second served file are equal" cache/$URL_HTTP out2
+    check_equal "normal and first served headers are equal" out.entity.headers out1.entity.headers
+    check_equal "normal and second served headers are equal" out.entity.headers out2.entity.headers
+    stopserver
+    ;;
+  4)
+    summary "RESUMING PARTIAL FILE BY CLIENT"
+    startserver
+    download http://$URL_HTTP out & abort 1
+    http_proxy=localhost:$PORT download http://$URL_HTTP out1
+    check_log "received complete file" "Server responds HTTP/1.1 200 OK"
+    check_log "served partial file" "HTCache responds HTTP/1.1 206 Partial Content"
+    check_headers out "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    check_equal "cached and served file are equal" cache/$URL_HTTP out1
+    stopserver
+    ;;
+  5)
+    summary "REDOWNLOADING CHANGED FILE"
+    startserver
+    touchfile cache/$URL_HTTP -m -t 190112140000 
+    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    check_log "detected complete file in cache" "Checking complete file in cache"
+    check_log "downloading new file" "Preparing new file in cache"
+    check_equal "cached and served file are equal" cache/$URL_HTTP out
+    check_headers out "served HTTP v1.1 OK" "HTTP/1.1 200 "
+    stopserver
+    ;;
+  6)
+    summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE"
+    startserver
+    http_proxy=localhost:$PORT download http://$URL_HTTP out1 & abort $WAIT
+    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    check_log "htcache asks for missing part" \
+      "Requesting resume of partial file in cache"
+    check_log "received partial file" \
+      "Server responds HTTP/1.1 206 Partial Content"
+    check_equal "cached and served file are equal" cache/$URL_HTTP out2
+    stopserver
+    ;;
+  7)
+    summary "RESUMING PARTIAL CHANGED FILE IN CACHE"
+    startserver
+    touchfile cache/$URL_HTTP.incomplete
+    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    check_log "htcache asks for missing part" "Requesting resume of partial file in cache"
+    check_log "received complete file" "Server responds HTTP/1.1 200 OK"
+    check_equal "cached and served file are equal" cache/$URL_HTTP out
+    stopserver
+    ;;
+  8)
+    summary "JOINING DOWNLOADS"
+    startserver
+    http_proxy=localhost:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 1
+    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    check_log "downloads are joined" "Joined running download"
+    check_equal "cached and first served file are equal" cache/$URL_HTTP out1
+    check_equal "cached and second served file are equal" cache/$URL_HTTP out2
+    stopserver
+    ;;
+  9)
+    summary "DOWNLOADING NEW FILE, CHUNKED TRANSFER"
+    startserver
+    download http://$URL_CHUNKED out1
+    http_proxy=localhost:$PORT download http://$URL_CHUNKED out2
+    check_equal "separate download and served file are equal" out1 out2
+    check_log "server sends chunked data" "Transfer-Encoding: chunked"
+    check_log "processing chunked data" "Switching to ChunkedDataResponse"
+    check_equal "cached and served file are equal" cache/$URL_CHUNKED out2
+    stopserver
+    ;;
+  10)
+    summary "FILTERED PROXY RESPONSE"
+    echo "[^/]*w3\.org\/Protocols\/HTTP.*" > $PREFIX-rules.drop
+    startserver --drop $PREFIX-rules.drop
+    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    check_log "blocked request to server" "Switching to BlockedContentResponse"
+    check_headers out "server sent 403" "HTTP/1.1 403 Dropped By Proxy"
+    check_headers out.entity "served HTML" "Content-Type: text\/html"
+    stopserver
+    rm $PREFIX-rules.drop
+    ;;
+  11)
+    summary "BLIND PROXY RESPONSE"
+    echo "[^/]*w3\.org\/Protocols\/HTTP.*" > $PREFIX-rules.drop
+    startserver --nocache $PREFIX-rules.drop
+    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    check_log "blocked request to server" "Switching to BlindResponse"
+    check_headers out "served HTTP v1.* OK" "HTTP/1.* 200 "
+    stopserver
+    rm $PREFIX-rules.drop
+    ;;
+  12)
+    summary "DOWNLOADING NEW FILE, FTP TRANSFER"
+    startserver
+    download ftp://$URL_FTP out1
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+    check_equal "separate download and served file are equal" out1 out2
+    check_equal "cached and served file are equal" cache/$URL_FTP out2
+    stopserver
+    ;;
+  13)
+    summary "SERVING FILE FROM CACHE, FTP TRANSFER"
+    startserver
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1
+    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+    check_exists "first file cached and finalized" cache/$URL_FTP
+    check_log "second file served from cache" "Reading complete file from cache"
+    check_equal "cached and first served file are equal" cache/$URL_FTP out1
+    check_equal "cached and second served file are equal" cache/$URL_FTP out2
+    stopserver
+    ;;
+  #14)
+  #  summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
+  #  startserver
+  #  ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1 & abort 1
+  #  ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+  #  check_log "htcache resumes file" "Resuming partial file in cache"
+  #  check_equal "cached and served file are equal" cache/$URL_FTP out2
+  #  stopserver
+  #  ;;
+  #  10)
+    #    summary "RATE CONTROL"
+    #    startserver --limit 10
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    #    check "download speed; should be approximately 10240" CHECK
+    #    check_equal "cached and served file are equal" cache/$URL_HTTP out
+    #    stopserver
+    #    ;;
+  #  11)
+    #    startserver --static
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out1
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    #    summary "STATIC MODE"
+    #    check_log "serving directly from cache without consulting server" "Static mode; serving file directly from cache"
+    #    check_equal "cached and served file are equal" cache/$URL_HTTP out2
+    #    stopserver
+    #    ;;
+  #  12)
+    #    startserver --offline
+    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
+    #    summary "OFF-LINE MODE"
+    #    check_log "refusing to connect to server" "AssertionError: operating in off-line mode"
+    #    stopserver
+    #    ;;
+
+  15)
+    coveragereport
+    ;;
+
+  *)
+    exit 1
+    ;;
+
+esac
+
+exit 0
+# vim:sw=2:ts=2:et:

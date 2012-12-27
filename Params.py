@@ -11,18 +11,32 @@ json_read = _json.loads
 json_write = _json.dumps
 
 
-## Main: determine runtime config from constants and ARGV
+
+### Main: determine runtime config from constants and ARGV
 
 _args = list( sys.argv )
 
+### Constants
+
 VERSION = 0.4
+LOG_EMERG, \
+LOG_ALERT, \
+LOG_CRIT, \
+LOG_ERR, \
+LOG_WARN, \
+LOG_NOTE, \
+LOG_INFO, \
+LOG_DEBUG = range(0, 8)
+
+## Variable settings
 
 # proxy params
+HOSTNAME = socket.gethostname()
 PROG = _args.pop(0)
 PORT = 8080
 ROOT = os.getcwd() + os.sep
 PID_FILE = '/var/run/htcache.pid'
-VERBOSE = 0
+VERBOSE = 3 # error
 TIMEOUT = 15
 FAMILY = socket.AF_INET
 STATIC = False
@@ -56,7 +70,6 @@ ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # foksuk.nl
 PARTIAL = '.incomplete'
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 DATA_DIR = '/var/lib/htcache/'
-RESOURCES = DATA_DIR+'resource.db'
 HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
 PROXY_INJECT = False
@@ -78,14 +91,13 @@ Proxy:
   -r --root DIR      set cache root directory, default current: %(ROOT)s
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
-     --limit RATE    FIXME: limit download rate at a fixed K/s
+     --limit RATE    TODO: limit download rate at a fixed K/s
      --daemon LOG    daemonize process and print PID, route output to LOG
      --debug         switch from gather to debug output module
 
 Cache:
-  -f RESOURCES
   -c --cache TYPE    use module for caching, default %(CACHE)s.
-  FIXME:
+  TODO:
   -b --backend REF   initialize metadata backend from reference,
   default...
 
@@ -130,6 +142,11 @@ Resources:
      --print-audio
      --print-images
                      Search through predefined list of content-types.
+
+    --data-dir
+                    Change location of var datafiles. Note: cannot change
+                    location of built-in files, only of storages.
+
 
 Maintenance:
      --prune-stale   TODO: Delete outdated cached resources.
@@ -209,6 +226,9 @@ while _args:
             sys.exit( 'Error: invalid cache directory %s' % ROOT )
     elif _arg in ( '-v', '--verbose' ):
         VERBOSE += 1
+    elif _arg in ( '-q', '--quiet' ):
+        VERBOSE = 0 # FIXME: should have another threshold for logger perhaps,
+        # and/or force warn or err and above to go somewhere.. syslog?
     elif _arg in ( '--nodir', ):
         _args.pop(0)
     elif _arg in ( '-t', '--timeout' ):
@@ -227,8 +247,6 @@ while _args:
         DEBUG = True
     elif _arg in ('--pid-file',):
         PID_FILE = _args.pop(0)
-    elif _arg in ('-f','--resource'):
-        RESOURCES = _args.pop(0)
     elif _arg in ('--prune',):
         PRUNE = True
     elif _arg in ('--print-allrecords',):
@@ -247,14 +265,19 @@ while _args:
 #        CHECK = 'validate'
     elif _arg in ('--check-files',):
         CMDS={'check-files':None}
+    elif _arg in ('--data-dir',):
+        path = _args.pop(0)
+        assert os.path.isdir(path), path
+        DATA_DIR = path + os.sep
     else:
         sys.exit( 'Error: invalid option %r' % _arg )
 
 
-def log(msg, threshold=0):
+def log(msg, threshold=5):
     """
     Not much of a log..
     Output if VERBOSE >= threshold
+    Use (r)syslog integer levels.
     """
     #assert not threshold == 0
     # see fiber.py which manages stdio

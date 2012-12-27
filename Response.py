@@ -15,7 +15,10 @@ class BlindResponse:
 
     def __init__( self, protocol, request ):
 
-        self.__sendbuf = protocol.recvbuf()
+        if hasattr(protocol, 'responsebuf'):
+            self.__sendbuf = protocol.responsebuf()
+        else:
+            self.__sendbuf = protocol.recvbuf()
 
     def hasdata( self ):
 
@@ -44,6 +47,11 @@ class BlindResponse:
         pass
 
 
+class ProxyResponse(BlindResponse):
+
+    pass
+
+
 class DataResponse:
 
     Done = False
@@ -62,13 +70,11 @@ class DataResponse:
         #if protocol.capture:
         #    self.__hash = hashlib.sha1()
 
-        args = self.__protocol.args()
+        args = protocol.response_headers()
 
         cached_headers = {}
-        if protocol.has_descriptor():
-            descr = protocol.get_descriptor()
-            urls, mediatype, charset, languages, metadata, features = descr
-            cached_headers = metadata
+        if protocol.descriptor:
+            pass
         #  Params.log("Descriptor: %s" % pformat(descr))
             #urirefs, cached_args = protocol.get_descriptor()
           # Abuse feature dict to store headers
@@ -79,10 +85,6 @@ class DataResponse:
           #    args[k] = v
         #else:
         #  Params.log("No descriptor for %s" % protocol.cache.path)
-
-        via = "%s:%i" % (socket.gethostname(), Params.PORT)
-        if args.setdefault('Via', via) != via:
-            args['Via'] += ', '+ via
 # XXX: this may need to be on js serving..
 #        if self.__protocol.rewrite:
 #            args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
@@ -244,7 +246,7 @@ class BlockedContentResponse:
         self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\n'\
                 'Content-Type: text/html\r\n\r\n"\
                 + open(Params.HTML_PLACEHOLDER).read() % { 
-                        'host': socket.gethostname(), 
+                        'host': Params.HOSTNAME,
                         'port': Params.PORT,
                         'location': '%s:%i/%s' % url,
                         'software': 'htcache/%s' % Params.VERSION }

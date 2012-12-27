@@ -6,7 +6,7 @@ TODO: determine cachability.
 """
 import os, socket, time
 
-import Params, Protocol, Resource
+import Params, Protocol
 from HTTP import HTTP
 
 
@@ -70,7 +70,8 @@ class HtRequest:
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(key, value.strip()), 1)
+                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(
+                    key, value.strip()), 1)
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
@@ -118,7 +119,8 @@ class HtRequest:
         assert chunk, \
                 'client closed connection before sending a '\
                 'complete message header at %s, ' \
-                'parser: %r, data: %r' % (self.__recvbuflen, self.__parse, self.__recvbuf)
+                'parser: %r, data: %r' % (
+                        self.__recvbuflen, self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
         self.__recvbuflen += len(chunk)
         while self.__parse:
@@ -160,7 +162,11 @@ class HtRequest:
             self.Protocol = Protocol.ProxyProtocol
 
         else:
-            self.Protocol = Protocol.BlindProtocol
+            # XXX self.Protocol = Protocol.BlindProtocol
+            self.Protocol = Protocol.HttpProtocol
+            scheme = ''
+            host = '' 
+            port = Params.PORT
 
         # Get the path
         if '/' in host:
@@ -184,25 +190,11 @@ class HtRequest:
         self.__port = port
         self.__reqpath = path
 
-# FIXME: new dev comment
-        # TODO: keep entity headers, strip other message headers from args
-        #Params.log('href %s'% proxied_url)
-        #self.Resource = Resource.Resource(proxied_url, self.args())
-
-# FIXME: old master
-#        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
-#        self.resource = Resource.forRequest(req_url)
-#
-#        if not self.resource:
-#            self.resource = Resource.new(req_url)
-#        
-#        if Params.VERBOSE > 1:
-#            print 'Matched to resource', req_url
-#        
+# FIXME: write a test for this
 #        if self.resource and 'Host' not in self.__headers:
 #            # Become HTTP/1.1 compliant
 #            self.__headers['Host'] = self.resource.ref.host
-#
+
         self.__headers[ 'Host' ] = host
         self.__headers[ 'Connection' ] = 'close'
 
@@ -210,13 +202,14 @@ class HtRequest:
         self.__headers.pop( 'Proxy-Connection', None )
         self.__headers.pop( 'Proxy-Authorization', None )
 
-        # Add Date (as per HTTP/1.1 [RFC 2616] 14.18)
+        # Add Date (HTTP/1.1 [RFC 2616] 14.18)
         if 'Date' not in self.__headers:
             self.__headers[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
 
-        # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
-        via = "1.1 %s:%i (htcache/%s)" % (socket.gethostname(), Params.PORT,
+        # Add proxy Via header (HTTP/1.1 [RFC 2616] 14.45)
+        via = "1.1 %s:%i (htcache/%s)" % (Params.HOSTNAME, 
+                Params.PORT,
                 Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
             self.__headers['Via'] += ', '+ via
@@ -233,11 +226,16 @@ class HtRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
+    def is_conditional(self):
+        return ( 'If-Modified-Since' in self.__headers
+                or 'If-None-Match' in self.__headers )
+        # XXX: If-Range
+
     @property
     def envelope(self):
         """
         Used before protocol is determined. After recv finishes parsing
-        Request.url and Request.hostinfo is used instead.
+        Request.requrl and Request.hostinfo is used instead.
         """
         return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
@@ -246,9 +244,21 @@ class HtRequest:
         return self.__host, self.__port
 
     @property
-    def url(self):
+    def requri(self):
         assert self.Protocol, "Use request.envelope property. "
         return self.__scheme, self.__host, self.__port, self.__reqpath
+
+    @property
+    def url( self ):
+        host, port = self.hostinfo
+
+        # Prepare requri to identify request
+        if port != 80:
+            hostinfo = "%s:%s" % self.hostinfo
+        else:
+            hostinfo = host
+
+        return "http://%s/%s" %  (hostinfo, self.__reqpath)
 
     @property
     def headers(self):
