@@ -384,7 +384,7 @@ class HttpProtocol(CachingProtocol):
             self.recv_entity()
             assert not self.descriptor, \
                 "Should not have descriptor for new resource. "
-            self.descriptor.init( self.cache.path, self.__args )
+# FIXME: #self.descriptor.init( self.cache.path, self.__args )
             self.set_dataresponse();
 
         elif self.__status == HTTP.PARTIAL_CONTENT \

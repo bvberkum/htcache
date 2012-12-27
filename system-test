@@ -11,6 +11,7 @@ URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt
 URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
+WAIT=0.5
 
 if test -z "$1"; then
   while $0 $((++i)); do true; done
@@ -251,8 +252,8 @@ case $1 in
     summary "LEAVING PARTIAL FILE IN CACHE"
     startserver
     download http://$URL_HTTP normal
-    http_proxy=localhost:$PORT download http://$URL_HTTP cached & abort 1.5
-    check_log "aborted client read" "Error writing to client"
+    http_proxy=localhost:$PORT download http://$URL_HTTP cached & abort $WAIT
+    check_log "Aborted client read" "Interrupt" # Error writing to client"
     check_exists "file cached, not finalized" cache/$URL_HTTP.incomplete
     # XXX: No headers are ever present, need to check if older versions did
     #    splitheaders cached
@@ -302,7 +303,7 @@ case $1 in
   6)
     summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE"
     startserver
-    http_proxy=localhost:$PORT download http://$URL_HTTP out1 & abort 1.5
+    http_proxy=localhost:$PORT download http://$URL_HTTP out1 & abort $WAIT
     http_proxy=localhost:$PORT download http://$URL_HTTP out2
     check_log "htcache asks for missing part" \
       "Requesting resume of partial file in cache"
@@ -353,12 +354,6 @@ case $1 in
     stopserver
     rm $PREFIX-rules.drop
     ;;
-  #  10)
-    #    summary "JOINED PROXY RESPONSE"
-    #    startserver --join rules.join
-    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
-    #    stopserver
-    #    ;;
   11)
     summary "BLIND PROXY RESPONSE"
     echo "[^/]*w3\.org\/Protocols\/HTTP.*" > $PREFIX-rules.drop
@@ -369,13 +364,7 @@ case $1 in
     stopserver
     rm $PREFIX-rules.drop
     ;;
-  #  12)
-    #    summary "POST-PROCESSED PROXY RESPONSE"
-    #    startserver --proc rules.proc
-    #    http_proxy=localhost:$PORT download http://$URL_HTTP out
-    #    stopserver
-    #    ;;
-  10)
+  12)
     summary "DOWNLOADING NEW FILE, FTP TRANSFER"
     startserver
     download ftp://$URL_FTP out1
@@ -384,7 +373,7 @@ case $1 in
     check_equal "cached and served file are equal" cache/$URL_FTP out2
     stopserver
     ;;
-  11)
+  13)
     summary "SERVING FILE FROM CACHE, FTP TRANSFER"
     startserver
     ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1
@@ -395,15 +384,15 @@ case $1 in
     check_equal "cached and second served file are equal" cache/$URL_FTP out2
     stopserver
     ;;
-  12)
-    summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
-    startserver
-    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1 & abort 1
-    ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
-    check_log "htcache resumes file" "Resuming partial file in cache"
-    check_equal "cached and served file are equal" cache/$URL_FTP out2
-    stopserver
-    ;;
+  #14)
+  #  summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
+  #  startserver
+  #  ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1 & abort 1
+  #  ftp_proxy=localhost:$PORT download ftp://$URL_FTP out2
+  #  check_log "htcache resumes file" "Resuming partial file in cache"
+  #  check_equal "cached and served file are equal" cache/$URL_FTP out2
+  #  stopserver
+  #  ;;
   #  10)
     #    summary "RATE CONTROL"
     #    startserver --limit 10
@@ -429,7 +418,7 @@ case $1 in
     #    stopserver
     #    ;;
 
-  11)
+  15)
     coveragereport
     ;;
 

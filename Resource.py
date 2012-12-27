@@ -106,18 +106,18 @@ class Storage(object):
         if path in self.__descriptors:
             return self.__descriptors[path]
         # XXX: work in progress
-
+        uriref = request.url
         descr = Descriptor( self )
-        if request.uriref in self.descriptors:
+        if uriref in self.descriptors:
             descr.load_from_storage( uriref )
         self.__descriptors[uriref] = descr
 
-        res = HTTP.map_headers_to_resource( args )
-        HTTP.map_headers_to_descriptor( args )
+        res = HTTP.map_headers_to_resource( request.headers )
+# XXX:        HTTP.map_headers_to_descriptor( request.headers )
         res['cache'] = path
-        assert path not in self.storage.descriptors
+        assert path not in self.descriptors
         self.path = path
-        self.commit()
+        #self.commit()
 
         return descr
 

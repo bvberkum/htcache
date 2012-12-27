@@ -51,7 +51,6 @@ test-code::
 	    PASSED=$$(grep PASSED unittest.log | wc -l);\
         ERRORS=$$(grep ERROR unittest.log | wc -l);\
 		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS;\
-		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS" >> test-results.tab;\
         echo $$PASSED passed checks, $$ERRORS errors
 
 test-system:: TESTS := 
