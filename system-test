@@ -7,9 +7,13 @@
 PORT=8888
 NUM="$1"
 PREFIX="/tmp/htcache-systemtest$NUM"
-URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
-URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
-URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
+[ -n "$URL_HTTP" ] && [ -n "$URL_CHUNKED" ] && [ -n "$URL_FTP" ] || {
+    echo "Must provide URL_* env vars for testing. "
+    exit 1
+}
+#URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
+#URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
+#URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
 WAIT=0.5
 
