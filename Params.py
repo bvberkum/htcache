@@ -46,7 +46,6 @@ LIMIT = False # XXX unused
 # misc. program params
 LOG = False
 DEBUG = False
-MODE = [] # emtpy for normal operation, function list for maintenance
 
 # proxy rule files
 DROP = []
@@ -88,7 +87,6 @@ USAGE = '''usage: %(PROG)s [options]
 
 Proxy:
   -p --port PORT     listen on this port for incoming connections, default %(PORT)i
-  -r --root DIR      set cache root directory, default current: %(ROOT)s
      --static        static mode; assume files never change
      --offline       offline mode; never connect to server
      --limit RATE    TODO: limit download rate at a fixed K/s
@@ -96,24 +94,26 @@ Proxy:
      --debug         switch from gather to debug output module
 
 Cache:
+  -r --root DIR      set cache root directory, default current: %(ROOT)s
   -c --cache TYPE    use module for caching, default %(CACHE)s.
-  TODO:
-  -b --backend REF   initialize metadata backend from reference,
-  default...
+  XXX: -b --backend REF   initialize metadata backend from reference,
+     --data-dir DIR
+                     Change location of var datafiles. Note: cannot change
+                     location of built-in files, only of storages.
 
 Rules:
      --drop FILE     filter requests for URI's based on regex patterns.
                      read line for line from file, default %(DROP_FILE)s.
      --nocache FILE  TODO: bypass caching for requests based on regex pattern.
-     --rewrite FILE  Filter any webresource by selecting on URL or 
+     --rewrite FILE  Filter any webresource by selecting on URL or
 
 Query
      --media-image
 
 Misc.:
      --check-refs    TODO: iterate cache references.
-     --check-sortlist 
-                     TODO: iterate cache references, 
+     --check-sortlist
+                     TODO: iterate cache references,
   -t --timeout SEC   break connection after so many seconds of inactivity,
                      default %(TIMEOUT)i
   -6 --ipv6          try ipv6 addresses if available
@@ -123,48 +123,36 @@ Misc.:
 See the documentation in ReadMe regarding configuration of the proxy. The
 following options don't run the proxy but access the cache and descriptor backend::
 
+
 Resources:
-     --print-info FILE
-     --print-all-info
-                     Print the resource record(s) for (each) cache location,
-                     then exit.
-     --print-record
-                     Print all record info; tab separated, one per line.
-                     This is the default.
-     FIXME --print-mode line|tree
+     --list-locations
+     --list-resources
+     --print-resources URL[,URL]
+                     Print all fields for each record; tab separated, one per line.
+     --print-all-records
+                     Print the record of all cache locations.
+     TODO --find-record KEY:[KEY:]ARG[,...]
+                     Search for exact record matches.
+     TODO --print-mode line|tree
      TODO --print-url
      TODO --print-path
                      List either URLs or PATHs only, omit record data.
-     --find-info KEY:[KEY:]ARG[,...]
-                     Search for exact record matches.
-     --print-documents
-     --print-videos
-     --print-audio
-     --print-images
+     TODO --print-documents
+     TODO --print-videos
+     TODO --print-audio
+     TODO --print-images
                      Search through predefined list of content-types.
 
-    --data-dir
-                    Change location of var datafiles. Note: cannot change
-                    location of built-in files, only of storages.
-
-
 Maintenance:
-     --prune-stale   TODO: Delete outdated cached resources.
-     --prune-gone    TODO: Remove resources no longer online.
-     TODO --check-exists
-                     Prune outdated resources or resources that are no longer online.
-
-     TODO --check-encodings
-     TODO --check-languages
-     TODO --check-mediatypes
-                     Use some heurisics to get a better value and replace
-                     previous setting on obvious matches, otherwise prompt user.
-     TODO --x-force-fix
-                     Use first likely value for
-                     check-encodings/languages/mediatypes.
-     TODO --check-dupes
-                     Symlink duplicate content, check by size and hash.
-                     Requires up to data hash index.
+     --check-
+     --prune-gone
+                    TODO: Remove resources no longer online.
+     --prune-stale
+                    Delete outdated cached resources, ie. those that are
+                    expired. Also drops records for missing files.
+     --link-dupes
+                    TODO: Symlink duplicate content, check by size and hash.
+                    Requires up to date hash index.
 ''' % locals()
 
 
@@ -247,16 +235,25 @@ while _args:
         DEBUG = True
     elif _arg in ('--pid-file',):
         PID_FILE = _args.pop(0)
-    elif _arg in ('--prune',):
-        PRUNE = True
-    elif _arg in ('--print-allrecords',):
-        CMDS={'print-all-records':None}
+    elif _arg == '--prune-gone':
+        CMDS={'prune-gone':None}
+    elif _arg == '--prune-stale':
+        CMDS={'prune-stale':None}
+    elif _arg == '--link-dupes':
+        CMDS={'link-dupes':None}
+
+    elif _arg in ('--list-locations',):
+        CMDS={'list-locations':None}
+    elif _arg in ('--list-resources',):
+        CMDS={'list-resources':None}
+
     elif _arg in ('--print-record',):
         CMDS={'print-record':[_args.pop(0)]}
+
     elif _arg in ('--find-records',):
         CMDS={'find-records':[_args.pop(0)]}
-#    elif _arg in ('--check-joinlist',):
-#        MODE.append(check_joinlist)
+    elif _arg in ('--check-joinlist',):
+        CMDS={'check-join-rules':None}
     elif _arg in ('--run-join-rules',):
         CMDS={'run-join-rules':None}
     elif _arg in ('--check-cache',):
@@ -290,7 +287,7 @@ def format_info():
     Return JSON for config.
     """
     return json_write({
-        "htcache": { 
+        "htcache": {
             "runtime": {
                 "program": PROG,
             },
@@ -331,16 +328,8 @@ def print_str(s, l = 79):
     return print_line
 
 def run(cmds={}):
-#    descriptors = Resource.get_backend()
-#        Resource.print_info(*Params.PRINT_RECORD)
-#        Resource.find_info(Params.FIND_RECORDS)
-#        Resource.print_info(*descriptors.keys())
     for k, a in CMDS.items():
         if not isinstance(a, (list, tuple)):
             a = ()
         cmds[k](*a)
-    #backend.close()
-
     sys.exit(0)
-
-

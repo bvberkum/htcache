@@ -144,8 +144,11 @@ class HTTP:
 def strstr(s):
     return s.strip('"')
 
+from util import HeaderDict
+
 def map_headers_to_resource(headers):
     kwds = {}
+    headerdict = HeaderDict(headers)
     mapping = {
         'allow': (str,'allow'),
         'content-encoding': (str,'content.encodings'),
@@ -161,8 +164,7 @@ def map_headers_to_resource(headers):
         'last-modified': (str,'last_modified'),
         'etag': (strstr,'etag'),
     }
-    for hn, hv in headers.items():
-        hn, hv = hn.lower(), hv.lower()
+    for hn, hv in headerdict.items():
         if hn == 'content-type':
             if ';' in hv:
                 hv = hv.split(';')

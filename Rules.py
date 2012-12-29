@@ -73,7 +73,8 @@ class Join:
                 m = regex.match(pathref)
                 if m:
                     pathref = regex.sub(repl, pathref)
-                    Params.log("Joined URL matching rule %r" % pattern, threshold=1)
+                    Params.log("Joined URL matching rule %r" % pattern,
+                            threshold=Params.LOG_INFO)
         return pathref
 
     @classmethod
@@ -112,6 +113,7 @@ class Join:
         Read all double commented lines as URLs, use on next first pattern line.
         """
         if not klass.rules:
+            Params.log("No Rules to run", Params.LOG_WARN)
             return
         ok = True
         lines = []

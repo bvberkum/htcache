@@ -66,11 +66,11 @@ class DataResponse:
         if self.__end == -1:
             self.__end = self.__protocol.size
 
-        # TODO: on/off: 
+        # TODO: on/off:
         #if protocol.capture:
         #    self.__hash = hashlib.sha1()
 
-        args = protocol.response_headers()
+        args = protocol.headers
 
         cached_headers = {}
         if protocol.descriptor:
@@ -104,10 +104,10 @@ class DataResponse:
             head = 'HTTP/1.1 206 Partial Content'
             args[ 'Content-Length' ] = str( self.__end - self.__pos )
             if self.__protocol.size >= 0:
-                args[ 'Content-Range' ] = 'bytes %i-%i/%i' % ( 
+                args[ 'Content-Range' ] = 'bytes %i-%i/%i' % (
                         self.__pos, self.__end - 1, self.__protocol.size )
             else:
-                args[ 'Content-Range' ] = 'bytes %i-%i/*' % ( 
+                args[ 'Content-Range' ] = 'bytes %i-%i/*' % (
                         self.__pos, self.__end - 1 )
         else:
             head = 'HTTP/1.1 416 Requested Range Not Satisfiable'
@@ -117,11 +117,11 @@ class DataResponse:
         Params.log('HTCache responds %s' % head, threshold=1)
         if Params.VERBOSE > 1:
             for key in args:
-                Params.log('> %s: %s' % ( 
+                Params.log('> %s: %s' % (
                     key, args[ key ].replace( '\r\n', ' > ' ) ), 2)
 
         # Prepare response for client
-        self.__sendbuf = '\r\n'.join( [ head ] + 
+        self.__sendbuf = '\r\n'.join( [ head ] +
                 map( ': '.join, args.items() ) + [ '', '' ] )
         if Params.LIMIT:
             self.__nextrecv = 0
@@ -157,16 +157,16 @@ class DataResponse:
             except:
                 Params.log("Error writing to client, aborted!")
                 self.Done = True
-                # Unittest 2: keep partial file 
+                # Unittest 2: keep partial file
                 #if not self.__protocol.cache.full():
                 #    self.__protocol.cache.remove_partial()
                 return
-        self.Done = not self.__sendbuf and ( 
-                self.__pos >= self.__protocol.size >= 0 
+        self.Done = not self.__sendbuf and (
+                self.__pos >= self.__protocol.size >= 0
                 or self.__pos >= self.__end >= 0 )
 
         # TODO: store hash for new recv'd content
-        #if self.__protocol.capture and self.Done: 
+        #if self.__protocol.capture and self.Done:
         #    print 'hash', self.__hash.hexdigest()
 
     def needwait( self ):
@@ -245,7 +245,7 @@ class BlockedContentResponse:
         url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\n'\
                 'Content-Type: text/html\r\n\r\n"\
-                + open(Params.HTML_PLACEHOLDER).read() % { 
+                + open(Params.HTML_PLACEHOLDER).read() % {
                         'host': Params.HOSTNAME,
                         'port': Params.PORT,
                         'location': '%s:%i/%s' % url,
@@ -306,7 +306,7 @@ class DirectResponse:
     Done = False
 
     """
-    HTCache generated response for request directly to 
+    HTCache generated response for request directly to
     proxy port.
     """
 
@@ -338,26 +338,26 @@ class DirectResponse:
 
     def serve_list(self, status, protocol, request):
         self.prepare_response(
-                "200 OK", 
-                "# Downloads \n" 
+                "200 OK",
+                "# Downloads \n"
                 "" + ('\n'.join(map(str,Runtime.DOWNLOADS.keys())))
             )
 
     def serve_downloads(self, status, protocol, request):
         self.prepare_response(
-                "200 OK", 
+                "200 OK",
                 "No data for %r %r %r %r"%request.url
             )
 
     def serve_echo(self, status, protocol, request):
         lines = [ 'HTCache: %s' % status, '' ]
-        
+
         lines.append( 'Request echo ing:' )
         lines.append( '' )
 
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
         for line in head.splitlines():
-            lines.append( len( line ) > 78 and '  %s...' % 
+            lines.append( len( line ) > 78 and '  %s...' %
                     line[ :75 ] or '  %s' % line )
         if body:
             lines.append( '+ Body: %i bytes' % len( body ) )
@@ -368,7 +368,7 @@ class DirectResponse:
             lines.append( '' )
             head, body = protocol.recvbuf().split( '\r\n\r\n', 1 )
             for line in head.splitlines():
-                lines.append( len( line ) > 78 and '  %s...' % 
+                lines.append( len( line ) > 78 and '  %s...' %
                         line[ :75 ] or '  %s' % line )
             lines.append( '' )
 
@@ -378,10 +378,10 @@ class DirectResponse:
             "Access-Control-Allow-Origin: *\r\n"\
             "Content-Type: text/plain\r\n"\
             "\r\n%s" % ( status, '\n'.join( lines ) )
-      
+
     def control_proxy(self, status, protocol, request):
         head, body = request.recvbuf().split( '\r\n\r\n', 1 )
-        req = { 
+        req = {
                 'args': request.headers
             }
         if body:
@@ -391,7 +391,7 @@ class DirectResponse:
                 #print "JSON: ",request.recvbuf()
                 raise
         # TODO: echos only
-        self.prepare_response(status, 
+        self.prepare_response(status,
                 Params.json_write(req), mime="application/json")
 
     def reload_proxy(self, status, protocol, request):
@@ -399,7 +399,7 @@ class DirectResponse:
 
     def serve_stylesheet(self, status, protocol, request):
         cssdata = open(Params.PROXY_INJECT_CSS).read()
-        self.__sendbuf = "\r\n".join( [ 
+        self.__sendbuf = "\r\n".join( [
             "HTTP/1.1 %s" % status,
             "Content-Type: text/css\r\n",
             cssdata
@@ -437,19 +437,19 @@ class DirectResponse:
             hostinfo[1] = int(hostinfo[1])
         else:
             hostinfo = url[1], 80
-        cache = Resource.get_cache(hostinfo, url[2][1:]) 
+        cache = Resource.get_cache(hostinfo, url[2][1:])
         descriptors = Resource.get_backend()
         if cache.path in descriptors:
             descr = descriptors[cache.path]
-            self.prepare_response(status, 
-                    Params.json_write(descr), 
+            self.prepare_response(status,
+                    Params.json_write(descr),
                     mime='application/json')
         else:
             self.prepare_response("404 No Data", "No data for %s %s %s %s"%request.url)
 
     def serve_script(self, status, protocol, request):
         jsdata = open(Params.PROXY_INJECT_JS).read()
-        self.__sendbuf = "\r\n".join( [ 
+        self.__sendbuf = "\r\n".join( [
             "HTTP/1.1 %s" % status,
             "Content-Type: application/javascript\r\n"
             "Access-Control-Allow-Origin: *\r\n",
@@ -491,12 +491,12 @@ class NotFoundResponse( DirectResponse ):
 
     def __init__( self, protocol, request ):
         if request.url()[0] == 'ftp':
-            DirectResponse.__init__( self, 
+            DirectResponse.__init__( self,
                     protocol, request,
                     status='550 Not Found'
                 )
         elif request.url()[0] == 'http':
-            DirectResponse.__init__( self, 
+            DirectResponse.__init__( self,
                     protocol, request,
                     status='404 Not Found'
                 )
@@ -506,7 +506,7 @@ class ExceptionResponse( DirectResponse ):
 
     def __init__( self, protocol, request ):
         traceback.print_exc()
-        DirectResponse.__init__( self, 
+        DirectResponse.__init__( self,
                 protocol, request,
                 status='500 Internal Server Error'
             )

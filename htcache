@@ -28,7 +28,7 @@ DOWNLOADS = Runtime.DOWNLOADS = weakref.WeakValueDictionary()
 Global set of download sessions, each being a request, protocol mapping.
 
 Only one download per resource is needed, just the first request is kept here.
-Each subsequent session will cannot overwrite the file, but can "join" the download 
+Each subsequent session will cannot overwrite the file, but can "join" the download
 by switching to the response fase.
 
 XXX: This also allows local lookup of resources, ie. to rewrite the cache location
@@ -46,6 +46,7 @@ def path_ignore(path):
             return True
 
 def run_join():
+    Rules.Join.parse()
     os.chdir(Params.ROOT)
     for root, dirs, files in os.walk(Params.ROOT):
         for d in dirs:
@@ -55,11 +56,13 @@ def run_join():
             fpath = os.path.join(root, f).replace(Params.ROOT, '')
             fpath2 = fpath.replace(':80','')
             fpath3 = Rules.Join.rewrite(fpath2)
+            assert fpath3, fpath3
             if fpath2 != fpath3:
-                print 'Renaming: ', fpath2, fpath
-                os.stat(fpath)
+                Params.log('Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
+                print fpath2, fpath3
                 dirname = os.path.dirname(fpath3)
-                if not os.path.isdir(dirname):
+                if dirname and not os.path.isdir(dirname):
+                    print 'creating', dirname
                     os.makedirs(dirname)
                 os.rename(fpath, fpath3)
             #for line, regex in Params.JOIN:
@@ -138,14 +141,17 @@ def load():
 
 if Params.CMDS:
     Params.run({
-        'print-record': Resource.print_info,
+        'list-locations': Resource.list_locations,
+        'list-resources': Resource.list_urls,
         'find-records': Resource.find_info,
+#        'link-dupes': Resource,
 #        Resource.print_media_list(*Params.PRINT_MEDIA)
 #        'find-videos': Resource,
 #        'find-images': Resource,
 #        'find-texts': Resource,
         'validate-cache': Resource.validate_cache,
         'run-join-rules': run_join,
+        'check-join-rules': Resource.check_joinlist,
         'check-cache': Resource.check_cache,
         'check-files': Resource.check_files,
     })
@@ -155,10 +161,10 @@ while True:
     load()
     try:
         Resource.get_backend()
-        fiber.spawn( 
-                HTCache_fiber_handler, 
-                Params.PORT, 
-                Params.DEBUG, 
+        fiber.spawn(
+                HTCache_fiber_handler,
+                Params.PORT,
+                Params.DEBUG,
                 Params.LOG,
                 Params.PID_FILE )
 

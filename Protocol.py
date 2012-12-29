@@ -90,6 +90,10 @@ class CachingProtocol(object):
     capture = None
     "XXX: old indicator to track hashsum of response entity."
 
+    @property
+    def url( self ):
+        return self.request.url
+
     def __init__( self, request, prepcache=True ):
         "Determine and open cache location, get descriptor backend. "
         super(CachingProtocol, self).__init__()
@@ -103,11 +107,18 @@ class CachingProtocol(object):
             self.init_cache()
 
     def init_cache(self):
+        """
+        Opens the cache location for the current URL.
+
+        The location will be subject to the specific heuristics of the backend
+        type, this path will be readable from cache.path.
+        """
         p = self.url.find( ':' ) # find len of scheme-id
         assert self.url[p:p+3] == '://', self.url
-        self.cache = Cache.load_backend_type(Params.CACHE)(self.url[p+3:])
-        Params.log("Init cache: %s %s" % (Params.CACHE, self.cache), 3)
-        Params.log('Prepped cache, position: %s' % self.cache.path, 2)
+        # XXX: record rewrites in descriptor DB?
+        self.cache = Cache.load_backend_type( Params.CACHE )( self.url[p+3:] )
+        Params.log( "Init cache: %s %s" % ( Params.CACHE, self.cache), 3 )
+        Params.log( 'Prepped cache, position: %s' % self.cache.path, 2 )
 
     def has_response( self ):
         return self.__status and self.__message
@@ -168,7 +179,7 @@ class CachingProtocol(object):
             self.Response = Response.BlockedImageContentResponse
         else:
             self.Response = Response.BlockedContentResponse
-    
+
     def get_size( self ):
         return self.cache.size;
     def set_size( self, size ):
@@ -222,7 +233,7 @@ class HttpProtocol(CachingProtocol):
 
         # Prepare request for contact with origin server..
         head = 'GET /%s HTTP/1.1' % path
-    
+
         args = request.headers
 
         args.pop( 'Accept-Encoding', None )
@@ -257,8 +268,8 @@ class HttpProtocol(CachingProtocol):
                 # should detect existing cache-validating conditional?
                 # FIXME: Validate client validator against cached entry
                 args[ 'If-Modified-Since' ] = mtime
-        else: 
-            # don't gateway conditions, client seems to have cache but this is 
+        else:
+            # don't gateway conditions, client seems to have cache but this is
             # a miss for the proxy
             args.pop( 'If-None-Match', None )
             args.pop( 'If-Modified-Since', None )
@@ -334,8 +345,8 @@ class HttpProtocol(CachingProtocol):
 
         """"
         The Protocol.recv function processes the server response.
-        It reads until headers can be parsed, then determines and prepares 
-        Response type. 
+        It reads until headers can be parsed, then determines and prepares
+        Response type.
         """
 
         assert not self.hasdata(), "has data"
@@ -361,29 +372,28 @@ class HttpProtocol(CachingProtocol):
         # Check wether to monitor the response based on the request
         if self.prepare_nocache_response():
             return
-   
+
         # Initialize a facade for the storage and check for existing data
         self.descriptor = Resource.backend.find(self.cache.path)
         if not self.descriptor:
-            self.descriptor = Resource.backend.prepare_for_request(
-                    self.cache.path, self.request) 
+            self.descriptor = Resource.backend.prepare(self)
+        assert self.descriptor
 
         # Sanity checks
-        if self.descriptor and not (self.cache.full() or self.cache.partial()):
+        if not self.descriptor.new and not (self.cache.full() or self.cache.partial()):
             Params.log("Warning: stale descriptor")
             self.descriptor.drop()
 
-        elif not self.descriptor and (self.cache.full() or self.cache.partial()):
-            Params.log("Error: stale cache %s" % self.cache.path)
-            # XXX: should load new Descriptor into db here or delete stale files.
+        elif self.descriptor.new and (self.cache.full() or self.cache.partial()):
+            Params.log("Error: dirty cache location %s" % self.cache.path)
+            # XXX: should create preliminary Descriptor, or delete file.
 
         # Process and update headers before deferring to response class
         # 2xx
         if self.__status in ( HTTP.OK, HTTP.MULTIPLE_CHOICES ):
 
             self.recv_entity()
-            assert not self.descriptor, \
-                "Should not have descriptor for new resource. "
+            self.descriptor.update( self.__args )
 # FIXME: #self.descriptor.init( self.cache.path, self.__args )
             self.set_dataresponse();
 
@@ -391,20 +401,19 @@ class HttpProtocol(CachingProtocol):
                 and self.cache.partial():
 
             self.recv_part()
-            assert self.descriptor, \
+            assert not self.descriptor.new, \
                 "Should have descriptor for partial content. "
             self.descriptor.update( self.__args )
             self.set_dataresponse();
 
         # 3xx: redirects
-        elif self.__status in (HTTP.FOUND, 
+        elif self.__status in (HTTP.FOUND,
                     HTTP.MOVED_PERMANENTLY,
                     HTTP.TEMPORARY_REDIRECT):
 
 # XXX:
             #location = self.__args.pop( 'Location', None )
-            if self.descriptor:
-                self.descriptor.move( self.cache.path, self.__args )
+            self.descriptor.move( self.cache.path, self.__args )
 #            self.cache.remove_partial()
             self.Response = Response.BlindResponse
 
@@ -416,10 +425,9 @@ class HttpProtocol(CachingProtocol):
                 self.Response = Response.BlindResponse
 
             else:
-                assert self.descriptor
                 self.descriptor.update( self.__args )
                 if not self.request.is_conditional():
-                    Params.log("Reading complete file from cache at %s" % 
+                    Params.log("Reading complete file from cache at %s" %
                             self.cache.path)
                     self.cache.open_full()
                     self.Response = Response.DataResponse
@@ -444,9 +452,10 @@ class HttpProtocol(CachingProtocol):
                 self.cache.remove_partial()
             elif self.cache.full():
                 self.cache.remove_full()
-            if self.descriptor:
-                self.descriptor.drop()
-                Params.log("Dropped descriptor: %s" % self.url)
+# XXX
+#            if self.descriptor:
+#                self.descriptor.drop()
+#                Params.log("Dropped descriptor: %s" % self.url)
             self.Response = Response.BlindResponse
 
         else:
@@ -470,7 +479,7 @@ class HttpProtocol(CachingProtocol):
             assert self.cache.partial()
         # FIXME: load http entity, perhaps response headers from shelve
         #self.descriptors.map_path(self.cache.path, uriref)
-        #self.descriptors.put(uriref, 
+        #self.descriptors.put(uriref,
         #descr = self.get_descriptor()
         #self.mtime, self.size = scriptor.last_modified, descr.
         if 'Last-Modified' in self.__args:
@@ -523,10 +532,6 @@ class HttpProtocol(CachingProtocol):
         else:
             self.Response = Response.DataResponse
 
-    @property
-    def url( self ):
-        return self.request.url
-    
     def recvbuf( self ):
         return self.print_message()
 
@@ -534,20 +539,21 @@ class HttpProtocol(CachingProtocol):
         if not args:
             args = self.__args
         return '\r\n'.join(
-            [ '%s %i %s' % ( 
-                self.request.envelope[2], 
-                self.__status, 
+            [ '%s %i %s' % (
+                self.request.envelope[2],
+                self.__status,
                 self.__message ) ] +
             map( ': '.join, args.items() ) + [ '', '' ] )
 
     def responsebuf( self ):
-        args = self.response_headers()
+        args = self.headers
         return self.print_message(args)
 
     def args( self ):
         return self.__args.copy()
 
-    def response_headers( self ):
+    @property
+    def headers( self ):
         args = self.args()
 
         via = "%s:%i" % (Params.HOSTNAME, Params.PORT)

@@ -1,5 +1,5 @@
-""" 
-Class for descriptor storage.
+"""
+Resource storage and descriptor facade.
 """
 import anydbm, os, urlparse
 from os.path import join
@@ -12,6 +12,7 @@ except AssertionError:
 
 import Params
 import HTTP
+import Rules
 from error import *
 
 
@@ -19,15 +20,15 @@ from error import *
 class Storage(object):
 
     """
-    AnyDBM facade.
+    AnyDBM facade for several indices.
     To keep descriptor storage and several indices to make it searchable.
     """
 
     resources = None
     """Web Resources::
-    
-        { <res> : <Resource(
-           
+
+        { <res-uri> : <Resource(
+
            host, path, meta, cache
 
         )> }
@@ -36,14 +37,14 @@ class Storage(object):
     brokenmap = None
     """Map of broken loations that could not be retrieved::
 
-        { <res> : <status> }
+        { <res-uri> : <status>, <keep-boolean> }
     """
 
     descriptors = None
     """Cache descriptors::
-    
-        { <path> : <Descriptor(
-            
+
+        { <cache-location> : <Descriptor(
+
             hash, mediatype, charset, language, size, quality
 
         ) }
@@ -51,26 +52,26 @@ class Storage(object):
 
     cachemap = None
     """Map of uriref to cache locations (reverse for resources)::
-    
-        { <path> : <res> }
+
+        { <cache-location> : <res-uri> }
     """
 
     relations_to = None
     """Qualified relations 'rel' from 'res' to 'ref'::
 
-        relations_to = { <res> => *( <rel>, <ref> ) }
+        relations_to = { <res-uri> => *( <rel-uri>, <ref-uri> ) }
     """
     relations_from = None
     """Reverse mapping, the qualification will be in relations_to::
 
-        relations_from = { <ref> => *<res> }
+        relations_from = { <ref-uri> => *<res-uri> }
     """
 
     def __init__(self, resources, descriptors, cachemap, resourcemap):
 
         Params.log([
             resources,
-            descriptors, 
+            descriptors,
             cachemap,
             resourcemap
         ])
@@ -92,32 +93,39 @@ class Storage(object):
         self.resourcemap.close()
 
     def __contains__(self, path):
-        return self.find(path)
+        return self.find(path) != None
 
     def find(self, path):
         if path not in self.__descriptors:
             if path in self.descriptors:
-                self.__descriptors[path] = self.descriptors[path]
+                descr = Descriptor(self)
+                descr.load_from_storage()
+                self.__descriptors[path] = descr
             else:
                 return
         return self.__descriptors[path]
 
-    def prepare_for_request(self, path, request):
+    def prepare(self, protocol):
+
+        path = protocol.cache.path
         if path in self.__descriptors:
             return self.__descriptors[path]
+
         # XXX: work in progress
-        uriref = request.url
         descr = Descriptor( self )
+
+        uriref = protocol.request.url
         if uriref in self.descriptors:
             descr.load_from_storage( uriref )
         self.__descriptors[uriref] = descr
 
-        res = HTTP.map_headers_to_resource( request.headers )
+        args = HTTP.map_headers_to_resource( protocol.headers )
+        descr.update(args)
 # XXX:        HTTP.map_headers_to_descriptor( request.headers )
-        res['cache'] = path
-        assert path not in self.descriptors
-        self.path = path
-        #self.commit()
+#        args['cache'] = path
+#        assert path not in self.descriptors
+        descr.path = path
+#        #self.commit()
 
         return descr
 
@@ -152,57 +160,59 @@ def strip_root(path):
 
 class Descriptor(object):
 
-    mapping = [
-        'locations',
-        'mediatype',
-        'size',
-        'etag',
-        'last_modified',
-        'quality_indicator',
-        'encodings',
-        'language',
-        'features',
-        'extension_headers',
-    ]
+    #mapping = [
+    #    'locations',
+    #    'mediatype',
+    #    'size',
+    #    'etag',
+    #    'last_modified',
+    #    'quality_indicator',
+    #    'encodings',
+    #    'language',
+    #    'features',
+    #    'extension_headers',
+    #]
     """
     Item names for each tuple index.
     """
 
-    def __init__( self, storage ):
+    def __init__(self, storage):
         self.path = None
-        self.__res_data = {}
-        self.__descr_data = {}
-        self.__res_data = {}
+        self.__data = {}
         self.storage = storage
 
-    def __nonzero__( self ):
+    def __nonzero__(self):
         return self.path != None
+
+    @property
+    def new(self):
+        return self.path not in self.storage.descriptors
 
     def load_from_storage( self, path ):
         self.path = path
         self.__data = Params.json_read(
                 self.storage.descritors[self.path])
-        Params.log(['load_from_storage', self.path, self.__data]);
+        Params.log(['load_from_storage', self.path, self.__data])
 
-    def commit( self ):
+    def commit(self):
         assert self.path
         self.storage.descriptors[self.path] = Params.json_write(
                 self.__data)
-        Params.log([ 'commit', path, self.__data ], 4)
+        Params.log([ 'commit', path, self.__data ], Params.LOG_DEBUG)
 
     def update(self, args):
         newdata = HTTP.map_headers_to_resource(args)
-        for k in newdata:
-            assert k in self.__data,\
-                    "Update to unknown header: %r" % k
-            assert newdata[k] == self.__data[k], \
-                    "XXX: update"
-        Params.log([ 'update', self.path, args, self.__data ], 4)
+        #for k in newdata:
+        #    assert k in self.__data,\
+        #            "Update to unknown header: %r" % k
+        #    assert newdata[k] == self.__data[k], \
+        #            "XXX: update"
+        Params.log([ 'update', self.path, args, self.__data ], Params.LOG_DEBUG)
         self.__data.update(newdata)
 
     def drop(self):
         del self.storage.descriptors[self.path]
-        Params.log([ 'drop', self.path, self.__data ], 4)
+        Params.log([ 'drop', self.path, self.__data ], Params.LOG_DEBUG)
 
     def create_for_response(self, protocol, response):
         assert False
@@ -212,8 +222,9 @@ class Descriptor(object):
     def data(self):
         return self.__data
 
-    def set_broken(self):
-        raise "TODO"
+    def set_broken(self, status ):
+        # TODO: set_broken
+        seld.drop()
 
 
 def index_factory(storage, path, mode='r'):
@@ -247,7 +258,7 @@ backend = None
 
 def open_backend(read_only=False):
     global backend
-        
+
     path = Params.DATA_DIR
 
     mode = 'w'
@@ -321,6 +332,23 @@ def print_media_list(*media):
     import sys
     print "end of media-list"; sys.exit()
 
+def list_locations():
+    global backend
+    get_backend(True)
+    print backend.resources
+    print backend.descriptors
+    for path in backend.descriptors:
+        print path
+    backend.close()
+
+def list_urls():
+    global backend
+    get_backend(True)
+    for url in backend.resources:
+
+        res = backend.find(path)
+        print res
+
 def find_info(q):
     import sys
     global backend
@@ -357,7 +385,7 @@ def find_info(q):
 
 def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
-    References in descriptor cache must exist as file. 
+    References in descriptor cache must exist as file.
     This checks existence and the size property,  if complete.
 
     All rules should be applied.
@@ -389,13 +417,14 @@ def validate_cache(pathname, uripathnames, mediatype, d1, d2, meta, features):
 def check_tree(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
-def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
+def check_joinlist():
     """
     Run joinlist rules over cache references.
 
-    Useful during development since 
+    Useful during development since
     """
-    return True
+    Rules.Join.parse()
+    Rules.Join.validate()
 
 def check_files():
     global backend
@@ -406,6 +435,7 @@ def check_files():
     #    descriptors = get_backend(main=False)
     pcount, rcount = 0, 0
     Params.log("Iterating paths in cache root location. ")
+
     for root, dirs, files in os.walk(Params.ROOT):
 
         # Ignore files in root
@@ -443,7 +473,7 @@ def check_files():
                     continue
                 urlparts = urlparse.urlparse(uriref)
                 hostname = urlparts.netloc
-                pathname = urlparts.path[1:] 
+                pathname = urlparts.path[1:]
 # XXX: cannot reconstruct--, or should always normalize?
                 if urlparts.query:
                     #print urlparts
@@ -483,7 +513,7 @@ def check_cache():
             continue
         urlparts = urlparse.urlparse(urirefs[0])
         hostname = urlparts.netloc
-        pathname = urlparts.path[1:] 
+        pathname = urlparts.path[1:]
 # XXX: cannot reconstruct--, or should always normalize?
         if urlparts.query:
             #print urlparts
