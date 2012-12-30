@@ -393,6 +393,7 @@ class HttpProtocol(CachingProtocol):
 
             self.recv_entity()
             self.descriptor.update( self.__args )
+            self.descriptor.commit()
             self.set_dataresponse();
 
         elif self.__status == HTTP.PARTIAL_CONTENT \
@@ -402,6 +403,7 @@ class HttpProtocol(CachingProtocol):
             assert not self.descriptor.new, \
                 "Should have descriptor for partial content. "
             self.descriptor.update( self.__args )
+            self.descriptor.commit()
             self.set_dataresponse();
 
         # 3xx: redirects

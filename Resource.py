@@ -97,15 +97,31 @@ class Storage(object):
     def __contains__(self, path):
         return self.find(path) != None
 
-    def find(self, path):
-        if path not in self.__descriptors:
-            if path in self.descriptors:
+    def fetch(self, url):
+        res = self.find(url)
+        if not res:
+            raise Exception("No record for %s" % url)
+        return res
+
+    def find(self, url):
+        if url not in self.__resources:
+            if url in self.resources:
                 descr = Descriptor(self)
                 descr.load_from_storage()
-                self.__descriptors[path] = descr
+                self.__resources[url] = descr
             else:
                 return
-        return self.__descriptors[path]
+        return self.__resources[url]
+        
+#    def find(self, path):
+#        if path not in self.__descriptors:
+#            if path in self.descriptors:
+#                descr = Descriptor(self)
+#                descr.load_from_storage()
+#                self.__descriptors[path] = descr
+#            else:
+#                return
+#        return self.__descriptors[path]
 
     def prepare(self, protocol):
 
@@ -192,15 +208,14 @@ class Descriptor(object):
 
     def load_from_storage( self, path ):
         self.path = path
-        self.__data = Params.json_read(
+        self.__data = json_read(
                 self.storage.descritors[self.path])
         log(['load_from_storage', self.path, self.__data])
 
     def commit(self):
         assert self.path
-        self.storage.descriptors[self.path] = Params.json_write(
-                self.__data)
-        log([ 'commit', path, self.__data ], Params.LOG_DEBUG)
+        self.storage.descriptors[self.path] = json_write( self.__data )
+        log([ 'commit', self.path, self.__data ], Params.LOG_DEBUG)
 
     def update(self, args):
         newdata = HTTP.map_headers_to_resource(args)
@@ -310,7 +325,7 @@ def list_urls():
 
 def print_record(url):
     backend = get_backend(True)
-    res = backend.find(url)
+    res = backend.fetch(url)
     print res
 
 # TODO: find_records by attribute query

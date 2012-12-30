@@ -18,7 +18,7 @@ from util import json_write, log
 
 def opt_command_flag(option, opt_str, value, parser):
     commands = getattr(parser.values, option.dest)
-    commands[ opt_str.strip('-') ] = ()
+    commands.append( ( opt_str.strip('-'), value ) )
     setattr(parser.values, option.dest, commands)
 
 def opt_dirpath(option, opt_str, value, parser):
@@ -46,7 +46,7 @@ def _cmd(**ext):
         action="callback", 
         callback=opt_command_flag,
         dest="commands",
-        default={}
+        default=[]
     )
     d.update(ext)
     return d
@@ -330,7 +330,6 @@ gives access to the stored data. """, (
         for n in varnames:
             setattr(Runtime, n.upper(), getattr(options, n))
 
-#        options.commands = {}
         Runtime.options, Runtime.arguments = \
                 options, arguments
 
@@ -457,16 +456,16 @@ exceptions = []
 def run(cmds={}):
     global exceptions
     
-    items = Runtime.options.commands.items()
+    items = Runtime.options.commands;
 
     for cmdid, cmdarg in items:
 
         try:
 
-            cmdfunc[cmdid](*cmdarg)
+            cmdfunc[cmdid](cmdarg)
 
         except Exception, e:
-            log("Error running %s%r: %s" % (cmdid, cmdarg, e), Params.LOG_ERR)
+            log("Error: %s" % (e), Params.LOG_ERR)
             etype, value, tb = sys.exc_info()
             exceptions.append((etype, value, tb))
 
