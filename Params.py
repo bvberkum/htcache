@@ -12,10 +12,6 @@ json_write = _json.dumps
 
 
 
-### Main: determine runtime config from constants and ARGV
-
-_args = list( sys.argv )
-
 ### Constants
 
 VERSION = 0.4
@@ -107,9 +103,6 @@ Rules:
      --nocache FILE  TODO: bypass caching for requests based on regex pattern.
      --rewrite FILE  Filter any webresource by selecting on URL or
 
-Query
-     --media-image
-
 Misc.:
      --check-refs    TODO: iterate cache references.
      --check-sortlist
@@ -156,6 +149,10 @@ Maintenance:
 ''' % locals()
 
 
+
+### Main: determine runtime config from constants and ARGV
+
+_args = list( sys.argv )
 while _args:
     _arg = _args.pop(0)
 
@@ -333,3 +330,5 @@ def run(cmds={}):
             a = ()
         cmds[k](*a)
     sys.exit(0)
+
+
