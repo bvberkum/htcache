@@ -274,14 +274,14 @@ def open_backend(read_only=False):
             cachemap=(join(path, 'cache_map.db'), mode),
             resourcemap=(join(path, 'resource_map.db'), mode,)
         ))
+    backend.mode = mode
 
 def get_backend(read_only=False):
     global backend
     if not backend:
         open_backend(read_only)
-# FIXME: should know if opened backend is read or write
-#    if read_only:
-#        assert backend.mode = 'r'
+    if read_only:
+        assert backend.mode == 'r'
     return backend
 
 
@@ -289,6 +289,63 @@ def get_backend(read_only=False):
 
 # psuedo-Main: special command line options allow resource DB queries:
 
+def list_locations():
+    global backend
+    get_backend(True)
+    print backend.resources
+    print backend.descriptors
+    for path in backend.descriptors:
+        print path
+    backend.close()
+
+def list_urls():
+    global backend
+    get_backend(True)
+    for url in backend.resources:
+
+        res = backend.find(path)
+        print res
+
+
+# TODO: find_records by attribute query
+def find_records(q):
+    import sys
+    global backend
+    print 'Searching for', q
+
+    attrpath, valuepattern = q.split(':')
+
+    for path in backend:
+        res = backend[path]
+        urls, mime, qs, n, meta, feats = res
+        for u in urls:
+            if q in u:
+                print path, mime, urls
+#        for k in props:
+#            if k in ('0','srcref'):
+#                if props[k] in res[0]:
+#                    print path
+#            elif k in ('1','mediatype'):
+#                if props[k] == res[1]:
+#                    print path
+#            elif k in ('2','charset'):
+#                if props[k] == res[2]:
+#                    print path
+#            elif k in ('3','language'):
+#                if props[k] in res[3]:
+#                    print path
+#            elif k in ('4','feature'):
+#                for k2 in props[k]:
+#                    if k2 not in res[4]:
+#                        continue
+#                    if res[4][k2] == props[k][k2]:
+#                        print path
+    backend.close()
+    log("End of findinfo", Params.LOG_DEBUG)
+    sys.exit(1)
+
+
+# FIXME:
 def print_info(*paths):
     global backend
     open_backend(True)
@@ -334,58 +391,6 @@ def print_media_list(*media):
                     print path
     import sys
     print "end of media-list"; sys.exit()
-
-def list_locations():
-    global backend
-    get_backend(True)
-    print backend.resources
-    print backend.descriptors
-    for path in backend.descriptors:
-        print path
-    backend.close()
-
-def list_urls():
-    global backend
-    get_backend(True)
-    for url in backend.resources:
-
-        res = backend.find(path)
-        print res
-
-def find_info(q):
-    import sys
-    global backend
-    print 'Searching for', q
-    for path in backend:
-        res = backend[path]
-        urls, mime, qs, n, meta, feats = res
-        for u in urls:
-            if q in u:
-                print path, mime, urls
-# XXX:
-#        for k in props:
-#            if k in ('0','srcref'):
-#                if props[k] in res[0]:
-#                    print path
-#            elif k in ('1','mediatype'):
-#                if props[k] == res[1]:
-#                    print path
-#            elif k in ('2','charset'):
-#                if props[k] == res[2]:
-#                    print path
-#            elif k in ('3','language'):
-#                if props[k] in res[3]:
-#                    print path
-#            elif k in ('4','feature'):
-#                for k2 in props[k]:
-#                    if k2 not in res[4]:
-#                        continue
-#                    if res[4][k2] == props[k][k2]:
-#                        print path
-    backend.close()
-    log("End of findinfo", Params.LOG_DEBUG)
-    sys.exit(1)
-
 def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
     References in descriptor cache must exist as file.

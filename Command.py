@@ -37,12 +37,16 @@ def opt_posnum(option, opt_str, value, parser):
         raise optparse.OptionValueError("%s requires a positive numerical argument" % opt_str)
     setattr(parser.values, option.dest, value)
 
-_cmd = dict(
+
+def _cmd(**ext):
+    d = dict(
         action="callback", 
         callback=opt_command_flag,
         dest="commands",
         default={}
     )
+    d.update(ext)
+    return d
 
 def _dirpath(default):
     return {
@@ -54,15 +58,33 @@ def _dirpath(default):
         }
 
 
+def _rulefile(name):
+    return {
+            'type': str,
+            'metavar': "FILE",
+            'dest': "%s_file" % name,
+            'default': getattr(Params, ("%s_FILE" % name).upper())
+        }
+
+             
 
 class CLIParams:
 
     specification = (
         ( "Proxy", "These options set parameters for the proxy service behaviour. ", (
+            (('-a', '--address', '--hostname'),
+                # TODO: allow port in address
+                "listen on this port for incoming connections, default: %(default)i", dict(
+                    metavar="HOST",
+                    default=Params.HOSTNAME,
+                    dest="hostname",
+                    type=str,
+            )),
             (('-p', '--port'),
                 "listen on this port for incoming connections, default: %(default)i", dict(
-                    metavar= "PORT",
+                    metavar="PORT",
                     default=Params.PORT,
+                    type=int,
                     action="callback",
                     callback=opt_posnum,
             )),
@@ -104,6 +126,7 @@ class CLIParams:
             (('--pid-file',),
                 "set the run file where to write the PID, default is '%(default)s'", dict(
                     metavar="FILE",
+                    default=Params.PID_FILE
             )),
             (("-r", "--root"),
                 "set cache root directory, default current: %(default)s", 
@@ -140,20 +163,27 @@ class CLIParams:
         ( "Rules", "Configure external files for URL filtering and rewriting. ", (
             (("--drop",),
                 "filter requests for URI's based on regex patterns"
-                " read line for line from file, default %(default)s", dict(
-                    metavar="FILE",
-                    default=Params.DROP_FILE,
-            )),
+                " read line for line from file, default %(default)s", 
+                    _rulefile("drop")
+            ),
             (("--nocache",),
-                "TODO: bypass caching for requests based on regex pattern", dict(
-                    metavar="FILE",
-                    default=Params.NOCACHE_FILE,
-            )),
+                "TODO: bypass caching for requests based on URL regex pattern", 
+                    _rulefile("nocache")
+            ),
             (("--rewrite",),
-                "XXX: Filter any webresource by selecting on URL or ...", dict(
-                    metavar="FILE",
-                    default=Params.REWRITE_FILE,
-            )),
+                "XXX: content rewrite any webresource by selecting on URL or ...??", 
+                    _rulefile("rewrite")
+            ),
+            (("--join",),
+                "Rewrites the internal location for requests based on URL RegEx."
+                " This can join distinct downloads to a single file, which"
+                " may be a problem if its contents has any differences. XXX: read"
+                " elsewhere on downloading joining. ",
+                    _rulefile("join")
+            ),
+            (("--join-rule",),
+                "XXX: append manual rule", dict()
+            ),
         )),
         ( "Misc.", "These affect both the proxy and commands. ", (
             (("-v", "--verbose"),
@@ -171,7 +201,7 @@ class CLIParams:
         ( "Query", 
                 "", (
             (("--info",),
-                "TODO: ", _cmd
+                "TODO: ", _cmd()
             ),
         )),
         ( "Maintenance", 
@@ -179,38 +209,42 @@ class CLIParams:
 options in this group performan maintenance tasks, and the last following group
 gives access to the stored data. """, (
             (("--check-refs",),
-                "TODO: iterate cache references", _cmd
+                "TODO: iterate cache references", _cmd()
             ),
             (("--check-sortlist",),
-                "TODO: iterate cache references", _cmd
+                "TODO: iterate cache references", _cmd()
             ),
             (("--prune-gone",),
-                "TODO: Remove resources no longer online.", _cmd
+                "TODO: Remove resources no longer online.", _cmd()
             ),
             (("--prune-stale",),
                 "Delete outdated cached resources, ie. those that are "
-                "expired. Also drops records for missing files. ", _cmd
+                "expired. Also drops records for missing files. ", _cmd()
             ),
             (("--link-dupes",),
                 "TODO: Symlink duplicate content, check by size and hash."
-                " Requires up to date hash index.", _cmd
+                " Requires up to date hash index.", _cmd()
             ),
             (("--list-resources",),
-                "", 
-                _cmd
+                "Print URLs of cached resources. ", 
+                _cmd()
             ),
             (("--list-locations",),
-                "", 
-                _cmd
+                "Print paths of descriptor locations. ", 
+                _cmd()
             ),
             (("--print-resources",),
                 "Print all fields for each record; tab separated, one per line.", 
-                _cmd
+                _cmd()
             ),
-#     --print-all-records
-#                     Print the record of all cache locations.
-#     TODO --find-record KEY:[KEY:]ARG[,...]
-#                     Search for exact record matches.
+            (("--find-records", ),
+                "XXX: Query for one or more records by regular expression.", 
+                _cmd(metavar="KEY[.KEY]:PATTERN", type=str)
+            ),
+            (("--print-record", ),
+                "",
+                _cmd(metavar="URL", type=str)
+            ),
 #     TODO --print-mode line|tree
 #     TODO --print-url
 #     TODO --print-path
@@ -220,8 +254,6 @@ gives access to the stored data. """, (
 #     TODO --print-audio
 #     TODO --print-images
 #                     Search through predefined list of content-types.
-        )),
-        ( "Resources", "", (
         )),
     )
 
@@ -260,29 +292,52 @@ gives access to the stored data. """, (
         return prsr, options, arguments
 
 
-def format_info():
+def print_info():
+
     """
-    Return JSON for config.
     """
+    backend = Resource.get_backend(True)
+
     print pformat({
         "htcache": {
 #            "runtime": {
 #                "program": ,
 #            },
             "config": {
-                "port": Runtime.PORT,
-                "root": Runtime.ROOT,
-                "pid-file": Runtime.PID_FILE,
-                "verboseness": Runtime.VERBOSE,
-                "timeout": Runtime.TIMEOUT,
-                "socket-family": Runtime.FAMILY,
-                "cache-type": Runtime.CACHE,
-                "join-file": Runtime.JOIN_FILE,
-                "drop-file": Runtime.DROP_FILE,
-                "nocache-file": Runtime.NOCACHE_FILE,
-                "rewrite-file": Runtime.REWRITE_FILE,
+                "proxy": {
+                    "hostname": Runtime.HOSTNAME,
+                    "port": Runtime.PORT,
+                    "socket-family": Runtime.FAMILY,
+                    "timeout": Runtime.TIMEOUT,
+                },
+                "process": {
+                    "pid-file": Runtime.PID_FILE,
+                    "deamon": Runtime.LOG,
+                    "verboseness": Runtime.VERBOSE,
+                },
+                "backend": {
+                    "cache-type": Runtime.CACHE,
+                    "root": Runtime.ROOT,
+                    "data": Runtime.DATA_DIR,
+                },
+                "rules": {
+                    "join-file": Runtime.JOIN_FILE,
+                    "drop-file": Runtime.DROP_FILE,
+                    "nocache-file": Runtime.NOCACHE_FILE,
+                    "rewrite-file": Runtime.REWRITE_FILE,
+                }
             },
             "statistics": {
+                "data": {
+                    "records": {
+                        "resources": len(backend.resources), 
+                        "descriptors": len(backend.descriptors), 
+                    },
+                    "mappings": {
+                        "cachemap": len(backend.cachemap), 
+                        "resourcemap": len(backend.resourcemap), 
+                    }
+                },
                 "rules": {
 #                        "drop": len(Rules.Drop.rules),
                         "join": len(Rules.Join.rules),
@@ -298,6 +353,7 @@ def format_info():
 from fnmatch import fnmatch
 
 
+# XXX:
 def path_ignore(path):
     for p in ('*.git*','*.sw[pon]','*.py[c]','*Makefile', '*.py', '*.mk'):
         if fnmatch(path, p):
@@ -329,11 +385,13 @@ def run_join():
             #        m = regex.match(fpath)
             #        print 'Match', fpath, m.groups()
 
+
+
 cmdfunc = {
-        'info': format_info,
+        'info': print_info,
         'list-locations': Resource.list_locations,
         'list-resources': Resource.list_urls,
-        'find-records': Resource.find_info,
+        'find-records': Resource.find_records,
 #        'link-dupes': Resource,
 #        Resource.print_media_list(*Params.PRINT_MEDIA)
 #        'find-videos': Resource,
@@ -369,6 +427,7 @@ if __name__ == '__main__':
             sys.exit(0)
 
     except Exception, e:
+        traceback.print_exc()
         print >>sys.stderr, "Failure: %s" % e
 
     
