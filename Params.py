@@ -42,6 +42,7 @@ JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 REWRITE_FILE = '/etc/htcache/rules.rewrite'
 
+PROXY_INJECT = False
 PARTIAL = '.incomplete'
 
 # non user-configurable
@@ -52,7 +53,6 @@ ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
 IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
 HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
 IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
-PROXY_INJECT = False
 PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
 PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
 

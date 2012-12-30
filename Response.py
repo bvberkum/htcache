@@ -38,7 +38,7 @@ class BlindResponse:
     def recv( self, sock ):
 
         assert not self.Done
-        chunk = sock.recv( Runtime.MAXCHUNK )
+        chunk = sock.recv( Params.MAXCHUNK )
         if chunk:
           self.__sendbuf += chunk
         elif not self.__sendbuf:
@@ -145,7 +145,7 @@ class DataResponse:
             bytecnt = sock.send( self.__sendbuf )
             self.__sendbuf = self.__sendbuf[ bytecnt: ]
         else:
-            bytecnt = Runtime.MAXCHUNK
+            bytecnt = Params.MAXCHUNK
             if 0 <= self.__end < self.__pos + bytecnt:
                 bytecnt = self.__end - self.__pos
 
@@ -180,7 +180,7 @@ class DataResponse:
         """
 
         assert not self.Done
-        chunk = sock.recv( Runtime.MAXCHUNK )
+        chunk = sock.recv( Params.MAXCHUNK )
         if chunk:
             self.__protocol.write( chunk )
             #if self.__protocol.capture:
@@ -218,7 +218,7 @@ class ChunkedDataResponse( DataResponse ):
 
     def recv( self, sock ):
         assert not self.Done
-        chunk = sock.recv( Runtime.MAXCHUNK )
+        chunk = sock.recv( Params.MAXCHUNK )
         assert chunk, 'chunked data error: connection closed prematurely'
         self.__recvbuf += chunk
         while '\r\n' in self.__recvbuf:

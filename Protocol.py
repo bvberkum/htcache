@@ -78,7 +78,7 @@ class CachingProtocol(object):
     """
     Open cache and descriptor index for requested resources.
 
-    Filter requests using DROP, NOCACHE and .. rules.
+    Filter requests using Drop, NoCache and .. rules.
     """
 
     cache = None
@@ -157,13 +157,11 @@ class CachingProtocol(object):
 
     def prepare_nocache_response( self ):
         "Blindly respond for NoCache rule matches. "
-        for pattern, compiled in Runtime.NOCACHE:
-            p = self.url.find( ':' ) # find len of scheme-id
-            if compiled.match( self.url[p+3:] ):
-                log('Not caching request, matches pattern: %r.' %
-                    pattern)
-                self.Response = Response.BlindResponse
-                return True
+        if Rules.NoCache.match( self.url ):
+            log('Not caching request, matches pattern: %r.' %
+                pattern)
+            self.Response = Response.BlindResponse
+            return True
 
     def set_blocked_response( self, path ):
         "Respond to client by writing filter warning about blocked content. "

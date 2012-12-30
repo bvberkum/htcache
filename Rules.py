@@ -76,6 +76,13 @@ class NoCache(AbstractRuleset):
 
     main_file = Params.NOCACHE_FILE
 
+    @classmethod
+    def match(klass, url):
+        for pattern, compiled in klass.rules:
+            p = url.find( ':' ) # find len of scheme-id
+            if compiled.match( url[p+3:] ):
+                return True
+
 
 class Join(AbstractRuleset):
 

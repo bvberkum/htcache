@@ -26,6 +26,7 @@ ENCODE_PATHSEP = None
 FileTreeQ_SORT = True
 FileTreeQ_ENCODE = False
 PARTIAL = None
+PROXY_INJECT = None
 
 # misc. program params
 LOG = False
