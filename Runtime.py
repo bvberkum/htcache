@@ -20,18 +20,19 @@ JOIN_FILE = None
 NOCACHE_FILE = None
 REWRITE_FILE = None
 DATA_DIR = None
-CACHE = 'caches.FileTree'
-ARCHIVE = ''
-ENCODE_PATHSEP = ''
+CACHE = None
+ARCHIVE = None
+ENCODE_PATHSEP = None
 FileTreeQ_SORT = True
 FileTreeQ_ENCODE = False
+PARTIAL = None
 
 # misc. program params
 LOG = False
 DEBUG = False
-PRUNE = None
-
-MAX_SIZE_PRUNE = 11*(1024**2)
 INTERACTIVE = False
+
+PRUNE = None
+MAX_SIZE_PRUNE = 11*(1024**2)
 
 COMMANDS = {}

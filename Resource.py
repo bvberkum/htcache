@@ -342,7 +342,6 @@ def find_records(q):
 #                        print path
     backend.close()
     log("End of findinfo", Params.LOG_DEBUG)
-    sys.exit(1)
 
 
 # FIXME:
@@ -368,7 +367,6 @@ def print_info(*paths):
         print >>sys.stderr, "No record found"
     backend.close()
     log("End of printinfo", Params.LOG_DEBUG)
-    sys.exit(0)
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
@@ -389,8 +387,7 @@ def print_media_list(*media):
                 res = backend[path]
                 if 'video' in res[1]:
                     print path
-    import sys
-    print "end of media-list"; sys.exit()
+
 def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
     References in descriptor cache must exist as file.
@@ -425,17 +422,8 @@ def validate_cache(pathname, uripathnames, mediatype, d1, d2, meta, features):
 def check_tree(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
-def check_joinlist():
-    """
-    Run joinlist rules over cache references.
-
-    Useful during development since
-    """
-    Rules.Join.parse()
-    Rules.Join.validate()
-
 def check_files():
-    global backend
+    backend = get_backend(True)
 # XXX old
     #if Params.PRUNE:
     #    descriptors = get_backend()
@@ -459,9 +447,9 @@ def check_files():
             if f not in backend.descriptors:
                 if os.path.isfile(f):
                     log("Missing descriptor for %s" % f)
-                    if Params.PRUNE:
+                    if Runtime.PRUNE:
                         size = os.path.getsize(f)
-                        if size < Params.MAX_SIZE_PRUNE:
+                        if size < Runtime.MAX_SIZE_PRUNE:
                             os.unlink(f)
                             log("Removed unknown file %s" % f)
                         else:
@@ -493,7 +481,6 @@ def check_files():
     log("Finished checking %s cache locations, found %s resources" % (
         pcount, rcount))
     backend.close()
-    sys.exit(0)
 
 def check_cache():
     #term = Resource.TerminalController()
@@ -503,7 +490,8 @@ def check_cache():
 #        descriptors = get_backend()
 #    else:
 #        descriptors = get_backend(main=False)
-    global backend
+    backend = get_backend(True)
+
     refs = backend.descriptors.keys()
     count = len(refs)
     log("Iterating %s descriptors" % count)
@@ -554,6 +542,5 @@ def check_cache():
     log("Finished checking %s cache descriptors" % count)
     backend.close()
     #pb.clear()
-    sys.exit(0)
 
 

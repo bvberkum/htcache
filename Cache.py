@@ -1,6 +1,7 @@
 import time, os, sys, shutil
 
 import Params
+import Runtime
 import Rules
 from util import *
 
@@ -40,7 +41,7 @@ class File(object):
         local path name. 
         """
         super( File, self ).__init__()
-        os.chdir(Params.ROOT)
+        os.chdir(Runtime.ROOT)
         if path:
             rpath = self.apply_rules(path)
             self.init(rpath)
@@ -57,11 +58,11 @@ class File(object):
                     os.unlink(rpath)
             # check if target is partial, rename
             i = 1
-            if os.path.exists(rpath + Params.PARTIAL):
-                while os.path.exists('%s.%s%s' % (rpath, i, Params.PARTIAL)):
+            if os.path.exists(rpath + Runtime.PARTIAL):
+                while os.path.exists('%s.%s%s' % (rpath, i, Runtime.PARTIAL)):
                     i+=1
-                shutil.copyfile(rpath+Params.PARTIAL, '%s.%s%s'
-                        %(rpath,i,Params.PARTIAL))
+                shutil.copyfile(rpath+Runtime.PARTIAL, '%s.%s%s'
+                        %(rpath,i,Runtime.PARTIAL))
                 log("Warning: backed up duplicate incomplete %s" % i)
                 # XXX: todo: keep largest partial only
             assert len(self.path) < 255, \
@@ -77,12 +78,12 @@ class File(object):
     def init(self, path):
         assert not path.startswith(os.sep), \
                 "File.init: saving in other roots not supported,"\
-                " only paths relative to Params.ROOT allowed."
+                " only paths relative to Runtime.ROOT allowed."
 
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path
-        psep = Params.ENCODE_PATHSEP
+        psep = Runtime.ENCODE_PATHSEP
         if psep:
             path = path.replace( '/', psep)
         else:
@@ -90,15 +91,15 @@ class File(object):
             if sep != -1:
                 path = path[ :sep ] + path[ sep: ].replace( '/', psep)
         # make archive path
-        if Params.ARCHIVE:
-            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path
+        if Runtime.ARCHIVE:
+            path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path
 
-        self.path = os.path.join(Params.ROOT, path)
+        self.path = os.path.join(Runtime.ROOT, path)
         self.file = None
 
     def partial( self ):
-        return os.path.isfile( self.path + Params.PARTIAL ) \
-            and os.stat( self.path + Params.PARTIAL )
+        return os.path.isfile( self.path + Runtime.PARTIAL ) \
+            and os.stat( self.path + Runtime.PARTIAL )
 
     def full( self ):
         return (
@@ -108,12 +109,12 @@ class File(object):
 
     def getsize(self):
         if self.partial():
-            return os.path.getsize( self.path + Params.PARTIAL )
+            return os.path.getsize( self.path + Runtime.PARTIAL )
         elif self.full():
             return os.path.getsize( self.path )
 
     def open_new( self ):
-        if Params.VERBOSE:
+        if Runtime.VERBOSE:
             print 'Preparing new file in cache'
        
         tdir = os.path.dirname( self.path )
@@ -121,19 +122,19 @@ class File(object):
             os.makedirs( tdir )
 
         try:
-            self.file = open( self.path + Params.PARTIAL, 'w+' )
+            self.file = open( self.path + Runtime.PARTIAL, 'w+' )
         except Exception, e:
             print 'Failed to open file:', e
             self.file = os.tmpfile()
 
     def open_partial( self, offset=-1 ):
-        self.mtime = os.stat( self.path + Params.PARTIAL ).st_mtime
-        self.file = open( self.path + Params.PARTIAL, 'a+' )
+        self.mtime = os.stat( self.path + Runtime.PARTIAL ).st_mtime
+        self.file = open( self.path + Runtime.PARTIAL, 'a+' )
         if offset >= 0:
             assert offset <= self.tell(), 'range does not match file in cache'
             self.file.seek( offset )
             self.file.truncate()
-        if Params.VERBOSE:
+        if Runtime.VERBOSE:
             print 'Resuming partial file in cache at byte', self.tell()
 
     def open_full( self ):
@@ -147,7 +148,7 @@ class File(object):
 
     def remove_partial( self ):
         log('Removed partial file from cache')
-        os.remove( self.path + Params.PARTIAL )
+        os.remove( self.path + Runtime.PARTIAL )
 
     def read( self, pos, size ):
         self.file.seek( pos )
@@ -165,9 +166,9 @@ class File(object):
         size = self.tell()
         self.file.close()
         if self.mtime >= 0:
-            os.utime( self.path + Params.PARTIAL, ( self.mtime, self.mtime ) )
+            os.utime( self.path + Runtime.PARTIAL, ( self.mtime, self.mtime ) )
         if self.size == size:
-            os.rename( self.path + Params.PARTIAL, self.path )
+            os.rename( self.path + Runtime.PARTIAL, self.path )
             log("Finalized %r" % self.path)
         else:
             log("Closed partial %r" % self.path)

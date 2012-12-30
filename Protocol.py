@@ -30,7 +30,7 @@ def connect( addr ):
         log('Requesting address info for %s:%i' % addr, 2)
         try:
             DNSCache[ addr ] = socket.getaddrinfo(
-                addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
+                addr[ 0 ], addr[ 1 ], Runtime.FAMILY, socket.SOCK_STREAM )
         except Exception, e:
             raise DNSLookupException(addr, e)
     family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
@@ -117,8 +117,8 @@ class CachingProtocol(object):
         p = self.url.find( ':' ) # find len of scheme-id
         assert self.url[p:p+3] == '://', self.url
         # XXX: record rewrites in descriptor DB?
-        self.cache = Cache.load_backend_type( Params.CACHE )( self.url[p+3:] )
-        log( "Init cache: %s %s" % ( Params.CACHE, self.cache), 3 )
+        self.cache = Cache.load_backend_type( Runtime.CACHE )( self.url[p+3:] )
+        log( "Init cache: %s %s" % ( Runtime.CACHE, self.cache), 3 )
         log( 'Prepped cache, position: %s' % self.cache.path, 2 )
 
     def has_response( self ):
@@ -134,7 +134,7 @@ class CachingProtocol(object):
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
-        if port == Params.PORT:
+        if port == Runtime.PORT:
             log("Direct request: %s" % path)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
             self.Response = Response.DirectResponse
@@ -149,7 +149,7 @@ class CachingProtocol(object):
             log('Dropping connection, '
                         'request matches pattern: %r.' % m, 1)
             return True
-        if Params.STATIC and self.cache.full():
+        if Runtime.STATIC and self.cache.full():
             log('Static mode; serving file directly from cache')
             self.cache.open_full()
             self.Response = Response.DataResponse
@@ -157,7 +157,7 @@ class CachingProtocol(object):
 
     def prepare_nocache_response( self ):
         "Blindly respond for NoCache rule matches. "
-        for pattern, compiled in Params.NOCACHE:
+        for pattern, compiled in Runtime.NOCACHE:
             p = self.url.find( ':' ) # find len of scheme-id
             if compiled.match( self.url[p+3:] ):
                 log('Not caching request, matches pattern: %r.' %
@@ -525,7 +525,7 @@ class HttpProtocol(CachingProtocol):
 
     def set_dataresponse(self):
         mediatype = self.__args.get( 'Content-Type', None )
-        if Params.PROXY_INJECT and mediatype and 'html' in mediatype:
+        if Runtime.PROXY_INJECT and mediatype and 'html' in mediatype:
             log("XXX: Rewriting HTML resource: "+self.url)
             self.rewrite = True
         if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
@@ -557,7 +557,7 @@ class HttpProtocol(CachingProtocol):
     def headers( self ):
         args = self.args()
 
-        via = "%s:%i" % (Params.HOSTNAME, Params.PORT)
+        via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
         if args.setdefault('Via', via) != via:
             args['Via'] += ', '+ via
 
@@ -574,7 +574,7 @@ class FtpProtocol( CachingProtocol ):
     def __init__( self, request ):
         super(FtpProtocol, self).__init__( request )
 
-        if Params.STATIC and self.cache.full():
+        if Runtime.STATIC and self.cache.full():
           self.__socket = None
           log("Static FTP cache : %s" % self.url)
           self.cache.open_full()

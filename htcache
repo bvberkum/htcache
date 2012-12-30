@@ -1,15 +1,9 @@
 #! /usr/bin/env python
-import sys, time, weakref, traceback
-
-import Params, Protocol, Request, Response, Runtime, fiber
-import Resource
-import Rules
-
 import os
 import sys
 import time
 import weakref
-
+import traceback
 
 
 # XXX: development tooling:
@@ -20,7 +14,14 @@ except ImportError, e:
     pass
 
 
-import Params, Cache, Protocol, Request, Response, Resource, fiber
+import fiber
+import Params, Runtime, Command
+import Cache
+import Protocol, Request, Response
+import Resource
+import Rules
+from util import log
+
 
 
 
@@ -38,7 +39,7 @@ to locally stored data.
 
 def HTCache_fiber_handler( client, address ):
 
-    Params.log('New Request from %s:%i, downloads: %s; +1' % (
+    log('New Request from %s:%i, downloads: %s; +1' % (
         address + (len(DOWNLOADS),)))
 
     protocol = None
@@ -52,13 +53,13 @@ def HTCache_fiber_handler( client, address ):
             protocol = DOWNLOADS[ request ]
             if protocol.Response:
                 if issubclass( protocol.Response, Response.DataResponse ):
-                    Params.log('Joined running download')
+                    log('Joined running download')
                     break
                 del DOWNLOADS[ request ]
             else:
                 yield fiber.WAIT()
         else:
-            Params.log('Switching to %s'% request.Protocol.__name__, 3)
+            log('Switching to %s'% request.Protocol.__name__, 3)
             protocol = DOWNLOADS[ request ] = request.Protocol( request )
             server = protocol.socket()
             while not protocol.Response:
@@ -68,11 +69,11 @@ def HTCache_fiber_handler( client, address ):
                 else:
                     yield fiber.RECV( server, Params.TIMEOUT )
                     protocol.recv( server )
-        Params.log('Switching to %s'% protocol.Response.__name__, 2)
+        log('Switching to %s'% protocol.Response.__name__, 2)
         response = protocol.Response( protocol, request )
         server = protocol.socket()
     except Exception:
-        Params.log('Warning: Switching to ExceptionResponse')
+        log('Warning: Switching to ExceptionResponse')
         response = Response.ExceptionResponse( protocol, request )
 
     # blocks while client has not read data
@@ -86,49 +87,66 @@ def HTCache_fiber_handler( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    Params.log('Transaction completed', 1)
+    log('Transaction completed', 1)
 
     if protocol:
         if response:
             response.finalize(client)
         #protocol.descriptors.close()
 
-def load():
-    Rules.parse_droplist()
-    Rules.parse_nocache()
-    Rules.Join.parse()
-    Rules.parse_rewritelist()
+if __name__ == '__main__':
 
+    try:
+
+        Command.CLIParams().parse()
+
+    except Exception:
+        traceback.print_exc()
+        print >>sys.stderr, "Failure during initalization"
 
 ### Cache Maintenance static entry
 
-Command.CLIParams.parse()
-
-if Command.run_evokation():
-    sys.exit(0)
-
-# or start main proxy  loop
-
-while True:
-    load()
     try:
-        Resource.get_backend()
-        fiber.spawn(
-                HTCache_fiber_handler,
-                Params.PORT,
-                Params.DEBUG,
-                Params.LOG,
-                Params.PID_FILE )
 
-    except fiber.Restart, e:
-        Resource.get_backend().close()
-        for mod in ( Params, Protocol, Request, Response, Resource, fiber):
-            mod = reload(mod)
+        if Command.run():
+            if Command.exceptions:
+                if Runtime.DEBUG:
+                    print
+                    print "Detailed error reports: "
+                    for tp, exc, tb in Command.exceptions:
+                        traceback.print_exception(tp, exc, tb)
+                sys.exit(1)
+            else:
+                sys.exit(0)
 
-    except Exception, e:
+    except Exception:
+        # XXX: programming catch
         traceback.print_exc()
-        sys.exit(1)
-        break
+        print >>sys.stderr, "Error running commands"
 
-Resource.get_backend().close()
+### Normal proxy subroutine
+
+    while True:
+        Rules.load()
+        try:
+            Resource.get_backend()
+            fiber.spawn(
+                    HTCache_fiber_handler,
+                    Runtime.HOSTNAME,
+                    Runtime.PORT,
+                    Runtime.DEBUG,
+                    Runtime.LOG,
+                    Runtime.PID_FILE )
+
+        except fiber.Restart, e:
+            Resource.get_backend().close()
+            for mod in ( Params, Runtime, Command, Protocol, Request, Response, Resource, fiber):
+                mod = reload(mod)
+
+        except Exception, e:
+            traceback.print_exc()
+            sys.exit(1)
+            break
+
+    Resource.get_backend().close()
 

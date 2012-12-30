@@ -170,7 +170,7 @@ def fork( output, pid_file ):
     os.dup2( nul.fileno(), sys.stdin.fileno()  )
 
 
-def spawn( generator, port, debug, log, pid_file ):
+def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
     """
     generator
@@ -186,20 +186,27 @@ def spawn( generator, port, debug, log, pid_file ):
         Filename.
     """
 
+    import Runtime
+
     # set up listening socket
+    listener = socket.socket( 
+                socket.AF_INET, socket.SOCK_STREAM )
+    listener.setblocking( 0 )
+    listener.setsockopt( 
+            socket.SOL_SOCKET, 
+            socket.SO_REUSEADDR, 
+            listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
     try:
-        listener = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-        listener.setblocking( 0 )
-        listener.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
-        listener.bind( ( '', port ) )
-        listener.listen( 5 )
-    except Exception, e:
-        print 'error: failed to create socket:', e
-        sys.exit( 1 )
+        listener.bind( 
+                ( hostname, port ) )
+    except:
+        log("unable to bind to %s:%i" %(hostname, port), Params.LOG_ERR)
+        raise
+    listener.listen( 5 )
 
     # fork and exit for deamon mode
-    if log:
-        fork( log, pid_file )
+    if daemon_log:
+        fork( daemon_log, pid_file )
 
     # stay attached to console
     if debug:
@@ -207,8 +214,7 @@ def spawn( generator, port, debug, log, pid_file ):
     else:
         myFiber = GatherFiber
 
-    log('[ INIT ] %s started at %s:%i' % (generator.__name__,
-        Params.HOSTNAME, port ), 1)
+    log('[ INIT ] %s started at %s:%i' % (generator.__name__, hostname, port ), 1)
 
     try:
 

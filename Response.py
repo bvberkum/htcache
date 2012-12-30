@@ -2,7 +2,7 @@ import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
 import Params, Resource, Rules, HTTP, Runtime
-from util import log
+from util import log, json_write, json_read
 
 
 class BlindResponse:
@@ -38,7 +38,7 @@ class BlindResponse:
     def recv( self, sock ):
 
         assert not self.Done
-        chunk = sock.recv( Params.MAXCHUNK )
+        chunk = sock.recv( Runtime.MAXCHUNK )
         if chunk:
           self.__sendbuf += chunk
         elif not self.__sendbuf:
@@ -116,7 +116,7 @@ class DataResponse:
             args[ 'Content-Length' ] = '0'
 
         log('HTCache responds %s' % head, threshold=1)
-        if Params.VERBOSE > 1:
+        if Runtime.VERBOSE > 1:
             for key in args:
                 log('> %s: %s' % (
                     key, args[ key ].replace( '\r\n', ' > ' ) ), 2)
@@ -124,7 +124,7 @@ class DataResponse:
         # Prepare response for client
         self.__sendbuf = '\r\n'.join( [ head ] +
                 map( ': '.join, args.items() ) + [ '', '' ] )
-        if Params.LIMIT:
+        if Runtime.LIMIT:
             self.__nextrecv = 0
 
     def hasdata( self ):
@@ -145,7 +145,7 @@ class DataResponse:
             bytecnt = sock.send( self.__sendbuf )
             self.__sendbuf = self.__sendbuf[ bytecnt: ]
         else:
-            bytecnt = Params.MAXCHUNK
+            bytecnt = Runtime.MAXCHUNK
             if 0 <= self.__end < self.__pos + bytecnt:
                 bytecnt = self.__end - self.__pos
 
@@ -172,7 +172,7 @@ class DataResponse:
 
     def needwait( self ):
 
-        return Params.LIMIT and max( self.__nextrecv - time.time(), 0 )
+        return Runtime.LIMIT and max( self.__nextrecv - time.time(), 0 )
 
     def recv( self, sock ):
         """
@@ -180,13 +180,13 @@ class DataResponse:
         """
 
         assert not self.Done
-        chunk = sock.recv( Params.MAXCHUNK )
+        chunk = sock.recv( Runtime.MAXCHUNK )
         if chunk:
             self.__protocol.write( chunk )
             #if self.__protocol.capture:
             #    self.__hash.update( chunk )
-            if Params.LIMIT:
-                self.__nextrecv = time.time() + len( chunk ) / Params.LIMIT
+            if Runtime.LIMIT:
+                self.__nextrecv = time.time() + len( chunk ) / Runtime.LIMIT
         else:
             if self.__protocol.size >= 0:
                 assert self.__protocol.size == self.__protocol.tell(), \
@@ -218,7 +218,7 @@ class ChunkedDataResponse( DataResponse ):
 
     def recv( self, sock ):
         assert not self.Done
-        chunk = sock.recv( Params.MAXCHUNK )
+        chunk = sock.recv( Runtime.MAXCHUNK )
         assert chunk, 'chunked data error: connection closed prematurely'
         self.__recvbuf += chunk
         while '\r\n' in self.__recvbuf:
@@ -246,9 +246,9 @@ class BlockedContentResponse:
         url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\n'\
                 'Content-Type: text/html\r\n\r\n"\
-                + open(Params.HTML_PLACEHOLDER).read() % {
-                        'host': Params.HOSTNAME,
-                        'port': Params.PORT,
+                + open(Runtime.HTML_PLACEHOLDER).read() % {
+                        'host': Runtime.HOSTNAME,
+                        'port': Runtime.PORT,
                         'location': '%s:%i/%s' % url,
                         'software': 'htcache/%s' % Params.VERSION }
 
@@ -387,13 +387,13 @@ class DirectResponse:
             }
         if body:
             try:
-                req = Params.json_read(body)
+                req = json_read(body)
             except:
                 #print "JSON: ",request.recvbuf()
                 raise
         # TODO: echos only
         self.prepare_response(status,
-                Params.json_write(req), mime="application/json")
+                json_write(req), mime="application/json")
 
     def reload_proxy(self, status, protocol, request):
         self.prepare_response(status, "Reloading gateway")
@@ -426,7 +426,7 @@ class DirectResponse:
                 '\r\n%s' % ( status, '\n'.join( lines ) )
 
     def serve_params(self, status, protocol, request):
-        msg = Params.format_info()
+        msg = Command.print_info(True)
         self.prepare_response(status, msg, mime='application/json')
 
     def serve_descriptor(self, status, protocol, request):
@@ -443,7 +443,7 @@ class DirectResponse:
         if cache.path in descriptors:
             descr = descriptors[cache.path]
             self.prepare_response(status,
-                    Params.json_write(descr),
+                    json_write(descr),
                     mime='application/json')
         else:
             self.prepare_response("404 No Data", "No data for %s %s %s %s"%request.url)

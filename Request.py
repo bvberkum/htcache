@@ -6,7 +6,7 @@ TODO: determine cachability.
 """
 import os, socket, time
 
-import Params, Protocol
+import Params, Protocol, Runtime
 from HTTP import HTTP
 from util import *
 
