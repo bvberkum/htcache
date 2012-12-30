@@ -2,6 +2,7 @@ import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
 import Params, Resource, Rules, HTTP, Runtime
+from util import log
 
 
 class BlindResponse:
@@ -59,7 +60,7 @@ class DataResponse:
 
     def __init__( self, protocol, request ):
 
-        Params.log("New DataResponse for "+str(request.url), 5)
+        log("New DataResponse for "+str(request.url), 5)
 
         self.__protocol = protocol
         self.__pos, self.__end = request.range()
@@ -75,7 +76,7 @@ class DataResponse:
         cached_headers = {}
         if protocol.descriptor:
             pass
-        #  Params.log("Descriptor: %s" % pformat(descr))
+        #  log("Descriptor: %s" % pformat(descr))
             #urirefs, cached_args = protocol.get_descriptor()
           # Abuse feature dict to store headers
           # TODO: parse mediatype, charset, language..
@@ -84,7 +85,7 @@ class DataResponse:
           #    #if 'encoding' in k.lower(): continue
           #    args[k] = v
         #else:
-        #  Params.log("No descriptor for %s" % protocol.cache.path)
+        #  log("No descriptor for %s" % protocol.cache.path)
 # XXX: this may need to be on js serving..
 #        if self.__protocol.rewrite:
 #            args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
@@ -114,10 +115,10 @@ class DataResponse:
             args[ 'Content-Range' ] = 'bytes */*'
             args[ 'Content-Length' ] = '0'
 
-        Params.log('HTCache responds %s' % head, threshold=1)
+        log('HTCache responds %s' % head, threshold=1)
         if Params.VERBOSE > 1:
             for key in args:
-                Params.log('> %s: %s' % (
+                log('> %s: %s' % (
                     key, args[ key ].replace( '\r\n', ' > ' ) ), 2)
 
         # Prepare response for client
@@ -155,7 +156,7 @@ class DataResponse:
             try:
                 self.__pos += sock.send( chunk )
             except:
-                Params.log("Error writing to client, aborted!")
+                log("Error writing to client, aborted!")
                 self.Done = True
                 # Unittest 2: keep partial file
                 #if not self.__protocol.cache.full():
@@ -192,7 +193,7 @@ class DataResponse:
                         'connection closed prematurely'
             else:
                 self.__protocol.size = self.__protocol.tell()
-                Params.log('Connection closed at byte %i' % self.__protocol.size, threshold=2)
+                log('Connection closed at byte %i' % self.__protocol.size, threshold=2)
             self.Done = not self.hasdata()
 
         #if self.Done:
@@ -201,7 +202,7 @@ class DataResponse:
                 #chunk, count = pattern.subn(substitute, chunk)
                 #self.size += len(substitute)
                 #(count * len(substitute))
-                #Params.log("Rewritten content with %r, %i times" % (
+                #log("Rewritten content with %r, %i times" % (
                 #        (pattern, substitute), count))
 
     def finalize(self, client):
@@ -225,14 +226,14 @@ class ChunkedDataResponse( DataResponse ):
             chunksize = int( head.split( ';' )[ 0 ], 16 )
             if chunksize == 0:
                 self.__protocol.size = self.__protocol.tell()
-                Params.log('Connection closed at byte %i' % self.__protocol.size, threshold=2)
+                log('Connection closed at byte %i' % self.__protocol.size, threshold=2)
                 self.Done = not self.hasdata()
                 return
             if len( tail ) < chunksize + 2:
                 return
             assert tail[ chunksize:chunksize+2 ] == '\r\n', \
                     'chunked data error: chunk does not match announced size'
-            Params.log('Received %i byte chunk' % chunksize, threshold=1)
+            log('Received %i byte chunk' % chunksize, threshold=1)
             self.__protocol.write( tail[ :chunksize ] )
             self.__recvbuf = tail[ chunksize+2: ]
 

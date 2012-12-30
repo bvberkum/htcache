@@ -8,6 +8,7 @@ import os, socket, time
 
 import Params, Protocol
 from HTTP import HTTP
+from util import *
 
 
 
@@ -42,7 +43,7 @@ class HtRequest:
 
         line = chunk[ :eol ]
 
-        Params.log('Client sends %r'%Params.print_str(line, 96), threshold=1)
+        log('Client sends %r' % print_str(line, 96), threshold=1)
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
@@ -65,12 +66,12 @@ class HtRequest:
 
         line = chunk[ :eol ]
         if ':' in line:
-            Params.log('> '+ line.rstrip(), 2)
+            log('> '+ line.rstrip(), 2)
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(
+                log("Warning: %r not a known HTTP (request) header (%r)"%(
                     key, value.strip()), 1)
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
@@ -80,14 +81,14 @@ class HtRequest:
             if self.__size:
                 assert self.__verb == 'POST', \
                         '%s request conflicts with message body' % self.__verb
-                Params.log('Opening temporary file for POST upload', 1)
+                log('Opening temporary file for POST upload', 1)
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
             else:
                 self.__body = None
                 self.__parse = None
         else:
-            Params.log('Warning: Ignored header line: %r' % line)
+            log('Warning: Ignored header line: %r' % line)
 
         return eol
 
@@ -135,7 +136,7 @@ class HtRequest:
 
         scheme = ''
         host = ''
-        port = Params.PORT
+        port = Runtime.PORT
         path = ''
 
         # Accept http and ftp proxy requests
@@ -166,7 +167,7 @@ class HtRequest:
             self.Protocol = Protocol.HttpProtocol
             scheme = ''
             host = '' 
-            port = Params.PORT
+            port = Runtime.PORT
 
         # Get the path
         if '/' in host:
@@ -182,7 +183,7 @@ class HtRequest:
         else:
             hostinfo = "%s:%s" % (host, port)
 
-        Params.log('scheme=%s, host=%s, port=%s, path=%s' % 
+        log('scheme=%s, host=%s, port=%s, path=%s' % 
                 (scheme, host, port, path), 3)
 
         self.__scheme = scheme
@@ -208,8 +209,9 @@ class HtRequest:
                 Params.TIMEFMT, time.gmtime() )
 
         # Add proxy Via header (HTTP/1.1 [RFC 2616] 14.45)
-        via = "1.1 %s:%i (htcache/%s)" % (Params.HOSTNAME, 
-                Params.PORT,
+        via = "1.1 %s:%i (htcache/%s)" % (
+                Runtime.HOSTNAME, 
+                Runtime.PORT,
                 Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
             self.__headers['Via'] += ', '+ via
@@ -264,7 +266,7 @@ class HtRequest:
     def headers(self):
         # XXX: used before protocol is determined,  assert self.Protocol
         if not self.Protocol and self.__parse == self.__parse_args:
-            Params.log("Warning: parsing headers is not finished. ")
+            log("Warning: parsing headers is not finished. ")
         return self.__headers.copy()
 
     def range(self):
@@ -295,5 +297,5 @@ class HtRequest:
         return request1 == request2
 
     def __str__(self):
-        return "<%s %s, %s>" % (Params.cn(self), self.hostinfo, self.envelope)
+        return "<%s %s, %s>" % (cn(self), self.hostinfo, self.envelope)
 

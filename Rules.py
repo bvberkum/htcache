@@ -4,6 +4,7 @@ import os
 import re
 
 import Params
+from util import log
 
 
 def parse_droplist(fpath=Params.DROP_FILE):
@@ -73,7 +74,7 @@ class Join:
                 m = regex.match(pathref)
                 if m:
                     pathref = regex.sub(repl, pathref)
-                    Params.log("Joined URL matching rule %r" % pattern,
+                    log("Joined URL matching rule %r" % pattern,
                             threshold=Params.LOG_INFO)
         return pathref
 
@@ -105,7 +106,7 @@ class Join:
                 open(fpath).readlines() 
                 if p.strip() and not p.strip().startswith('#')])
         else:
-            Params.log("No such file: %s" % fpath, Params.LOG_ALERT)
+            log("No such file: %s" % fpath, Params.LOG_ALERT)
 
     @classmethod
     def validate(klass):
@@ -113,7 +114,7 @@ class Join:
         Read all double commented lines as URLs, use on next first pattern line.
         """
         if not klass.rules:
-            Params.log("No Rules to run", Params.LOG_WARN)
+            log("No Rules to run", Params.LOG_WARN)
             return
         ok = True
         lines = []
@@ -124,7 +125,7 @@ class Join:
                     open(fpath).readlines() if len(path.strip()) > 1 and
                     path.strip()[1]=='#'])
             except Exception, e:
-                Params.log("Parsing exception: %s" % e, Params.LOG_ERR)
+                log("Parsing exception: %s" % e, Params.LOG_ERR)
                 return
         for path in lines:
             match = False
@@ -153,12 +154,12 @@ class Rewrite:
     @classmethod
     def run(klass, chunk):
         delta = 0
-        Params.log("Trying to rewrite chunk. ", 3)
+        log("Trying to rewrite chunk. ", 3)
         for regex, repl in Params.REWRITE:
             if regex.search(chunk):
                 new_chunk, count = regex.subn(repl, chunk)
                 delta += len(new_chunk)-len(chunk)
                 chunk = new_chunk
             else:
-                Params.log("No match on chunk", 4)
+                log("No match on chunk", 4)
         return delta, chunk

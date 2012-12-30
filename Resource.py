@@ -13,6 +13,8 @@ except AssertionError:
 import Params
 import HTTP
 import Rules
+import Runtime
+from util import *
 from error import *
 
 
@@ -69,7 +71,7 @@ class Storage(object):
 
     def __init__(self, resources, descriptors, cachemap, resourcemap):
 
-        Params.log([
+        log([
             resources,
             descriptors,
             cachemap,
@@ -192,13 +194,13 @@ class Descriptor(object):
         self.path = path
         self.__data = Params.json_read(
                 self.storage.descritors[self.path])
-        Params.log(['load_from_storage', self.path, self.__data])
+        log(['load_from_storage', self.path, self.__data])
 
     def commit(self):
         assert self.path
         self.storage.descriptors[self.path] = Params.json_write(
                 self.__data)
-        Params.log([ 'commit', path, self.__data ], Params.LOG_DEBUG)
+        log([ 'commit', path, self.__data ], Params.LOG_DEBUG)
 
     def update(self, args):
         newdata = HTTP.map_headers_to_resource(args)
@@ -207,12 +209,12 @@ class Descriptor(object):
         #            "Update to unknown header: %r" % k
         #    assert newdata[k] == self.__data[k], \
         #            "XXX: update"
-        Params.log([ 'update', self.path, args, self.__data ], Params.LOG_DEBUG)
+        log([ 'update', self.path, args, self.__data ], Params.LOG_DEBUG)
         self.__data.update(newdata)
 
     def drop(self):
         del self.storage.descriptors[self.path]
-        Params.log([ 'drop', self.path, self.__data ], Params.LOG_DEBUG)
+        log([ 'drop', self.path, self.__data ], Params.LOG_DEBUG)
 
     def create_for_response(self, protocol, response):
         assert False
@@ -242,7 +244,7 @@ def index_factory(storage, path, mode='r'):
             raise Exception("Unable to create new resource DB at <%s>: %s" %
                     (path, e))
     try:
-        Params.log("Opening %s mode=%s" %(path, mode))
+        log("Opening %s mode=%s" %(path, mode))
         return anydbm.open(path, mode)
     except anydbm.error, e:
         raise Exception("Unable to access resource DB at <%s>: %s" %
@@ -259,7 +261,8 @@ backend = None
 def open_backend(read_only=False):
     global backend
 
-    path = Params.DATA_DIR
+    path = Runtime.DATA_DIR
+    assert path
 
     mode = 'w'
     if read_only:
@@ -296,7 +299,7 @@ def print_info(*paths):
             path = Params.ROOT + path
 #        path = path.replace(Params.ROOT, '')
         if path not in backend:
-            Params.log("Unknown cache location: %s" % path, Params.LOG_CRIT)
+            log("Unknown cache location: %s" % path, Params.LOG_CRIT)
         else:
             print path, backend.find(path)
             recordcnt += 1
@@ -307,7 +310,7 @@ def print_info(*paths):
     else:
         print >>sys.stderr, "No record found"
     backend.close()
-    Params.log("End of printinfo", Params.LOG_DEBUG)
+    log("End of printinfo", Params.LOG_DEBUG)
     sys.exit(0)
 
 def print_media_list(*media):
@@ -380,7 +383,7 @@ def find_info(q):
 #                    if res[4][k2] == props[k][k2]:
 #                        print path
     backend.close()
-    Params.log("End of findinfo", Params.LOG_DEBUG)
+    log("End of findinfo", Params.LOG_DEBUG)
     sys.exit(1)
 
 def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
@@ -396,14 +399,14 @@ def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     if cache.partial():
         pathname += '.incomplete'
     if not (cache.partial() or cache.full()):
-        Params.log("Missing %s" % pathname)
+        log("Missing %s" % pathname)
         return
     if 'Content-Length' not in meta:
-        Params.log("Missing content length of %s" % pathname)
+        log("Missing content length of %s" % pathname)
         return
     length = int(meta['Content-Length'])
     if cache.full() and os.path.getsize(pathname) != length:
-        Params.log("Corrupt file: %s, size should be %s" % (pathname, length))
+        log("Corrupt file: %s, size should be %s" % (pathname, length))
         return
     return True
 
@@ -434,7 +437,7 @@ def check_files():
     #else:
     #    descriptors = get_backend(main=False)
     pcount, rcount = 0, 0
-    Params.log("Iterating paths in cache root location. ")
+    log("Iterating paths in cache root location. ")
 
     for root, dirs, files in os.walk(Params.ROOT):
 
@@ -450,26 +453,26 @@ def check_files():
             pcount += 1
             if f not in backend.descriptors:
                 if os.path.isfile(f):
-                    Params.log("Missing descriptor for %s" % f)
+                    log("Missing descriptor for %s" % f)
                     if Params.PRUNE:
                         size = os.path.getsize(f)
                         if size < Params.MAX_SIZE_PRUNE:
                             os.unlink(f)
-                            Params.log("Removed unknown file %s" % f)
+                            log("Removed unknown file %s" % f)
                         else:
-                            Params.log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
+                            log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
                 elif not (os.path.isdir(f) or os.path.islink(f)):
-                    Params.log("Unrecognized path %s" % f)
+                    log("Unrecognized path %s" % f)
             elif f in backend.descriptors:
                 rcount += 1
                 descr = backend.descriptors[f]
                 assert isinstance(descr, Descriptor)
                 uriref = descr[0][0]
-                Params.log("Found resource %s" % uriref, threshold=1)
+                log("Found resource %s" % uriref, threshold=1)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
                 port = 80
                 if len(descr[0]) != 1:
-                    Params.log("Multiple references %s" % f)
+                    log("Multiple references %s" % f)
                     continue
                 urlparts = urlparse.urlparse(uriref)
                 hostname = urlparts.netloc
@@ -482,7 +485,7 @@ def check_files():
                 cache = get_cache(hostinfo, pathname)
                 #print 'got cache', cache.getsize(), cache.path
 # end
-    Params.log("Finished checking %s cache locations, found %s resources" % (
+    log("Finished checking %s cache locations, found %s resources" % (
         pcount, rcount))
     backend.close()
     sys.exit(0)
@@ -498,18 +501,18 @@ def check_cache():
     global backend
     refs = backend.descriptors.keys()
     count = len(refs)
-    Params.log("Iterating %s descriptors" % count)
+    log("Iterating %s descriptors" % count)
     for i, ref in enumerate(refs):
-        Params.log("%i, %s" % (i, ref), Params.LOG_DEBUG)
+        log("%i, %s" % (i, ref), Params.LOG_DEBUG)
         descr = backend.descriptors[ref]
-        Params.log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
+        log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
         urirefs, mediatype, d1, d2, meta, features = descr
         #progress = float(i)/count
         #pb.update(progress, ref)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
         port = 80
         if len(urirefs) != 1:
-            Params.log("Multiple references %s" % ref)
+            log("Multiple references %s" % ref)
             continue
         urlparts = urlparse.urlparse(urirefs[0])
         hostname = urlparts.netloc
@@ -533,17 +536,17 @@ def check_cache():
                 if os.path.getsize(path) > Params.MAX_SIZE_PRUNE:
                     if Params.INTERACTIVE:
                         pass
-                    Params.log("Keeping %s" % path)
+                    log("Keeping %s" % path)
                     continue
                 if os.path.isfile(path):
                     print 'size=', cache.getsize() / 1024**2
                     os.unlink(path)
-                    Params.log("Deleted %s" % path)
+                    log("Deleted %s" % path)
                 else:
-                    Params.log("Unable to remove dir %s" % path)
+                    log("Unable to remove dir %s" % path)
             del backend.descriptors[ref]
-            Params.log("Removed %s" % cache.path)
-    Params.log("Finished checking %s cache descriptors" % count)
+            log("Removed %s" % cache.path)
+    log("Finished checking %s cache descriptors" % count)
     backend.close()
     #pb.clear()
     sys.exit(0)

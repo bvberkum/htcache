@@ -1,4 +1,6 @@
 
+from util import HeaderDict
+
 
 class HTTP:
 
@@ -144,7 +146,6 @@ class HTTP:
 def strstr(s):
     return s.strip('"')
 
-from util import HeaderDict
 
 def map_headers_to_resource(headers):
     kwds = {}

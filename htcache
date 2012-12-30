@@ -12,6 +12,7 @@ import weakref
 
 
 
+# XXX: development tooling:
 try:
     import coverage
     coverage.process_startup()
@@ -34,43 +35,6 @@ by switching to the response fase.
 XXX: This also allows local lookup of resources, ie. to rewrite the cache location
 to locally stored data.
 """
-
-
-### Descriptor/Cache Query static entry
-
-from fnmatch import fnmatch
-
-def path_ignore(path):
-    for p in ('*.git*','*.sw[pon]','*.py[c]','*Makefile', '*.py', '*.mk'):
-        if fnmatch(path, p):
-            return True
-
-def run_join():
-    Rules.Join.parse()
-    os.chdir(Params.ROOT)
-    for root, dirs, files in os.walk(Params.ROOT):
-        for d in dirs:
-            if d in ['.git']:
-                dirs.remove(d)
-        for f in files:
-            fpath = os.path.join(root, f).replace(Params.ROOT, '')
-            fpath2 = fpath.replace(':80','')
-            fpath3 = Rules.Join.rewrite(fpath2)
-            assert fpath3, fpath3
-            if fpath2 != fpath3:
-                Params.log('Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
-                print fpath2, fpath3
-                dirname = os.path.dirname(fpath3)
-                if dirname and not os.path.isdir(dirname):
-                    print 'creating', dirname
-                    os.makedirs(dirname)
-                os.rename(fpath, fpath3)
-            #for line, regex in Params.JOIN:
-            #    if m:
-            #        m = regex.match(fpath)
-            #        print 'Match', fpath, m.groups()
-
-
 
 def HTCache_fiber_handler( client, address ):
 
@@ -129,7 +93,6 @@ def HTCache_fiber_handler( client, address ):
             response.finalize(client)
         #protocol.descriptors.close()
 
-
 def load():
     Rules.parse_droplist()
     Rules.parse_nocache()
@@ -137,25 +100,14 @@ def load():
     Rules.parse_rewritelist()
 
 
-### Descriptor/Cache Maintenance static entry
+### Cache Maintenance static entry
 
-if Params.CMDS:
-    Params.run({
-        'list-locations': Resource.list_locations,
-        'list-resources': Resource.list_urls,
-        'find-records': Resource.find_info,
-#        'link-dupes': Resource,
-#        Resource.print_media_list(*Params.PRINT_MEDIA)
-#        'find-videos': Resource,
-#        'find-images': Resource,
-#        'find-texts': Resource,
-        'validate-cache': Resource.validate_cache,
-        'run-join-rules': run_join,
-        'check-join-rules': Resource.check_joinlist,
-        'check-cache': Resource.check_cache,
-        'check-files': Resource.check_files,
-    })
+Command.CLIParams.parse()
+
+if Command.run_evokation():
     sys.exit(0)
+
+# or start main proxy  loop
 
 while True:
     load()

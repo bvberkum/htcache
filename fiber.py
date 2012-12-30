@@ -1,6 +1,8 @@
 import sys, os, select, time, socket, traceback
 
 import Params
+from util import log
+
 
 class Restart(Exception): pass
 
@@ -58,7 +60,7 @@ class Fiber:
         except AssertionError, msg:
             if not str(msg):
                 msg = traceback.format_exc()
-            Params.log('Assertion failure: %s'% msg)
+            log('Assertion failure: %s'% msg)
         except:
             traceback.print_exc()
 
@@ -115,7 +117,7 @@ class DebugFiber( Fiber ):
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
             if self.state:
-                Params.log('Waiting at %s'% self, 1)
+                log('Waiting at %s'% self, 1)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -170,6 +172,20 @@ def fork( output, pid_file ):
 
 def spawn( generator, port, debug, log, pid_file ):
 
+    """
+    generator
+        A generator (callable that yields state changes), 
+    port
+        Integer.
+    debug
+        Boolean to indicated wether to use regular GatherFiber or
+        DebugFiber.
+    log
+        Callable.
+    pid_file
+        Filename.
+    """
+
     # set up listening socket
     try:
         listener = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
@@ -191,7 +207,7 @@ def spawn( generator, port, debug, log, pid_file ):
     else:
         myFiber = GatherFiber
 
-    Params.log('[ INIT ] %s started at %s:%i' % (generator.__name__,
+    log('[ INIT ] %s started at %s:%i' % (generator.__name__,
         Params.HOSTNAME, port ), 1)
 
     try:
@@ -233,10 +249,10 @@ def spawn( generator, port, debug, log, pid_file ):
                     expire = state.expire
 
             if expire is None:
-                Params.log('[ IDLE ] %s %s'% (time.ctime(), len(fibers)))
+                log('[ IDLE ] %s %s'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-                Params.log('[ BUSY ] %s %s'% (time.ctime(), len(fibers)))
+                log('[ BUSY ] %s %s'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
             else:
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -254,8 +270,8 @@ def spawn( generator, port, debug, log, pid_file ):
                 trysend[ fileno ].step()
 
     except KeyboardInterrupt, e:
-        Params.log("Interrupt: %s" % e, 1)
-        Params.log('[ DONE ] %s interrupted'% (generator.__name__))
+        log("Interrupt: %s" % e, 1)
+        log('[ DONE ] %s interrupted'% (generator.__name__))
         sys.exit( 0 )
 
     except Restart:

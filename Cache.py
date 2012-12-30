@@ -2,6 +2,7 @@ import time, os, sys, shutil
 
 import Params
 import Rules
+from util import *
 
 
 def load_backend_type(tp):
@@ -45,14 +46,14 @@ class File(object):
             self.init(rpath)
             # symlink to rewritten path
             #if path != rpath and not os.path.exists(path):
-            #    Params.log("Symlink: %s -> %s" %(path, rpath))
+            #    log("Symlink: %s -> %s" %(path, rpath))
             #    os.makedirs(os.path.dirname(path))
             #    os.symlink(rpath, path)
             # check if target is symlink, must exist
             if os.path.islink(rpath):
                 target = os.readlink(rpath)
                 if not os.path.exists(target):
-                    Params.log("Warning: broken symlink, replacing: %s" % target)
+                    log("Warning: broken symlink, replacing: %s" % target)
                     os.unlink(rpath)
             # check if target is partial, rename
             i = 1
@@ -61,7 +62,7 @@ class File(object):
                     i+=1
                 shutil.copyfile(rpath+Params.PARTIAL, '%s.%s%s'
                         %(rpath,i,Params.PARTIAL))
-                Params.log("Warning: backed up duplicate incomplete %s" % i)
+                log("Warning: backed up duplicate incomplete %s" % i)
                 # XXX: todo: keep largest partial only
             assert len(self.path) < 255, \
                     "LBYL, cache location path to long for Cache.File! "
@@ -142,10 +143,10 @@ class File(object):
 
     def remove_full( self ):
         os.remove( self.path )
-        Params.log('Removed complete file from cache')
+        log('Removed complete file from cache')
 
     def remove_partial( self ):
-        Params.log('Removed partial file from cache')
+        log('Removed partial file from cache')
         os.remove( self.path + Params.PARTIAL )
 
     def read( self, pos, size ):
@@ -167,9 +168,9 @@ class File(object):
             os.utime( self.path + Params.PARTIAL, ( self.mtime, self.mtime ) )
         if self.size == size:
             os.rename( self.path + Params.PARTIAL, self.path )
-            Params.log("Finalized %r" % self.path)
+            log("Finalized %r" % self.path)
         else:
-            Params.log("Closed partial %r" % self.path)
+            log("Closed partial %r" % self.path)
 
     def __nonzero__(self):
       return self.partial() or self.full()
