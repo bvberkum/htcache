@@ -256,13 +256,14 @@ Storage.DescriptorStorageFactory = index_factory
 Storage.ResourceMapFactory = index_factory
 Storage.CacheMapFactory = index_factory
 
+
 backend = None
 
 def open_backend(read_only=False):
     global backend
 
+    assert Runtime.DATA_DIR
     path = Runtime.DATA_DIR
-    assert path
 
     mode = 'w'
     if read_only:
@@ -284,10 +285,12 @@ def get_backend(read_only=False):
         assert backend.mode == 'r'
     return backend
 
+def close_backend():
+    global backend
+    backend.close()
+    backend = None
 
-# FIXME: rewrite this to Rules or Cmd
 
-# psuedo-Main: special command line options allow resource DB queries:
 
 def list_locations():
     global backend
@@ -302,10 +305,13 @@ def list_urls():
     global backend
     get_backend(True)
     for url in backend.resources:
-
-        res = backend.find(path)
+        res = backend.find(url)
         print res
 
+def print_record(url):
+    backend = get_backend(True)
+    res = backend.find(url)
+    print res
 
 # TODO: find_records by attribute query
 def find_records(q):
@@ -343,8 +349,7 @@ def find_records(q):
     backend.close()
     log("End of findinfo", Params.LOG_DEBUG)
 
-
-# FIXME:
+# TODO: integrate with other print_info
 def print_info(*paths):
     global backend
     open_backend(True)

@@ -3,11 +3,16 @@ import os
 import sys
 import anydbm
 
+import Runtime
 import Resource
 
 
 
 class Resource_Storage_Factory(unittest.TestCase):
+
+    """
+    test if factory produces anydbm like object
+    """
 
     def test_(self):
         path = '/tmp/htcache-Resource_Storage_Factory-test.db'
@@ -29,7 +34,14 @@ class Resource_Storage_Factory(unittest.TestCase):
 
 class Resource_Storage(unittest.TestCase):
 
+    """
+    Test Storage interface.
+    """
+
     def test_1_factories(self):
+        """
+        Test if factories exists.
+        """
         for name in ('ResourceStorage', 'DescriptorStorage', \
                 'ResourceMap', 'CacheMap'):
             factory = getattr(Resource.Storage, "%sFactory" % name)
@@ -44,8 +56,23 @@ class Resource_Descriptor(unittest.TestCase):
 
 class Resource_backend(unittest.TestCase):
 
-    def test_(self):
+    """
+    Test wether get/open/close backend works. 
+    """
+
+    def test_1_init(self):
         self.assertTrue(Resource.backend == None)
+        Runtime.DATA_DIR = '/tmp/htache-unittest-data'
+        if not os.path.exists(Runtime.DATA_DIR):
+            os.mkdir(Runtime.DATA_DIR)
+        Resource.open_backend()
+        self.assertTrue(isinstance(Resource.backend, Resource.Storage))
+        Resource.close_backend()
+
+    def test_2_ro(self):
+        self.assertTrue(Resource.backend == None)
+        Runtime.DATA_DIR = '/tmp/htache-unittest-data'
         Resource.open_backend(True)
         self.assertTrue(isinstance(Resource.backend, Resource.Storage))
+        Resource.close_backend()
 

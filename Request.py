@@ -191,7 +191,7 @@ class HtRequest:
         self.__port = port
         self.__reqpath = path
 
-# FIXME: write a test for this
+# XXX: need a test for this
 #        if self.resource and 'Host' not in self.__headers:
 #            # Become HTTP/1.1 compliant
 #            self.__headers['Host'] = self.resource.ref.host

@@ -435,6 +435,7 @@ cmdfunc = {
         'list-locations': Resource.list_locations,
         'list-resources': Resource.list_urls,
         'find-records': Resource.find_records,
+        'print-record': Resource.print_record,
 
 # Rules
         'run-join-rules': Rules.Join.run,

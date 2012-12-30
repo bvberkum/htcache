@@ -172,7 +172,7 @@ class Join(AbstractRuleset):
                     os.rename(fpath, fpath3)
 
 
-# FIXME:
+# FIXME: drop rules
 class Drop(AbstractRuleset):
 
     main_file = Params.DROP_FILE
@@ -204,7 +204,7 @@ class Rewrite(AbstractRuleset):
     @classmethod
     def parse_rule(klass, line):
         return
-# FIXME:
+# FIXME: parse rewrite rules
         fields = line.strip().split('\t')
         patterns = [ re.compile(f) if f != '.*' else None for f in fields[:-1] ]
 

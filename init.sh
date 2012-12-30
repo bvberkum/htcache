@@ -4,9 +4,6 @@
 # System-V like init script for htcache.
 # Note path definitions here and in Params.py.
 #
-# FIXME: this is inadequate and fragile, also htcache may want to handle
-# daemonization and running detection internally.
-#
 ### BEGIN INIT INFO
 # Provides:          htcache
 # Required-Start:    

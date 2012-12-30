@@ -265,7 +265,7 @@ class HttpProtocol(CachingProtocol):
                     ( size, mtime ), 1)
                 # XXX: treat as unspecified end-to-end revalidation
                 # should detect existing cache-validating conditional?
-                # FIXME: Validate client validator against cached entry
+                # TODO: Validate client validator against cached entry
                 args[ 'If-Modified-Since' ] = mtime
         else:
             # don't gateway conditions, client seems to have cache but this is
@@ -393,7 +393,6 @@ class HttpProtocol(CachingProtocol):
 
             self.recv_entity()
             self.descriptor.update( self.__args )
-# FIXME: #self.descriptor.init( self.cache.path, self.__args )
             self.set_dataresponse();
 
         elif self.__status == HTTP.PARTIAL_CONTENT \
@@ -476,7 +475,7 @@ class HttpProtocol(CachingProtocol):
                     self.url,4)
             self.cache.open_new()
             assert self.cache.partial()
-        # FIXME: load http entity, perhaps response headers from shelve
+        # TODO: load http entity, perhaps response headers from shelve
         #self.descriptors.map_path(self.cache.path, uriref)
         #self.descriptors.put(uriref,
         #descr = self.get_descriptor()

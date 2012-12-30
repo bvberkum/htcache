@@ -3,6 +3,7 @@ import os
 import unittest
 
 import Params
+import Runtime
 import Rules
 
 
@@ -11,12 +12,14 @@ class Rules_Join(unittest.TestCase):
 
     test_rules = 'etc/rules.join'
 
-    def test_1_init(self):
+    def test_1_1_defaults(self):
         self.assertEqual(
             Params.JOIN_FILE, '/etc/htcache/rules.join')
-        self.assertEqual(Params.JOIN, [])
-        Params.JOIN_FILE = 'etc/rules.join'
-        Rules.Join.parse() 
+
+    def test_1_2_init(self):
+        self.assertEqual(Rules.Join.rules, [])
+        fn = 'etc/rules.join'
+        Rules.Join.parse(fn) 
         self.assertEqual(len(Rules.Join.rules), 2)
 
     def test_2_rewrite(self):
@@ -36,4 +39,5 @@ class Rules_Drop(unittest.TestCase):
 
 class Rules_Rewrite(unittest.TestCase):
     pass
+
 

@@ -246,7 +246,7 @@ class BlockedContentResponse:
         url = request.hostinfo + (request.envelope[1],)
         self.__sendbuf = "HTTP/1.1 403 Dropped By Proxy\r\n'\
                 'Content-Type: text/html\r\n\r\n"\
-                + open(Runtime.HTML_PLACEHOLDER).read() % {
+                + open(Params.HTML_PLACEHOLDER).read() % {
                         'host': Runtime.HOSTNAME,
                         'port': Runtime.PORT,
                         'location': '%s:%i/%s' % url,

@@ -1,35 +1,21 @@
-./Resource.py:268:# FIXME: should know if opened backend is read or write
-./Resource.py:274:# FIXME: rewrite this to Rules or Cmd
-./Protocol.py:258:                # FIXME: Validate client validator against cached entry
-./Protocol.py:471:        # FIXME: load http entity, perhaps response headers from shelve
-./Request.py:193:# FIXME: write a test for this
-./Protocol.py.orig:271:                # FIXME: Validate client validator against cached entry
-./Protocol.py.orig:484:        # FIXME: load http entity, perhaps response headers from shelve
-./Rules.mk.LOCAL.29728.mk:35:	grep $$GREP_F "FIXME" ./ > $@;\
-./Request.py.orig:196:# FIXME: write a test for this
+./Protocol.py:268:                # FIXME: Validate client validator against cached entry
+./Protocol.py:396:# FIXME: #self.descriptor.init( self.cache.path, self.__args )
+./Protocol.py:479:        # FIXME: load http entity, perhaps response headers from shelve
+./Request.py:194:# FIXME: write a test for this
 ./protocol-test:4:- FIXME: should cover a good deal of HTTP stuff.
-./main.rst:274:  the first argument being prefixed with '?'. FIXME: does not solve anything?
-./Rules.mk.BACKUP.29728.mk:35:	grep $$GREP_F "FIXME" ./ > $@;\
-./main.rst.orig:66:        - FIXME: needs a lot of merging to get this right again
-./main.rst.orig:281:  the first argument being prefixed with '?'. FIXME: does not solve anything?
-./Rules.mk.REMOTE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
-./Params.py:134:     FIXME --print-mode line|tree
-./Params.py:230:        VERBOSE = 0 # FIXME: should have another threshold for logger perhaps,
+./main.rst:280:  the first argument being prefixed with '?'. FIXME: does not solve anything?
+./Rules.py:165:                    log('FIXME: Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
+./Rules.py:175:# FIXME:
+./Rules.py:207:# FIXME:
 ./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
-./Rules.mk.BASE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
 
-./Resource.py:209:        raise "TODO"
-./Resource.py:216:        raise "TODO"
-./Resource.py:305:        # TODO: documents
-./Protocol.py:234:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
-./Protocol.py:266:        # TODO: Store relationship with referer
+./Resource.py:221:        raise "TODO"
+./Resource.py:228:        # TODO: set_broken
+./Resource.py:313:# TODO: find_records by attribute query
+./Resource.py:376:        # TODO: documents
+./Protocol.py:244:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+./Protocol.py:276:        # TODO: Store relationship with referer
 ./Request.py:3:TODO: determine cachability.
-./Protocol.py.orig:247:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
-./Protocol.py.orig:279:        # TODO: Store relationship with referer
-./Rules.mk.LOCAL.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
-./Rules.mk.LOCAL.29728.mk:33:$/TODO.list: ./
-./Rules.mk.LOCAL.29728.mk:37:	grep $$GREP_F "TODO" ./ >> $@;\
-./Request.py.orig:3:TODO: determine cachability.
 ./main.rst:28:            - TODO: ``--keep-cache`` mark location revisioning
 ./main.rst:29:            - TODO: ``--validate-tree`` resource cache should match size, checksum
 ./main.rst:30:            - TODO: ``--validate-joinlist`` resource should have been rewritten
@@ -42,113 +28,81 @@
 ./main.rst:38:            - TODO: ``--print-record`` query
 ./main.rst:39:            - TODO: ``--print-records`` query
 ./main.rst:40:            - TODO: ``--print-media`` query
-./main.rst:227:TODO: Rewriting and content filtering is not implemented.
-./main.rst:310:TODO: a file-based header storage or perhaps even an Apache mod_asis
-./Rules.mk.BACKUP.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
-./Rules.mk.BACKUP.29728.mk:33:$/TODO.list: ./
-./Rules.mk.BACKUP.29728.mk:37:	grep $$GREP_F "TODO" ./ >> $@;\
-./main.rst.orig:28:            - TODO: ``--keep-cache`` mark location revisioning
-./main.rst.orig:29:            - TODO: ``--validate-tree`` resource cache should match size, checksum
-./main.rst.orig:30:            - TODO: ``--validate-joinlist`` resource should have been rewritten
-./main.rst.orig:31:            - TODO: ``--validate-joinlist --auto`` rename if possible
-./main.rst.orig:32:            - TODO: ``--validate-lists`` 
-./main.rst.orig:33:            - TODO: ``--check-joinlist`` run testlines from JOIN,  
-./main.rst.orig:34:            - TODO: ``--check-lists``
-./main.rst.orig:35:            - TODO: abstract, refactor query/maintenance mode handling. Allow
-./main.rst.orig:37:            - TODO: ``--print-allrecords`` simply dump?
-./main.rst.orig:38:            - TODO: ``--print-record`` query
-./main.rst.orig:39:            - TODO: ``--print-records`` query
-./main.rst.orig:40:            - TODO: ``--print-media`` query
-./main.rst.orig:234:TODO: Rewriting and content filtering is not implemented.
-./main.rst.orig:317:TODO: a file-based header storage or perhaps even an Apache mod_asis
+./main.rst:233:TODO: Rewriting and content filtering is not implemented.
+./main.rst:316:TODO: a file-based header storage or perhaps even an Apache mod_asis
 ./CHANGELOG.rst:1:TODO htcache version 1.0 (planned)
-./Response.py:69:        # TODO: on/off: 
-./Response.py:81:          # TODO: parse mediatype, charset, language..
-./Response.py:168:        # TODO: store hash for new recv'd content
-./Response.py:393:        # TODO: echos only
-./Rules.mk.REMOTE.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
-./Rules.mk.REMOTE.29728.mk:33:$/TODO.list: ./
-./Rules.mk.REMOTE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
-./Params.py:94:     --limit RATE    TODO: limit download rate at a fixed K/s
-./Params.py:100:  TODO:
-./Params.py:107:     --nocache FILE  TODO: bypass caching for requests based on regex pattern.
-./Params.py:114:     --check-refs    TODO: iterate cache references.
-./Params.py:116:                     TODO: iterate cache references, 
-./Params.py:135:     TODO --print-url
-./Params.py:136:     TODO --print-path
-./Params.py:152:     --prune-stale   TODO: Delete outdated cached resources.
-./Params.py:153:     --prune-gone    TODO: Remove resources no longer online.
-./Params.py:154:     TODO --check-exists
-./Params.py:157:     TODO --check-encodings
-./Params.py:158:     TODO --check-languages
-./Params.py:159:     TODO --check-mediatypes
-./Params.py:162:     TODO --x-force-fix
-./Params.py:165:     TODO --check-dupes
+./Response.py:70:        # TODO: on/off:
+./Response.py:82:          # TODO: parse mediatype, charset, language..
+./Response.py:169:        # TODO: store hash for new recv'd content
+./Response.py:394:        # TODO: echos only
+./Command.py:78:                # TODO: allow port in address
+./Command.py:113:                "TODO: limit download rate at a fixed K/s", dict(
+./Command.py:191:                "TODO: bypass caching for requests based on URL regex pattern", 
+./Command.py:245:                "TODO: ", _cmd()
+./Command.py:280:#                "TODO: iterate cache references", _cmd()
+./Command.py:283:                "TODO: Remove resources no longer online.", _cmd()
+./Command.py:290:                "TODO: Symlink duplicate content, check by size and hash."
+./Command.py:293:#     TODO --print-mode line|tree
+./Command.py:294:#     TODO --print-url
+./Command.py:295:#     TODO --print-path
+./Command.py:297:#     TODO --print-documents
+./Command.py:298:#     TODO --print-videos
+./Command.py:299:#     TODO --print-audio
+./Command.py:300:#     TODO --print-images
 ./init.sh:45:        # TODO: check htcache status before redirecting output to lock
-./Rules.mk.BASE.29728.mk:18:TRGT                += $/TODO.list $/htcache.js
-./Rules.mk.BASE.29728.mk:33:$/TODO.list: ./
-./Rules.mk.BASE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
-./Response.py.orig:73:        # TODO: on/off: 
-./Response.py.orig:85:          # TODO: parse mediatype, charset, language..
-./Response.py.orig:172:        # TODO: store hash for new recv'd content
-./Response.py.orig:402:        # TODO: echos only
 
 ./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
-./Cache.py:65:                # XXX: todo: keep largest partial only
-./Resource.py:84:        # XXX:
-./Resource.py:108:        # XXX: work in progress
-./Resource.py:199:                    "XXX: update"
-./Resource.py:334:# XXX:
-./Resource.py:402:# XXX old
-./Resource.py:439:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:447:# XXX: cannot reconstruct--, or should always normalize?
-./Resource.py:479:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:487:# XXX: cannot reconstruct--, or should always normalize?
-./Protocol.py:91:    "XXX: old indicator to track hashsum of response entity."
-./Protocol.py:130:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
-./Protocol.py:256:                # XXX: treat as unspecified end-to-end revalidation
-./Protocol.py:322:                key = key.title() # XXX: bad? :)
-./Protocol.py:378:            # XXX: should load new Descriptor into db here or delete stale files.
-./Protocol.py:404:# XXX:
-./Protocol.py:483:                # XXX: Try again, should make a list of alternate (but invalid) date formats
-./Protocol.py:519:            Params.log("XXX: Rewriting HTML resource: "+self.url)
-./Request.py:165:            # XXX self.Protocol = Protocol.BlindProtocol
-./Request.py:232:        # XXX: If-Range
-./Request.py:265:        # XXX: used before protocol is determined,  assert self.Protocol
-./Protocol.py.orig:96:    "XXX: old indicator to track hashsum of response entity."
-./Protocol.py.orig:139:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
-./Protocol.py.orig:269:                # XXX: treat as unspecified end-to-end revalidation
-./Protocol.py.orig:335:                key = key.title() # XXX: bad? :)
-./Protocol.py.orig:391:            # XXX: should load new Descriptor into db here or delete stale files.
-./Protocol.py.orig:417:# XXX:
-./Protocol.py.orig:496:                # XXX: Try again, should make a list of alternate (but invalid) date formats
-./Protocol.py.orig:532:            Params.log("XXX: Rewriting HTML resource: "+self.url)
+./Cache.py:67:                # XXX: todo: keep largest partial only
+./Resource.py:87:        # XXX:
+./Resource.py:116:        # XXX: work in progress
+./Resource.py:126:# XXX:        HTTP.map_headers_to_descriptor( request.headers )
+./Resource.py:211:        #            "XXX: update"
+./Resource.py:429:# XXX old
+./Resource.py:467:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:475:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:507:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:515:# XXX: cannot reconstruct--, or should always normalize?
+./Protocol.py:92:    "XXX: old indicator to track hashsum of response entity."
+./Protocol.py:119:        # XXX: record rewrites in descriptor DB?
+./Protocol.py:142:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
+./Protocol.py:266:                # XXX: treat as unspecified end-to-end revalidation
+./Protocol.py:332:                key = key.title() # XXX: bad? :)
+./Protocol.py:388:            # XXX: should create preliminary Descriptor, or delete file.
+./Protocol.py:413:# XXX:
+./Protocol.py:454:# XXX
+./Protocol.py:491:                # XXX: Try again, should make a list of alternate (but invalid) date formats
+./Protocol.py:527:            log("XXX: Rewriting HTML resource: "+self.url)
+./Request.py:166:            # XXX self.Protocol = Protocol.BlindProtocol
+./Request.py:234:        # XXX: If-Range
+./Request.py:267:        # XXX: used before protocol is determined,  assert self.Protocol
 ./control.rst:21:        May cache and serve. XXX: while fresh?
-./Rules.mk.LOCAL.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
-./Rules.mk.LOCAL.29728.mk:39:	grep $$GREP_F "XXX" ./ >> $@;\
-./unit-test:107:# XXX: could not figure out a way to make wget save (headers) for non 200
-./unit-test:279:# XXX: No headers are ever present, need to check if older versions did
 ./HTCache.hx:34:        // XXX: figure out a way to set global cookie? iframe from proxy?
-./htcache.orig:34:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
-./Request.py.orig:235:        # XXX: If-Range
-./Request.py.orig:268:        # XXX: used before protocol is determined,  assert self.Protocol
-./Rules.mk.BACKUP.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
-./Rules.mk.BACKUP.29728.mk:39:	grep $$GREP_F "XXX" ./ >> $@;\
-./Response.py:88:# XXX: this may need to be on js serving..
-./Rules.mk.REMOTE.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
-./Rules.mk.REMOTE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
+./util.py:3:# XXX: Dont use cjson, its buggy, see comments at
+./Response.py:89:# XXX: this may need to be on js serving..
+./Command.py:99:# XXX: write macro to fix this:
+./Command.py:111:#/XXX
+./Command.py:127:                "XXX: try ipv6 addresses if available", dict(
+./Command.py:152:            (("--data-dir",), "XXX: Change location of var datafiles. Note: cannot change "
+./Command.py:156:            (("--static-dir",), "XXX: Change location of static datafiles.", 
+./Command.py:164:            (("-b", "--backend",), "XXX:initialize metadata backend from reference", dict(
+./Command.py:195:                "XXX: content rewrite any webresource by selecting on URL or ...??", 
+./Command.py:201:                " may be a problem if its contents has any differences. XXX: read"
+./Command.py:206:                "XXX: append manual rule", dict()
+./Command.py:209:                "XXX: validate and run tests", 
+./Command.py:213:                "XXX: re-run", 
+./Command.py:219:                "increase output, XXX: use twice to show http headers", dict(
+./Command.py:232:                "XXX: turn of output printing?", dict(
+./Command.py:260:                "XXX: Query for one or more records by regular expression.", 
+./Command.py:278:# XXX:
+./Command.py:415:# XXX:
+./Command.py:443:# XXX: Maintenance
 ./Terminal.py:1:# XXX: unintegrated ANSI terminal wrapper
-./Rules.py:27:# XXX: first need to see working
-./Rules.py:61:#/XXX
-./Rules.py:91:# XXX: could put tab back into JOIN rules file
-./Params.py:2:# XXX: Dont use cjson, its buggy, see comments at
-./Params.py:43:ONLINE = True # XXX:bvb: useless..
-./Params.py:44:LIMIT = False # XXX unused
+./Rules.py:33:# XXX: could put tab back into JOIN rules file, also parse continuous
+./Params.py:52:ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
 ./system-test:88:# XXX: could not figure out a way to make wget save (headers) for non 200
-./system-test:258:# XXX: No headers are ever present, need to check if older versions did
-./Rules.mk.BASE.29728.mk:10:# XXX: REV_$d              := $(shell cat REVISION)
-./Rules.mk.BASE.29728.mk:34:	@rgrep -I -n --exclude Makefile "XXX\|FIXME\|TODO" ./ > $@
-./Response.py.orig:92:# XXX: this may need to be on js serving..
-./htcache:34:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
+./system-test:258:    # XXX: No headers are ever present, need to check if older versions did
+./htcache:9:# XXX: development tooling:
+./htcache:36:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
+./htcache:123:        # XXX: programming catch
 
 
