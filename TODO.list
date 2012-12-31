@@ -1,20 +1,18 @@
-./Protocol.py:268:                # FIXME: Validate client validator against cached entry
-./Protocol.py:396:# FIXME: #self.descriptor.init( self.cache.path, self.__args )
-./Protocol.py:479:        # FIXME: load http entity, perhaps response headers from shelve
-./Request.py:194:# FIXME: write a test for this
 ./protocol-test:4:- FIXME: should cover a good deal of HTTP stuff.
 ./main.rst:280:  the first argument being prefixed with '?'. FIXME: does not solve anything?
 ./Rules.py:165:                    log('FIXME: Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
-./Rules.py:175:# FIXME:
-./Rules.py:207:# FIXME:
-./init.sh:7:# FIXME: this is inadequate and fragile, also htcache may want to handle
+./Rules.py:175:# FIXME: drop rules
+./Rules.py:207:# FIXME: parse rewrite rules
 
-./Resource.py:221:        raise "TODO"
-./Resource.py:228:        # TODO: set_broken
-./Resource.py:313:# TODO: find_records by attribute query
-./Resource.py:376:        # TODO: documents
-./Protocol.py:244:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
-./Protocol.py:276:        # TODO: Store relationship with referer
+./Resource.py:236:        raise "TODO"
+./Resource.py:243:        # TODO: set_broken
+./Resource.py:331:# TODO: find_records by attribute query
+./Resource.py:367:# TODO: integrate with other print_info
+./Resource.py:394:        # TODO: documents
+./Protocol.py:245:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+./Protocol.py:269:                # TODO: Validate client validator against cached entry
+./Protocol.py:277:        # TODO: Store relationship with referer
+./Protocol.py:481:        # TODO: load http entity, perhaps response headers from shelve
 ./Request.py:3:TODO: determine cachability.
 ./main.rst:28:            - TODO: ``--keep-cache`` mark location revisioning
 ./main.rst:29:            - TODO: ``--validate-tree`` resource cache should match size, checksum
@@ -49,30 +47,31 @@
 ./Command.py:298:#     TODO --print-videos
 ./Command.py:299:#     TODO --print-audio
 ./Command.py:300:#     TODO --print-images
-./init.sh:45:        # TODO: check htcache status before redirecting output to lock
+./init.sh:42:        # TODO: check htcache status before redirecting output to lock
 
 ./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
 ./Cache.py:67:                # XXX: todo: keep largest partial only
 ./Resource.py:87:        # XXX:
-./Resource.py:116:        # XXX: work in progress
-./Resource.py:126:# XXX:        HTTP.map_headers_to_descriptor( request.headers )
-./Resource.py:211:        #            "XXX: update"
-./Resource.py:429:# XXX old
-./Resource.py:467:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:475:# XXX: cannot reconstruct--, or should always normalize?
-./Resource.py:507:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:515:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:132:        # XXX: work in progress
+./Resource.py:142:# XXX:        HTTP.map_headers_to_descriptor( request.headers )
+./Resource.py:226:        #            "XXX: update"
+./Resource.py:447:# XXX old
+./Resource.py:485:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:493:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:525:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:533:# XXX: cannot reconstruct--, or should always normalize?
 ./Protocol.py:92:    "XXX: old indicator to track hashsum of response entity."
 ./Protocol.py:119:        # XXX: record rewrites in descriptor DB?
 ./Protocol.py:142:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
-./Protocol.py:266:                # XXX: treat as unspecified end-to-end revalidation
-./Protocol.py:332:                key = key.title() # XXX: bad? :)
-./Protocol.py:388:            # XXX: should create preliminary Descriptor, or delete file.
-./Protocol.py:413:# XXX:
-./Protocol.py:454:# XXX
-./Protocol.py:491:                # XXX: Try again, should make a list of alternate (but invalid) date formats
-./Protocol.py:527:            log("XXX: Rewriting HTML resource: "+self.url)
+./Protocol.py:267:                # XXX: treat as unspecified end-to-end revalidation
+./Protocol.py:333:                key = key.title() # XXX: bad? :)
+./Protocol.py:389:            # XXX: should create preliminary Descriptor, or delete file.
+./Protocol.py:415:# XXX:
+./Protocol.py:456:# XXX
+./Protocol.py:493:                # XXX: Try again, should make a list of alternate (but invalid) date formats
+./Protocol.py:529:            log("XXX: Rewriting HTML resource: "+self.url)
 ./Request.py:166:            # XXX self.Protocol = Protocol.BlindProtocol
+./Request.py:194:# XXX: need a test for this
 ./Request.py:234:        # XXX: If-Range
 ./Request.py:267:        # XXX: used before protocol is determined,  assert self.Protocol
 ./control.rst:21:        May cache and serve. XXX: while fresh?
@@ -94,13 +93,13 @@
 ./Command.py:232:                "XXX: turn of output printing?", dict(
 ./Command.py:260:                "XXX: Query for one or more records by regular expression.", 
 ./Command.py:278:# XXX:
-./Command.py:415:# XXX:
+./Command.py:414:# XXX:
 ./Command.py:443:# XXX: Maintenance
 ./Terminal.py:1:# XXX: unintegrated ANSI terminal wrapper
 ./Rules.py:33:# XXX: could put tab back into JOIN rules file, also parse continuous
 ./Params.py:52:ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
-./system-test:88:# XXX: could not figure out a way to make wget save (headers) for non 200
-./system-test:258:    # XXX: No headers are ever present, need to check if older versions did
+./system-test:97:# XXX: could not figure out a way to make wget save (headers) for non 200
+./system-test:270:    # XXX: No headers are ever present, need to check if older versions did
 ./htcache:9:# XXX: development tooling:
 ./htcache:36:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
 ./htcache:123:        # XXX: programming catch

@@ -152,31 +152,30 @@ def map_headers_to_resource(headers):
     headerdict = HeaderDict(headers)
     mapping = {
         'allow': (str,'allow'),
-        'content-encoding': (str,'content.encodings'),
-        'content-length': (int,'size'),
-        'content-language': (str,'language'),
+#XXX:        'content-encoding': (str,'content.encodings'),
+        'content-length': (int,'content.size'),
+        'content-language': (str,'content.language'),
         'content-location': (str,'location'),
-        'content-md5': (str,'content.md5'),
+# XXX:'content-md5': (str,'content.md5'),
         #'content-range': '',
         #'vary': 'vary',
         #'content-type': 'mediatype',
-        'last-modified': (str,'mtime'),
-        'expires': (str,'content.expires'),
-        'last-modified': (str,'last_modified'),
+        'last-modified': (str,'content.mtime'),
+        'expires': (str,'expires'),
         'etag': (strstr,'etag'),
     }
     for hn, hv in headerdict.items():
         if hn == 'content-type':
             if ';' in hv:
                 hv = hv.split(';')
-                kwds['mediatype'] = hv.pop(0).strip()
+                kwds['content.mediatype'] = hv.pop(0).strip()
                 while hv:
                     hp = hv.pop(0).strip().split('=')
                     kwds[hp[0].strip()] = hp[1].strip()
                 if 'qs' in kwds:
                     kwds['qs'] = float(kwds['qs'])
             else:
-                kwds['mediatype'] = hv.strip()
+                kwds['content.mediatype'] = hv.strip()
         elif hn.lower() in mapping:
             ht, hm = mapping[hn.lower()]
             kwds[hm] = ht(hv)

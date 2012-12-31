@@ -83,8 +83,6 @@ class CachingProtocol(object):
 
     cache = None
     "resource entity storage"
-    descriptors = None
-    "resource descriptor storage"
 
     Response = None
     "the htcache response class"
@@ -95,7 +93,7 @@ class CachingProtocol(object):
     def url( self ):
         return self.request.url
 
-    def __init__( self, request, prepcache=True ):
+    def __init__( self, request):
         "Determine and open cache location, get descriptor backend. "
         super(CachingProtocol, self).__init__()
 
@@ -103,9 +101,6 @@ class CachingProtocol(object):
 
         # Track server response
         self.__status, self.__message = None, None
-
-        if prepcache:
-            self.init_cache()
 
     def init_cache(self):
         """
@@ -118,8 +113,13 @@ class CachingProtocol(object):
         assert self.url[p:p+3] == '://', self.url
         # XXX: record rewrites in descriptor DB?
         self.cache = Cache.load_backend_type( Runtime.CACHE )( self.url[p+3:] )
+
         log( "Init cache: %s %s" % ( Runtime.CACHE, self.cache), 3 )
         log( 'Prepped cache, position: %s' % self.cache.path, 2 )
+
+    def init_descriptor(self):
+        # Initialize a facade for the storage and check for existing data
+        self.descriptor = Resource.backend.find(self.cache.path)
 
     def has_response( self ):
         return self.__status and self.__message
@@ -139,6 +139,7 @@ class CachingProtocol(object):
             assert host in LOCALHOSTS, "Cannot service for %s" % host
             self.Response = Response.DirectResponse
             return True
+
         # XXX: Respond by writing message as plain text, e.g echo/debug it:
         #self.Response = Response.DirectResponse
         # Filter request by regex from patterns.drop
@@ -149,15 +150,20 @@ class CachingProtocol(object):
             log('Dropping connection, '
                         'request matches pattern: %r.' % m, 1)
             return True
+
+        self.init_cache()
+
         if Runtime.STATIC and self.cache.full():
             log('Static mode; serving file directly from cache')
             self.cache.open_full()
+            self.init_descriptor()
             self.Response = Response.DataResponse
             return True
 
     def prepare_nocache_response( self ):
         "Blindly respond for NoCache rule matches. "
-        if Rules.NoCache.match( self.url ):
+        pattern = Rules.NoCache.match( self.url )
+        if pattern:
             log('Not caching request, matches pattern: %r.' %
                 pattern)
             self.Response = Response.BlindResponse
@@ -213,6 +219,8 @@ class HttpProtocol(CachingProtocol):
     rewrite = None
 
     def __init__( self, request ):
+        super(HttpProtocol, self).__init__(request)
+
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
@@ -220,12 +228,10 @@ class HttpProtocol(CachingProtocol):
         if self.prepare_direct_response(request):
             # don't initialize cache for direct requests, let response class
             # handle further processing.
-            super(HttpProtocol, self).__init__(request, False)
             self.__socket = None
             return
-        else:
-            # normal caching proxy response
-            super(HttpProtocol, self).__init__(request)
+
+        self.init_descriptor()
 
         log("Cache partial: %s, full:%s" % (self.cache.partial(),
             self.cache.full()), 3)
@@ -372,28 +378,25 @@ class HttpProtocol(CachingProtocol):
         if self.prepare_nocache_response():
             return
 
-        # Initialize a facade for the storage and check for existing data
-        self.descriptor = Resource.backend.find(self.cache.path)
-        if not self.descriptor:
-            self.descriptor = Resource.backend.prepare(self)
-        assert self.descriptor
-
         # Sanity checks
-        if not self.descriptor.new and not (self.cache.full() or self.cache.partial()):
-            log("Warning: stale descriptor")
-            self.descriptor.drop()
+        # FIXME
+        #if not self.descriptor.new and not (self.cache.full() or self.cache.partial()):
+        #    log("Warning: stale descriptor")
+        #    self.descriptor.drop()
 
-        elif self.descriptor.new and (self.cache.full() or self.cache.partial()):
-            log("Error: dirty cache location %s" % self.cache.path)
-            # XXX: should create preliminary Descriptor, or delete file.
+        #elif self.descriptor.new and (self.cache.full() or self.cache.partial()):
+        #    log("Error: dirty cache location %s" % self.cache.path)
+        #    # XXX: should create preliminary Descriptor, or delete file.
 
         # Process and update headers before deferring to response class
         # 2xx
         if self.__status in ( HTTP.OK, HTTP.MULTIPLE_CHOICES ):
 
             self.recv_entity()
-            self.descriptor.update( self.__args )
-            self.descriptor.commit()
+            self.descriptor = Resource.backend.prepare( self )
+            print self.descriptor
+#            self.descriptor.update( self.__args )
+#            self.descriptor.commit()
             self.set_dataresponse();
 
         elif self.__status == HTTP.PARTIAL_CONTENT \
@@ -639,7 +642,7 @@ class FtpProtocol( CachingProtocol ):
     def __handle_passivemode( self, code, line ):
         assert code == 227, \
             'server sends %i; expected 227 (passive mode)' % code
-        channel = eval( line.split()[ -1 ] )
+        channel = eval( line.strip('.').split()[ -1 ] )
         addr = '%i.%i.%i.%i' % channel[ :4 ], channel[ 4 ] * 256 + channel[ 5 ]
         self.__socket = connect( addr )
         self.__sendbuf = 'SIZE %s\r\n' % self.__path

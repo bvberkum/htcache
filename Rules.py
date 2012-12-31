@@ -81,7 +81,7 @@ class NoCache(AbstractRuleset):
         for pattern, compiled in klass.rules:
             p = url.find( ':' ) # find len of scheme-id
             if compiled.match( url[p+3:] ):
-                return True
+                return pattern
 
 
 class Join(AbstractRuleset):

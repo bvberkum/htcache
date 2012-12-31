@@ -103,49 +103,25 @@ class Storage(object):
             raise Exception("No record for %s" % url)
         return res
 
-    def find(self, url):
-        if url not in self.__resources:
-            if url in self.resources:
-                descr = Descriptor(self)
-                descr.load_from_storage()
-                self.__resources[url] = descr
+    def find(self, uriref):
+        if uriref not in self.__resources:
+            if uriref in self.resources:
+                res = Resource(self).load(uriref)
+                self.__resources[uriref] = res
             else:
                 return
-        return self.__resources[url]
-        
-#    def find(self, path):
-#        if path not in self.__descriptors:
-#            if path in self.descriptors:
-#                descr = Descriptor(self)
-#                descr.load_from_storage()
-#                self.__descriptors[path] = descr
-#            else:
-#                return
-#        return self.__descriptors[path]
+        return self.__resources[uriref]
 
     def prepare(self, protocol):
-
-        path = protocol.cache.path
-        if path in self.__descriptors:
-            return self.__descriptors[path]
-
-        # XXX: work in progress
-        descr = Descriptor( self )
-
-        uriref = protocol.request.url
-        if uriref in self.descriptors:
-            descr.load_from_storage( uriref )
-        self.__descriptors[uriref] = descr
-
-        args = HTTP.map_headers_to_resource( protocol.headers )
-        descr.update(args)
-# XXX:        HTTP.map_headers_to_descriptor( request.headers )
-#        args['cache'] = path
-#        assert path not in self.descriptors
-        descr.path = path
-#        #self.commit()
-
-        return descr
+        uriref = protocol.url
+        if uriref in self.__resources:
+            return self.__resources[uriref]
+        res = Resource(self)
+        if uriref in self.resources:
+            res = Resource(self).load(uriref)
+        res.update(protocol.headers)
+        self.__resources[uriref] = res
+        return res
 
     def put(self, uriref, metalink):
         """
@@ -156,9 +132,6 @@ class Storage(object):
             self.cache[uriref]
         pass
 
-    def map_path(self, path, uriref):
-        pass
-
     def set(self, uriref, descriptor):
         pass
 
@@ -166,59 +139,56 @@ class Storage(object):
         self.shelve
 
 
-def strip_root(path):
-    if path.startswith(Params.ROOT):
-        path = path[len(Params.ROOT):]
-    if path.startswith(os.sep):
-        path = path[1:]
-    return path
-
-
 ### Descriptor Storage types:
 
-class Descriptor(object):
-
-    #mapping = [
-    #    'locations',
-    #    'mediatype',
-    #    'size',
-    #    'etag',
-    #    'last_modified',
-    #    'quality_indicator',
-    #    'encodings',
-    #    'language',
-    #    'features',
-    #    'extension_headers',
-    #]
-    """
-    Item names for each tuple index.
-    """
-
+class Record(object):
     def __init__(self, storage):
-        self.path = None
+        super(Record, self).__init__()
         self.__data = {}
         self.storage = storage
+
+    def __setitem__(self, key, value):
+        self.__data[key] = value
+
+    def __getitem__(self, key):
+        return self.__data[key]
+
+    def __str__(self):
+        return str(self.__data)
+
+
+class Resource(Record):
+
+    def __init__(self, storage):
+        super(Resource, self).__init__(storage)
 
     def __nonzero__(self):
         return self.path != None
 
+    # FIXME:
     @property
     def new(self):
         return self.path not in self.storage.descriptors
 
-    def load_from_storage( self, path ):
+    def load( self, path ):
         self.path = path
         self.__data = json_read(
                 self.storage.descritors[self.path])
         log(['load_from_storage', self.path, self.__data])
+        return self
 
     def commit(self):
         assert self.path
         self.storage.descriptors[self.path] = json_write( self.__data )
         log([ 'commit', self.path, self.__data ], Params.LOG_DEBUG)
 
-    def update(self, args):
-        newdata = HTTP.map_headers_to_resource(args)
+    def update(self, headers):
+        newdata = HTTP.map_headers_to_resource(headers)
+        for k in newdata:
+            if k.startswith('content.'):
+                self.content[k[8:]] = newdata[k]
+            else:
+                self[k] = newdata[k]
         #for k in newdata:
         #    assert k in self.__data,\
         #            "Update to unknown header: %r" % k
@@ -241,7 +211,13 @@ class Descriptor(object):
 
     def set_broken(self, status ):
         # TODO: set_broken
-        seld.drop()
+        self.drop()
+
+
+class Descriptor(Record):
+    pass
+
+#/FIXME
 
 
 def index_factory(storage, path, mode='r'):
@@ -479,7 +455,7 @@ def check_files():
             elif f in backend.descriptors:
                 rcount += 1
                 descr = backend.descriptors[f]
-                assert isinstance(descr, Descriptor)
+                assert isinstance(descr, Record)
                 uriref = descr[0][0]
                 log("Found resource %s" % uriref, threshold=1)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
@@ -518,7 +494,7 @@ def check_cache():
     for i, ref in enumerate(refs):
         log("%i, %s" % (i, ref), Params.LOG_DEBUG)
         descr = backend.descriptors[ref]
-        log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
+        log("Record data: [%s] %r" %(ref, descr.data,), 2)
         urirefs, mediatype, d1, d2, meta, features = descr
         #progress = float(i)/count
         #pb.update(progress, ref)

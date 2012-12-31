@@ -48,10 +48,11 @@ test-code::
 		HOST=$$(hostname -s);\
 		BRANCH=$$(git status | grep On.branch | sed 's/. On branch //');\
 		REV=$$(git show | grep ^commit | sed 's/commit //');\
-	    PASSED=$$(grep PASSED unittest.log | wc -l);\
-        ERRORS=$$(grep ERROR unittest.log | wc -l);\
+		PASSED=$$(grep PASSED unittest.log | wc -l);\
+		ERRORS=$$(grep ERROR unittest.log | wc -l);\
 		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS;\
-        echo $$PASSED passed checks, $$ERRORS errors
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS" >> test-results.tab;\
+		echo $$PASSED passed checks, $$ERRORS errors
 
 test-system:: TESTS := 
 test-system::
