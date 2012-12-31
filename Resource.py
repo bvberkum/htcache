@@ -10,6 +10,13 @@ try:
 except AssertionError:
     from sets import Set as set
 
+from sqlalchemy import Column, Integer, String, Boolean, Text, \
+    ForeignKey, Table, Index, DateTime, \
+    create_engine
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref, sessionmaker
+
 import Params
 import HTTP
 import Rules
@@ -24,268 +31,164 @@ class Storage(object):
     """
     AnyDBM facade for several indices.
     To keep descriptor storage and several indices to make it searchable.
-    """
 
-    resources = None
-    """Web Resources::
+    Web Resources::
 
         { <res-uri> : <Resource(
 
            host, path, meta, cache
 
         )> }
-    """
-
-    brokenmap = None
-    """Map of broken loations that could not be retrieved::
+    
+    Map of broken loations that could not be retrieved::
 
         { <res-uri> : <status>, <keep-boolean> }
-    """
-
-    descriptors = None
-    """Cache descriptors::
+    
+    Cache descriptors::
 
         { <cache-location> : <Descriptor(
 
             hash, mediatype, charset, language, size, quality
 
         ) }
-    """
 
-    cachemap = None
-    """Map of uriref to cache locations (reverse for resources)::
+    Map of uriref to cache locations (reverse for resources)::
 
         { <cache-location> : <res-uri> }
-    """
 
-    relations_to = None
-    """Qualified relations 'rel' from 'res' to 'ref'::
+    Qualified relations 'rel' from 'res' to 'ref'::
 
         relations_to = { <res-uri> => *( <rel-uri>, <ref-uri> ) }
-    """
-    relations_from = None
-    """Reverse mapping, the qualification will be in relations_to::
+    
+    Reverse mapping, the qualification will be in relations_to::
 
         relations_from = { <ref-uri> => *<res-uri> }
     """
 
-    def __init__(self, resources, descriptors, cachemap, resourcemap):
-
-        log([
-            resources,
-            descriptors,
-            cachemap,
-            resourcemap
-        ])
-        self.resources = self.ResourceStorageFactory(*resources)
-        self.descriptors = self.DescriptorStorageFactory(*descriptors)
-        self.cachemap = self.CacheMapFactory(*cachemap)
-        self.resourcemap = self.ResourceMapFactory(*resourcemap)
-
-        self.__resources = {}
-        self.__descriptors = {}
-        # XXX:
-        #chksmdb = join(path, '.cllct/sha1sum.db')
-        #self.sha1sum = dbshelve.open(chksmdb)
-
-    def close(self):
-        self.resources.close()
-        self.descriptors.close()
-        self.cachemap.close()
-        self.resourcemap.close()
-
-    def __contains__(self, path):
-        return self.find(path) != None
-
-    def fetch(self, url):
-        res = self.find(url)
-        if not res:
-            raise Exception("No record for %s" % url)
-        return res
-
-    def find(self, uriref):
-        if uriref not in self.__resources:
-            if uriref in self.resources:
-                res = Resource(self).load(uriref)
-                self.__resources[uriref] = res
-            else:
-                return
-        return self.__resources[uriref]
-
-    def prepare(self, protocol):
-        uriref = protocol.url
-        if uriref in self.__resources:
-            return self.__resources[uriref]
-        res = Resource(self)
-        if uriref in self.resources:
-            res = Resource(self).load(uriref)
-        res.update(protocol.headers)
-        self.__resources[uriref] = res
-        return res
-
-    def put(self, uriref, metalink):
-        """
-        Store or update the descriptor.
-        """
-        self.shelve[uriref]
-        if uriref in self.cachemap:
-            self.cache[uriref]
-        pass
-
-    def set(self, uriref, descriptor):
-        pass
-
-    def __setitem__(self, path, value):
-        self.shelve
-
 
 ### Descriptor Storage types:
 
-class Record(object):
-    def __init__(self, storage):
-        super(Record, self).__init__()
-        self.__data = {}
-        self.storage = storage
-
-    def __setitem__(self, key, value):
-        self.__data[key] = value
-
-    def __getitem__(self, key):
-        return self.__data[key]
-
-    def __str__(self):
-        return str(self.__data)
+SqlBase = declarative_base()
 
 
-class Resource(Record):
+class SessionMixin(object):
 
-    def __init__(self, storage):
-        super(Resource, self).__init__(storage)
+    sessions = {}
 
-    def __nonzero__(self):
-        return self.path != None
+    @staticmethod
+    def get_instance(name='default', dbref=None, init=False, read_only=False):
+        # XXX: read_only
+        if name not in SessionMixin.sessions:
+            assert dbref, "session does not exists: %s" % name
+            session = get_session(dbref, init)
+            #assert session.engine, "new session has no engine"
+            SessionMixin.sessions[name] = session
+        else:
+            session = SessionMixin.sessions[name]
+            #assert session.engine, "existing session does not have engine"
+        return session
 
-    # FIXME:
-    @property
-    def new(self):
-        return self.path not in self.storage.descriptors
+    @staticmethod
+    def close_instance(name='default', dbref=None, init=False, read_only=False):
+        if name in SessionMixin.sessions:
+            session = SessionMixin.session[name]
+        session.close()
 
-    def load( self, path ):
-        self.path = path
-        self.__data = json_read(
-                self.storage.descritors[self.path])
-        log(['load_from_storage', self.path, self.__data])
-        return self
+    # 
+    key_names = []
+
+    def key(self):
+        key = {}
+        for a in self.key_names:
+            key[a] = getattr(self, a)
+        return key
 
     def commit(self):
-        assert self.path
-        self.storage.descriptors[self.path] = json_write( self.__data )
-        log([ 'commit', self.path, self.__data ], Params.LOG_DEBUG)
+        session = SessionMixin.get_instance()
+        session.add(self)
+        session.commit()
 
-    def update(self, headers):
-        newdata = HTTP.map_headers_to_resource(headers)
-        for k in newdata:
-            if k.startswith('content.'):
-                self.content[k[8:]] = newdata[k]
-            else:
-                self[k] = newdata[k]
-        #for k in newdata:
-        #    assert k in self.__data,\
-        #            "Update to unknown header: %r" % k
-        #    assert newdata[k] == self.__data[k], \
-        #            "XXX: update"
-        log([ 'update', self.path, args, self.__data ], Params.LOG_DEBUG)
-        self.__data.update(newdata)
+    def find(self, qdict=None):
+        try:
+            return self.fetch(qdict=qdict)
+        except NoResultFound, e:
+            log("No results for %s.find(%s)" % (cn(self), qdict),
+                    Params.LOG_INFO)
 
-    def drop(self):
-        del self.storage.descriptors[self.path]
-        log([ 'drop', self.path, self.__data ], Params.LOG_DEBUG)
+    def fetch(self, qdict=None):
+        """
+        Keydict must be filter parameters that return exactly one record.
+        """
+        session = SessionMixin.get_instance()
+        print qdict
+        if not qdict:
+            qdict = self.key()
+        return session.query(self.__class__).filter(**qdict).one()
 
-    def create_for_response(self, protocol, response):
-        assert False
-        raise "TODO"
-
-    @property
-    def data(self):
-        return self.__data
-
-    def set_broken(self, status ):
-        # TODO: set_broken
-        self.drop()
+    def exists(self):
+        return self.fetch() != None 
 
 
-class Descriptor(Record):
-    pass
+class Resource(SqlBase, SessionMixin):
+    """
+    """
+    __tablename__ = 'resources'
+    id = Column(Integer, primary_key=True)
+    host = Column(String(255), nullable=False)
+    path = Column(String(255), nullable=False)
+    key_names = [id]
+
+class Descriptor(SqlBase, SessionMixin):
+    """
+    """
+    __tablename__ = 'descriptors'
+    id = Column(Integer, primary_key=True)
+    resource = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    path = Column(String(255), nullable=True)
+    mediatype = Column(String(255), nullable=False)
+    charset = Column(String(255), nullable=True)
+    language = Column(String(255), nullable=True)
+    size = Column(Integer, nullable=False)
+    quality = Column(Integer, nullable=True)
+    key_names = [id]
+
+class Relation(SqlBase, SessionMixin):
+    """
+    """
+    __tablename__ = 'relations'
+    id = Column(Integer, primary_key=True)
+    relate = Column(String(16), nullable=False)
+    revuri = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    reluri = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    key_names = [id]
+
 
 #/FIXME
 
-
-def index_factory(storage, path, mode='r'):
-    """
-    Modes:
-        r: read only
-        w: read and write, create if needed
-    """
-
-    if not os.path.exists(path):
-        assert 'w' in mode, "Missing resource DB, no file at <%s>" % path
-        try:
-            anydbm.open(path, 'n').close()
-        except Exception, e:
-            raise Exception("Unable to create new resource DB at <%s>: %s" %
-                    (path, e))
-    try:
-        log("Opening %s mode=%s" %(path, mode))
-        return anydbm.open(path, mode)
-    except anydbm.error, e:
-        raise Exception("Unable to access resource DB at <%s>: %s" %
-                (path, e))
-
-
-Storage.ResourceStorageFactory = index_factory
-Storage.DescriptorStorageFactory = index_factory
-Storage.ResourceMapFactory = index_factory
-Storage.CacheMapFactory = index_factory
-
-
 backend = None
 
-def open_backend(read_only=False):
+
+def get_backend():
     global backend
-
-    assert Runtime.DATA_DIR
-    path = Runtime.DATA_DIR
-
-    mode = 'w'
-    if read_only:
-        mode = 'r'
-
-    backend = Storage(**dict(
-            resources=(join(path, 'resources.db'), mode),
-            descriptors=(join(path, 'descriptors.db'), mode,),
-            cachemap=(join(path, 'cache_map.db'), mode),
-            resourcemap=(join(path, 'resource_map.db'), mode,)
-        ))
-    backend.mode = mode
-
-def get_backend(read_only=False):
-    global backend
-    if not backend:
-        open_backend(read_only)
-    if read_only:
-        assert backend.mode == 'r'
-    return backend
-
-def close_backend():
-    global backend
-    backend.close()
-    backend = None
+    backend = SessionMixin.get_instance('default', Params.DATA)
 
 
+def get_session(dbref, initialize=False):
+    engine = create_engine(dbref)#, encoding='utf8')
+    #engine.raw_connection().connection.text_factory = unicode
+    if initialize:
+        log("Applying SQL DDL to DB %s " % (dbref,), Params.LOG_NOTE)
+        SqlBase.metadata.create_all(engine)  # issue DDL create 
+        print 'Updated schema'
+    session = sessionmaker(bind=engine)()
+    return session
+
+
+
+# Query commands 
 
 def list_locations():
-    global backend
-    get_backend(True)
+    backend = SessionMixin.get_instance(True, Runtime.DATA)
     print backend.resources
     print backend.descriptors
     for path in backend.descriptors:
@@ -293,14 +196,13 @@ def list_locations():
     backend.close()
 
 def list_urls():
-    global backend
-    get_backend(True)
+    backend = SessionMixin.get_instance(True, Runtime.DATA)
     for url in backend.resources:
         res = backend.find(url)
         print res
 
 def print_record(url):
-    backend = get_backend(True)
+    backend = SessionMixin.get_instance(True, Runtime.DATA)
     res = backend.fetch(url)
     print res
 
@@ -419,12 +321,12 @@ def check_tree(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
 def check_files():
-    backend = get_backend(True)
+    backend = SessionMixin.get_instance(True)
 # XXX old
     #if Params.PRUNE:
-    #    descriptors = get_backend()
+    #    descriptors = SessionMixin.get_instance()
     #else:
-    #    descriptors = get_backend(main=False)
+    #    descriptors = SessionMixin.get_instance(main=False)
     pcount, rcount = 0, 0
     log("Iterating paths in cache root location. ")
 
@@ -434,7 +336,7 @@ def check_files():
         if not root[len(Params.ROOT):]:
             continue
 
-#    	rdir = os.path.join(Params.ROOT, root)
+#        rdir = os.path.join(Params.ROOT, root)
         for f in dirs + files:
             f = os.path.join(root, f)
             #if path_ignore(f):
@@ -483,10 +385,10 @@ def check_cache():
     #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
     #pb = Resource.ProgressBar(term, 'Iterating descriptors')
 #    if Params.PRUNE:
-#        descriptors = get_backend()
+#        descriptors = SessionMixin.get_instance()
 #    else:
-#        descriptors = get_backend(main=False)
-    backend = get_backend(True)
+#        descriptors = SessionMixin.get_instance(main=False)
+    backend = SessionMixin.get_instance(True)
 
     refs = backend.descriptors.keys()
     count = len(refs)

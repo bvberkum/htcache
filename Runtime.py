@@ -20,6 +20,7 @@ JOIN_FILE = None
 NOCACHE_FILE = None
 REWRITE_FILE = None
 DATA_DIR = None
+DATA = None
 CACHE = None
 ARCHIVE = None
 ENCODE_PATHSEP = None

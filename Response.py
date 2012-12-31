@@ -74,8 +74,7 @@ class DataResponse:
         args = protocol.headers
 
         cached_headers = {}
-        if protocol.descriptor:
-            pass
+# XXX: if protocol.descriptor:
         #  log("Descriptor: %s" % pformat(descr))
             #urirefs, cached_args = protocol.get_descriptor()
           # Abuse feature dict to store headers

@@ -149,6 +149,12 @@ class CLIParams:
                 "set cache root directory, default current: %(default)s", 
                 _dirpath(Params.ROOT)
             ),
+            (("-d", "--data",), "XXX: Change location of var datafiles. Note: cannot change "
+                " location of built-in files, only of storages.", dict(
+                    type=str,
+                    metavar="SQL"
+                )
+            ),
             (("--data-dir",), "XXX: Change location of var datafiles. Note: cannot change "
                 " location of built-in files, only of storages.", 
                 _dirpath(Params.DATA_DIR)

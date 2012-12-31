@@ -94,6 +94,7 @@ def HTCache_fiber_handler( client, address ):
             response.finalize(client)
         #protocol.descriptors.close()
 
+
 if __name__ == '__main__':
 
     try:
@@ -104,7 +105,8 @@ if __name__ == '__main__':
         traceback.print_exc()
         print >>sys.stderr, "Failure during initalization"
 
-### Cache Maintenance static entry
+
+    ### Cache Maintenance static entry
 
     try:
 
@@ -124,12 +126,13 @@ if __name__ == '__main__':
         traceback.print_exc()
         print >>sys.stderr, "Error running commands"
 
-### Normal proxy subroutine
+
+    ### Normal proxy subroutine
 
     while True:
+        Resource.get_backend()
         Rules.load()
         try:
-            Resource.get_backend()
             fiber.spawn(
                     HTCache_fiber_handler,
                     Runtime.HOSTNAME,
@@ -139,7 +142,7 @@ if __name__ == '__main__':
                     Runtime.PID_FILE )
 
         except fiber.Restart, e:
-            Resource.get_backend().close()
+            Resource.SessionMixin.close_instance('default')
             for mod in ( Params, Runtime, Command, Protocol, Request, Response, Resource, fiber):
                 mod = reload(mod)
 

@@ -117,9 +117,11 @@ class CachingProtocol(object):
         log( "Init cache: %s %s" % ( Runtime.CACHE, self.cache), 3 )
         log( 'Prepped cache, position: %s' % self.cache.path, 2 )
 
-    def init_descriptor(self):
-        # Initialize a facade for the storage and check for existing data
-        self.descriptor = Resource.backend.find(self.cache.path)
+#    def init_descriptor(self):
+#        # Initialize a facade for the storage and check for existing data
+#        self.descriptor = Resource.Descriptor().find(dict(
+#            Resource.Descriptor.path = self.cache.path
+#        ))
 
     def has_response( self ):
         return self.__status and self.__message
@@ -156,7 +158,7 @@ class CachingProtocol(object):
         if Runtime.STATIC and self.cache.full():
             log('Static mode; serving file directly from cache')
             self.cache.open_full()
-            self.init_descriptor()
+#            self.init_descriptor()
             self.Response = Response.DataResponse
             return True
 
@@ -231,7 +233,7 @@ class HttpProtocol(CachingProtocol):
             self.__socket = None
             return
 
-        self.init_descriptor()
+       # self.init_descriptor()
 
         log("Cache partial: %s, full:%s" % (self.cache.partial(),
             self.cache.full()), 3)
@@ -393,9 +395,9 @@ class HttpProtocol(CachingProtocol):
         if self.__status in ( HTTP.OK, HTTP.MULTIPLE_CHOICES ):
 
             self.recv_entity()
-            self.descriptor = Resource.backend.prepare( self )
-            print self.descriptor
-#            self.descriptor.update( self.__args )
+#XXX:            self.descriptor = Resource.backend.prepare( self )
+#            print self.descriptor
+#XXX:           self.descriptor.update( self.__args )
 #            self.descriptor.commit()
             self.set_dataresponse();
 
@@ -405,8 +407,8 @@ class HttpProtocol(CachingProtocol):
             self.recv_part()
             assert not self.descriptor.new, \
                 "Should have descriptor for partial content. "
-            self.descriptor.update( self.__args )
-            self.descriptor.commit()
+# XXX:            self.descriptor.update( self.__args )
+# XXX:            self.descriptor.commit()
             self.set_dataresponse();
 
         # 3xx: redirects
