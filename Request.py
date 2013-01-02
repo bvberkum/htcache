@@ -15,12 +15,18 @@ from util import *
 class HtRequest:
 
     """
-    The single type for requests supported by htcache.
-    This should cover HTTP and FTP.
+    The single type for requests acceptect by htcache. This should cover HTTP
+    and FTP.
 
-    HtRequest.recv() wil finish once the entire request has been read,
-    and choose the appropiate Protocol from HttpProtocol, FtpProtocol, or
-    BlindProtocol.
+    This gets fed data by fiber from the incoming socket, which is parsed as
+    a regular MIME message. The parser expects an HTTP-esque request line and
+    request headers.
+
+    Once the entire request including message body has been read and buffered, 
+    HtRequest.recv() wil finish and choose the appropiate Protocol for fiber to 
+    continue with.
+
+    XXX: HtRequest may want to skip buffering large uploads into memory.
     """
 
     Protocol = None
@@ -43,7 +49,7 @@ class HtRequest:
 
         line = chunk[ :eol ]
 
-        log('Client sends %r' % print_str(line, 96), threshold=1)
+        log('Client sends %r' % print_str(line, 96), Params.LOG_NOTE)
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
@@ -66,13 +72,13 @@ class HtRequest:
 
         line = chunk[ :eol ]
         if ':' in line:
-            log('> '+ line.rstrip(), 2)
+            log('> '+ line.rstrip(), Params.LOG_DEBUG)
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
                 log("Warning: %r not a known HTTP (request) header (%r)"%(
-                    key, value.strip()), 1)
+                    key, value.strip()), Params.LOG_WARN)
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
@@ -81,14 +87,14 @@ class HtRequest:
             if self.__size:
                 assert self.__verb == 'POST', \
                         '%s request conflicts with message body' % self.__verb
-                log('Opening temporary file for POST upload', 1)
+                log('Opening temporary file for POST upload', Params.LOG_INFO)
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
             else:
                 self.__body = None
                 self.__parse = None
         else:
-            log('Warning: Ignored header line: %r' % line)
+            log('Error: Ignored header line: %r' % line, Params.LOG_ERROR)
 
         return eol
 
@@ -184,7 +190,7 @@ class HtRequest:
             hostinfo = "%s:%s" % (host, port)
 
         log('scheme=%s, host=%s, port=%s, path=%s' % 
-                (scheme, host, port, path), 3)
+                (scheme, host, port, path), Params.LOG_DEBUG)
 
         self.__scheme = scheme
         self.__host = host
@@ -260,13 +266,13 @@ class HtRequest:
         else:
             hostinfo = host
 
-        return "http://%s/%s" %  (hostinfo, self.__reqpath)
+        return "//%s/%s" % ( hostinfo, self.__reqpath )
 
     @property
     def headers(self):
         # XXX: used before protocol is determined,  assert self.Protocol
         if not self.Protocol and self.__parse == self.__parse_args:
-            log("Warning: parsing headers is not finished. ")
+            log("Warning: parsing headers is not finished. ", Params.LOG_WARN)
         return self.__headers.copy()
 
     def range(self):

@@ -28,7 +28,8 @@ function startserver
   rm -rf $PREFIX.*
   mkdir $PREFIX.data
   mkdir $PREFIX.cache
-  if ! ./htcache -p $PORT -r $PREFIX.cache --data-dir $PREFIX.data -v $@ --daemon $PREFIX.log --pid-file $PID; then
+  if ! ./htcache -p $PORT -r $PREFIX.cache --data-dir $PREFIX.data --daemon $PREFIX.log \
+          --log-level 6 --pid-file $PID; then
     test -e $PID && rm $PID
     exit 1
   else
@@ -191,6 +192,7 @@ fi
 
 function check_equal
 {
+  echo $PREFIX.$2
   if test ! -e $PREFIX.$2; then
     check "$1" ERROR "1st file missing" 
   elif test ! -e $PREFIX.$3; then
@@ -278,7 +280,9 @@ case $1 in
     startserver
     download http://$URL_HTTP out
     http_proxy=localhost:$PORT download http://$URL_HTTP out1
+    htcache -d $PREFIX.data -r $PREFIX.cache --list-locations
     http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    htcache -d $PREFIX.data -r $PREFIX.cache --list-locations
     check_exists "first file cached and finalized" cache/$URL_HTTP
     check_url_cached "record exists" http://$URL_HTTP
     check_equal "cached and normal file are equal" cache/$URL_HTTP out

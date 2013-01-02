@@ -116,8 +116,7 @@ class DebugFiber( Fiber ):
         try:
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
-            if self.state:
-                log('Waiting at %s'% self, 1)
+            log('Waiting at %s'% self, Params.LOG_DEBUG)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -214,7 +213,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
     else:
         myFiber = GatherFiber
 
-    log('[ INIT ] %s started at %s:%i' % (generator.__name__, hostname, port ), 1)
+    log('[ INIT ] %s started at %s:%i' % (generator.__name__, hostname, port ),
+            Params.LOG_NOTE)
 
     try:
 
@@ -228,7 +228,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
             now = time.time()
 
             i = len( fibers )
-            #print '[ STEP ]', i, 'fiber(s)'
+            log('[ STEP ] at %s, %s fibers'% (time.ctime(), len(fibers)),
+                    Params.LOG_DEBUG)
             while i:
                 i -= 1
                 state = fibers[ i ].state
@@ -255,10 +256,12 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
                     expire = state.expire
 
             if expire is None:
-                log('[ IDLE ] %s %s'% (time.ctime(), len(fibers)))
+                log('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+                if len(fibers) == 0:
+                    assert len(Runtime.DOWNLOADS) == 0
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-                log('[ BUSY ] %s %s'% (time.ctime(), len(fibers)))
+                log('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
             else:
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -276,12 +279,11 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
                 trysend[ fileno ].step()
 
     except KeyboardInterrupt, e:
-        log("Interrupt: %s" % e, 1)
-        log('[ DONE ] %s interrupted'% (generator.__name__))
+        log('[ DONE ] %s closing normally'% (generator.__name__), Params.LOG_NOTE)
         sys.exit( 0 )
 
     except Restart:
-        print '[ RESTART ]', generator.__name__, 'will now respawn'
+        log('[ RESTART ] %s will now respawn' % generator.__name__, Params.LOG_NOTE)
         i = len( fibers )
         while i:
             i -= 1
@@ -290,8 +292,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
         listener.close()
         raise
 
-    except:
-        print '[ DONE ]', generator.__name__, 'crashed', len(fibers)
+    except Exception, e:
+        log('[ CRITICAL ] %s crashed: %s' % (generator.__name__, e), Params.LOG_CRIT)
         traceback.print_exc( file=sys.stdout )
         sys.exit( 1 )
 

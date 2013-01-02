@@ -40,7 +40,9 @@ to locally stored data.
 def HTCache_fiber_handler( client, address ):
 
     log('New Request from %s:%i, downloads: %s; +1' % (
-        address + (len(DOWNLOADS),)))
+        address + (len(DOWNLOADS),)), Params.LOG_DEBUG)
+
+    log("Log level is at %s" % Runtime.VERBOSE, Params.LOG_INFO)
 
     protocol = None
     request = Request.HtRequest()
@@ -53,13 +55,20 @@ def HTCache_fiber_handler( client, address ):
             protocol = DOWNLOADS[ request ]
             if protocol.Response:
                 if issubclass( protocol.Response, Response.DataResponse ):
-                    log('Joined running download')
+                    log('Joining running download', Params.LOG_INFO)
+                    assert not hasattr( protocol.data, 'cache' ),\
+                            protocol.data.cache
+                    protocol.data.init_and_open()
+                    #assert hasattr( protocol.data, 'descriptor' )
+                    #protocol.data.init_cache()
+                    #protocol.data.open_cache()
                     break
+                # XXX: continues to handle response
                 del DOWNLOADS[ request ]
             else:
                 yield fiber.WAIT()
         else:
-            log('Switching to %s'% request.Protocol.__name__, 3)
+            log('Switching to %s'% request.Protocol.__name__, Params.LOG_NOTE)
             protocol = DOWNLOADS[ request ] = request.Protocol( request )
             server = protocol.socket()
             while not protocol.Response:
@@ -69,11 +78,11 @@ def HTCache_fiber_handler( client, address ):
                 else:
                     yield fiber.RECV( server, Params.TIMEOUT )
                     protocol.recv( server )
-        log('Switching to %s'% protocol.Response.__name__, 2)
+        log('Switching to %s'% protocol.Response.__name__, Params.LOG_NOTE)
         response = protocol.Response( protocol, request )
         server = protocol.socket()
-    except Exception:
-        log('Warning: Switching to ExceptionResponse')
+    except Exception, e:
+        log('Warning: Switching to ExceptionResponse, reason: %s' % e, Params.LOG_CRIT)
         response = Response.ExceptionResponse( protocol, request )
 
     # blocks while client has not read data
@@ -87,12 +96,13 @@ def HTCache_fiber_handler( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    log('Transaction completed', 1)
+    log('Transaction completed', Params.LOG_NOTE)
 
-    if protocol:
-        if response:
-            response.finalize(client)
-        #protocol.descriptors.close()
+    assert protocol
+
+    response.finalize(client)
+
+    del DOWNLOADS[request]
 
 
 if __name__ == '__main__':

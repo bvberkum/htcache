@@ -2,8 +2,6 @@ import os
 import socket
 
 
-DOWNLOADS = None
-
 ONLINE = None
 LIMIT = None
 PORT = None

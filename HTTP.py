@@ -147,38 +147,42 @@ def strstr(s):
     return s.strip('"')
 
 
-def map_headers_to_resource(headers):
-    kwds = {}
+def map_headers_to_descriptor(headers):
+    data = {}
     headerdict = HeaderDict(headers)
+    
     mapping = {
-        'allow': (str,'allow'),
+#        'allow': (str,'resource.allow'),
 #XXX:        'content-encoding': (str,'content.encodings'),
-        'content-length': (int,'content.size'),
-        'content-language': (str,'content.language'),
-        'content-location': (str,'location'),
+        'content-length': (int,'size'),
+        'content-language': (str,'language'),
+#        'content-location': (str,'resource.location'),
 # XXX:'content-md5': (str,'content.md5'),
         #'content-range': '',
         #'vary': 'vary',
         #'content-type': 'mediatype',
-        'last-modified': (str,'content.mtime'),
-        'expires': (str,'expires'),
+#        'last-modified': (str,'resource.mtime'),
+#        'expires': (str,'resource.expires'),
         'etag': (strstr,'etag'),
     }
+
     for hn, hv in headerdict.items():
-        if hn == 'content-type':
+        if hn.lower() == 'content-type':
             if ';' in hv:
                 hv = hv.split(';')
-                kwds['content.mediatype'] = hv.pop(0).strip()
+                data['mediatype'] = hv.pop(0).strip()
                 while hv:
                     hp = hv.pop(0).strip().split('=')
-                    kwds[hp[0].strip()] = hp[1].strip()
-                if 'qs' in kwds:
-                    kwds['qs'] = float(kwds['qs'])
+                    data[hp[0].strip()] = hp[1].strip()
+                if 'qs' in data:
+                    data['qs'] = float(data['qs'])
             else:
-                kwds['content.mediatype'] = hv.strip()
+                data['mediatype'] = hv.strip()
+                
         elif hn.lower() in mapping:
             ht, hm = mapping[hn.lower()]
-            kwds[hm] = ht(hv)
-    return kwds
+            data[hm] = ht(hv)
+
+    return data
 
 

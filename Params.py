@@ -28,7 +28,7 @@ PORT = 8080
 HOSTNAME = socket.gethostname()
 ROOT = os.getcwd() + os.sep
 DATA_DIR = '/var/lib/htcache/'
-DATA = 'sqlite://'+DATA_DIR+'resources.sql'
+DATA = 'sqlite:///'+DATA_DIR+'resources.sql'
 
 PID_FILE = '/var/run/htcache.pid'
 CACHE = 'caches.FileTree'

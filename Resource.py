@@ -17,20 +17,21 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref, sessionmaker
 
+import Cache
 import Params
 import HTTP
 import Rules
 import Runtime
 from util import *
 from error import *
+from pprint import pformat
 
 
 
-class Storage(object):
+class ProxyData(object):
 
     """
-    AnyDBM facade for several indices.
-    To keep descriptor storage and several indices to make it searchable.
+    A facade for instances in datastore seen from a Descriptor instance.
 
     Web Resources::
 
@@ -65,6 +66,183 @@ class Storage(object):
         relations_from = { <ref-uri> => *<res-uri> }
     """
 
+    def __init__( self, protocol ):
+        self.protocol = protocol
+        self.descriptor = None
+        self.cache = None
+
+    def is_open( self ):
+        return self.cache and self.cache.file != None
+
+    def init_cache( self ):
+        """
+        Opens the cache location for the current URL.
+
+        The location will be subject to the specific heuristics of the backend
+        type, this path will be readable from cache.path.
+        """
+        protocol = self.protocol
+        assert protocol.url[:2] == '//', protocol.url
+        netpath = protocol.url[2:]
+        # XXX: record rewrites in descriptor DB?
+        log( "Init cache: %s" % ( Runtime.CACHE, ), Params.LOG_DEBUG )
+        self.cache = Cache.load_backend_type( Runtime.CACHE )( netpath )
+        self.partial, self.complete = self.cache.partial(), self.cache.full()
+        log( 'Prepped cache, position: %s' % self.cache.path, Params.LOG_INFO )
+
+    def open_cache( self ):
+        assert self.cache.path
+        if self.partial:
+            self.cache.open_partial()
+        elif self.complete:
+            self.cache.open_full()
+        else:
+            self.cache.open_new()
+
+    def init_data(self):
+        """
+        After a client sends request headers, 
+        initialize check for existing data or initialize a new descriptor.
+        If new, the associated resource is initalized later.
+        """
+        assert self.cache.path and self.cache.path[0] != os.sep,\
+            "call init_cache, should be relative path"
+        descriptor = Descriptor()
+        self.descriptor = descriptor.find(
+            Descriptor.path == self.cache.path
+        )
+        if not self.descriptor or self.descriptor.id:
+            descriptor.path = self.cache.path
+            self.descriptor = descriptor
+        log('ProxyData.init_data %r '%( self.descriptor ),
+                Params.LOG_DEBUG)
+        
+    def init_and_open(self):
+        """
+        Set cache location and open any partial or complete file, 
+        then fetch descriptor if it exists. 
+        """
+        self.init_cache()
+        self.init_data()
+        assert self.descriptor.id and self.complete, \
+                "Nothing there to open. "
+        self.open_cache()
+        #assert self.data.is_open() and self.cache.full(), \
+        #    "XXX: sanity check, cannot have partial served content, serve error instead"
+
+    def update_data(self):
+# after server response headers
+        data = HTTP.map_headers_to_descriptor(
+                self.protocol.headers )
+        for k in data:
+            if not hasattr( self.descriptor, k ):
+                log("Unknown descriptor field from headers: %s" % k, Params.LOG_ERR)
+                continue
+            setattr( self.descriptor, k, data[k] )
+        log('ProxyData.update_data %r %r '%( data, self.descriptor ),
+                Params.LOG_DEBUG)
+
+# before client response headers
+    def finish_data(self):
+        if not self.descriptor.id:
+            res = Resource()
+            res.url = self.protocol.url
+            self.descriptor.resource = res
+            res.commit()
+            self.descriptor.commit()
+        log('ProxyData.finish_data %r %r '%( self.descriptor, self.descriptor.resource ),
+                Params.LOG_DEBUG)
+
+    ## Proxy lifecycle hooks
+
+    def prepare_request( self, request ):
+        """
+        Called by protocol to provide updated request headers.
+        """
+        log("ProxyData.prepare_request", Params.LOG_DEBUG)
+        req_headers = request.headers
+
+        self.init_cache()
+        self.init_data()
+
+        req_headers.pop( 'Accept-Encoding', None )
+        htrange = req_headers.pop( 'Range', None )
+        assert not htrange,\
+                "XXX: Req for %s had a range: %s" % (self.protocol.url, htrange)
+
+        # if expires < now: revalidate
+        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+        cache_control = req_headers.pop( 'Cache-Control', None )
+        # HTTP/1.0 compat
+        #if not cache_control:
+        #    cache_control = req_headers.pop( 'Pragma', None )
+        #    if cache_control:
+        #        assert cache_control.strip() == "no-cache"
+        #        req_headers['Cache-Control'] = "no-cache"
+
+        if self.is_open():
+            mdtime = time.strftime(
+                Params.TIMEFMT, time.gmtime( self.cache.mtime ) )
+
+            if self.partial:
+                size = self.cache.size
+                log('Requesting resume of partial file in cache: '
+                    '%i bytes, %s' % ( size, mdtime ))
+                req_headers[ 'Range' ] = 'bytes=%i-' % size
+                req_headers[ 'If-Range' ] = mdtime
+
+            elif self.complete:
+                log('Checking complete file in cache: %i bytes, %s' %
+                    ( size, mdtime ), 1)
+                # XXX: treat as unspecified end-to-end revalidation
+                # should detect existing cache-validating conditional?
+                # TODO: Validate client validator against cached entry
+                req_headers[ 'If-Modified-Since' ] = mdtime
+
+                # XXX: don't gateway conditions, client seems to have cache but this is
+                # a miss for the proxy
+#            req_headers.pop( 'If-None-Match', None )
+#            req_headers.pop( 'If-Modified-Since', None )
+
+        # TODO: Store relationship with referer
+        relationtype = req_headers.pop('X-Relationship', None)
+        referer = req_headers.get('Referer', None)
+        if referer:
+            #self.relate(relationtype, self.url, referer)
+            pass
+
+        return req_headers
+
+    def prepare_response( self ):
+        log("ProxyData.prepare_response", Params.LOG_DEBUG)
+
+        if not self.descriptor.id:
+            # XXX: allow for opaque moves of descriptors
+            if self.cache.path != self.descriptor.path:
+                assert not ( self.partial or self.complete )
+                self.cache.path = self.descriptor.path
+                self.partial, self.complete = self.cache.partial(), self.cache.partial()
+            # /XXX
+            self.update_data()
+        else:
+            assert self.cache.path == self.descriptor.path
+
+        self.open_cache()
+        self.finish_data()
+
+        return self.protocol.headers
+
+    def move( self ):
+        log("ProxyData.move", Params.LOG_DEBUG)
+
+    def set_broken( self ):
+        log("ProxyData.set_broken", Params.LOG_DEBUG)
+
+    def close(self):
+        log("ProxyData.close", Params.LOG_DEBUG)
+        del self.cache
+        del self.descriptor
+
 
 ### Descriptor Storage types:
 
@@ -72,6 +250,9 @@ SqlBase = declarative_base()
 
 
 class SessionMixin(object):
+
+    """
+    """
 
     sessions = {}
 
@@ -91,12 +272,15 @@ class SessionMixin(object):
     @staticmethod
     def close_instance(name='default', dbref=None, init=False, read_only=False):
         if name in SessionMixin.sessions:
-            session = SessionMixin.session[name]
+            session = SessionMixin.sessions[name]
         session.close()
 
-    # 
+    # XXX: SessionMixin.key_names
     key_names = []
 
+#    def __nonzero__(self):
+#        return self.id != None
+#
     def key(self):
         key = {}
         for a in self.key_names:
@@ -120,7 +304,6 @@ class SessionMixin(object):
         Keydict must be filter parameters that return exactly one record.
         """
         session = SessionMixin.get_instance()
-        print qdict
         if not qdict:
             qdict = self.key()
         return session.query(self.__class__).filter(**qdict).one()
@@ -128,29 +311,56 @@ class SessionMixin(object):
     def exists(self):
         return self.fetch() != None 
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class Resource(SqlBase, SessionMixin):
     """
     """
     __tablename__ = 'resources'
     id = Column(Integer, primary_key=True)
-    host = Column(String(255), nullable=False)
-    path = Column(String(255), nullable=False)
-    key_names = [id]
+    url = Column(String(255), nullable=False)
+#    host = Column(String(255), nullable=False)
+#    path = Column(String(255), nullable=False)
+#    key_names = [id]
+    
+    def __str__(self):
+        return "Resource(%s)" % pformat(dict(
+            id=self.id,
+            url=self.url,
+        ))
 
 class Descriptor(SqlBase, SessionMixin):
     """
     """
     __tablename__ = 'descriptors'
+
     id = Column(Integer, primary_key=True)
-    resource = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    resource_id = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    resource = relationship( Resource, 
+#            primaryjoin=resource_id==Resource.id, 
+            backref='descriptors')
     path = Column(String(255), nullable=True)
     mediatype = Column(String(255), nullable=False)
     charset = Column(String(255), nullable=True)
     language = Column(String(255), nullable=True)
-    size = Column(Integer, nullable=False)
+    size = Column(Integer, nullable=True)
     quality = Column(Integer, nullable=True)
-    key_names = [id]
+    etag = Column(String(255), nullable=True)
+#    key_names = [id]
+   
+    def __str__(self):
+        return "Descriptor(%s)" % pformat(dict(
+            id=self.id,
+            path=self.path,
+            etag=self.etag,
+            size=self.size,
+            charset=self.charset,
+            language=self.language,
+            quality=self.quality,
+            mediatype=self.mediatype
+        ))
 
 class Relation(SqlBase, SessionMixin):
     """
@@ -160,26 +370,39 @@ class Relation(SqlBase, SessionMixin):
     relate = Column(String(16), nullable=False)
     revuri = Column(Integer, ForeignKey(Resource.id), nullable=False)
     reluri = Column(Integer, ForeignKey(Resource.id), nullable=False)
-    key_names = [id]
+#    key_names = [id]
+
+    def __str__(self):
+        return "Relation(%s)" % pformat(dict(
+            id=self.id,
+            relate=self.relate,
+            revuri=self.revuri,
+            reluri=self.reluri
+        ))
+
 
 
 #/FIXME
 
 backend = None
 
-
-def get_backend():
+def get_backend(read_only=False):
     global backend
-    backend = SessionMixin.get_instance('default', Params.DATA)
-
+    if not backend:
+        backend = SessionMixin.get_instance(
+                name='default', 
+                dbref=Runtime.DATA, 
+                init=True,
+                read_only=read_only)
+    return backend
 
 def get_session(dbref, initialize=False):
     engine = create_engine(dbref)#, encoding='utf8')
     #engine.raw_connection().connection.text_factory = unicode
     if initialize:
-        log("Applying SQL DDL to DB %s " % (dbref,), Params.LOG_NOTE)
+        log("Applying SQL DDL to DB %s " % (dbref,), Params.LOG_DEBUG)
         SqlBase.metadata.create_all(engine)  # issue DDL create 
-        print 'Updated schema'
+        log("Updated data schema", Params.LOG_INFO)
     session = sessionmaker(bind=engine)()
     return session
 
@@ -188,28 +411,37 @@ def get_session(dbref, initialize=False):
 # Query commands 
 
 def list_locations():
-    backend = SessionMixin.get_instance(True, Runtime.DATA)
-    print backend.resources
-    print backend.descriptors
-    for path in backend.descriptors:
-        print path
+    global backend
+    get_backend()
+
+    for res in backend.query(Resource).all():
+        print res
+        for d in res.descriptors:
+            print '\t', str(d).replace('\n', '\n\t')
+    
     backend.close()
 
 def list_urls():
-    backend = SessionMixin.get_instance(True, Runtime.DATA)
+    global backend
+    get_backend()
     for url in backend.resources:
         res = backend.find(url)
         print res
+        for d in res.descriptors:
+            print '\t', str(d).replace('\n', '\n\t')
 
 def print_record(url):
-    backend = SessionMixin.get_instance(True, Runtime.DATA)
-    res = backend.fetch(url)
+    get_backend()
+    res = Resource().fetch(Resource.url == url)
     print res
+    for d in res.descriptors:
+        print '\t', str(d).replace('\n', '\n\t')
 
 # TODO: find_records by attribute query
 def find_records(q):
     import sys
     global backend
+    get_backend()
     print 'Searching for', q
 
     attrpath, valuepattern = q.split(':')
@@ -286,7 +518,7 @@ def print_media_list(*media):
                 if 'video' in res[1]:
                     print path
 
-def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
+def check_data(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
     References in descriptor cache must exist as file.
     This checks existence and the size property,  if complete.
@@ -416,7 +648,7 @@ def check_cache():
         cache = get_cache(hostinfo, pathname)
 # end
         act = None
-        if not check_descriptor(cache, *descr):
+        if not check_data(cache, *descr):
             if not Params.PRUNE:
                 continue
             act = True
