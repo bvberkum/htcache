@@ -87,8 +87,8 @@ class ProxyData(object):
             mtime = calendar.timegm( time.strptime(
                 value, Params.TIMEFMT ) )
         except:
-            log('Error: illegal time format in Last-Modified: %s.' %
-                value, Params.LOG_ERR)
+            get_log(Params.LOG_ERR)\
+                    ( 'Error: illegal time format in Last-Modified: %s.', value )
             # XXX: Try again, should make a list of alternate (but invalid) date formats
             try:
                 tmhdr = re.sub(
@@ -104,8 +104,8 @@ class ProxyData(object):
                         value,
                         Params.ALTTIMEFMT ) )
                 except:
-                    log('Fatal: unable to parse Last-Modified: %s.' %
-                        value, Params.LOG_ERR)
+                    get_log(Params.LOG_ERR)\
+                            ( 'Fatal: unable to parse Last-Modified: %s.', value )
         if mtime:
             self.cache.mtime = mtime
 #            self.descriptor.mtime = mtime
@@ -158,10 +158,10 @@ class ProxyData(object):
         assert protocol.url[:2] == '//', protocol.url
         netpath = protocol.url[2:]
         # XXX: record rewrites in descriptor DB?
-        log( "Init cache: %s" % ( Runtime.CACHE, ), Params.LOG_DEBUG )
+        get_log(Params.LOG_DEBUG)( "Init cache: %s", Runtime.CACHE )
         netpath = Rules.Join.rewrite(netpath)
         self.cache = Cache.load_backend_type( Runtime.CACHE )( netpath )
-        log( 'Prepped cache, position: %s' % self.cache.path, Params.LOG_INFO )
+        get_log(Params.LOG_INFO)( 'Prepped cache, position: %s', self.cache.path)
 
     def open_cache( self ):
         assert self.cache.path
@@ -177,14 +177,12 @@ class ProxyData(object):
             "call init_cache, should be relative path"
         descriptor = Descriptor()
         self.descriptor = descriptor.find(
-            Descriptor.path == self.cache.path
+            Descriptor.path == self.cache.abspath()
         )
         if not self.descriptor or not self.descriptor.id:
-            descriptor.path = self.cache.path
+            descriptor.path = self.cache.abspath()
             self.descriptor = descriptor
-        if Params.DEBUG_BE:
-            log('ProxyData.init_data %r '%( self.descriptor ),
-                    Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')('ProxyData.init_data %r ', self.descriptor)
         
     def init_and_open(self):
         """
@@ -204,18 +202,19 @@ class ProxyData(object):
         if not self.descriptor.resource:
             self.descriptor.resource = Resource()
         self.map_to_data( HTTP.filter_entity_headers( self.protocol.args() ) )
-        if Params.DEBUG_BE:
-            log('ProxyData.update_data %r %r '%( data, self.descriptor ),
-                    Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')\
+            ( 'ProxyData.update_data %r ', self.descriptor )
 
 # before client response headers
     def finish_data(self):
-        if not self.descriptor.id:
+# XXX
+#        if not self.descriptor.id:
+        assert self.descriptor.resource.url, self.descriptor.resource
+        if self.descriptor.resource.url:
             self.descriptor.resource.commit()
-            self.descriptor.commit()
-        if Params.DEBUG_BE:
-            log('ProxyData.finish_data %r %r '%( self.descriptor, self.descriptor.resource ),
-                    Params.LOG_DEBUG)
+        self.descriptor.commit()
+        get_log(Params.LOG_DEBUG, 'backend')\
+            ('ProxyData.finish_data %r %r ', self.descriptor, self.descriptor.resource )
 
     ###
 
@@ -256,7 +255,8 @@ class ProxyData(object):
                 else:
                     setattr( self.descriptor, hm, ht(hv) )
             else:
-                log("Unrecognized entity header %s" % hn, Params.LOG_ERR)
+                get_log(Params.LOG_WARN, 'backend')\
+                    ("Unrecognized entity header %s", hn)
 
     def map_to_headers(self):
         headerdict = HeaderDict()
@@ -288,7 +288,8 @@ class ProxyData(object):
         """
         Called by protocol to provide updated request headers.
         """
-        log("ProxyData.prepare_request", Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.prepare_request")
         req_headers = request.headers
 
         self.init_cache()
@@ -318,14 +319,15 @@ class ProxyData(object):
 
         if self.cache.partial:
             size = self.cache.size
-            log('Requesting resume of partial file in cache: '
-                '%i bytes, %s' % ( size, mdtime ), Params.LOG_NOTE)
+            get_log(Params.LOG_NOTE, 'backend')\
+                    ('Requesting resume of partial file in cache: '
+                    '%i bytes, %s', size, mdtime )
             req_headers[ 'Range' ] = 'bytes=%i-' % size
             req_headers[ 'If-Range' ] = mdtime
 
         elif self.cache.full:
-            log('Checking complete file in cache: %s' %
-                ( mdtime, ), Params.LOG_INFO)
+            get_log(Params.LOG_INFO, 'backend')\
+                    ( 'Checking complete file in cache: %s', mdtime )
             # XXX: treat as unspecified end-to-end revalidation
             # should detect existing cache-validating conditional?
             # TODO: Validate client validator against cached entry
@@ -353,7 +355,10 @@ class ProxyData(object):
             # XXX: allow for opaque moves of descriptors
             if self.cache.path != self.descriptor.path:
                 assert not ( self.cache.partial or self.cache.full )
-                self.cache.path = self.descriptor.path
+                path = self.descriptor.path
+                p = len(Runtime.ROOT)
+                assert path[:p] == Runtime.ROOT, "hmmm"
+                self.cache.path = path[p:].replace( Runtime.PARTIAL, '' )
             # /XXX
 
             # set new data
@@ -373,8 +378,6 @@ class ProxyData(object):
 
         args.update(self.map_to_headers())
 
-        self.finish_data()
-
         via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
         if args.setdefault('Via', via) != via:
             args['Via'] += ', '+ via
@@ -383,17 +386,25 @@ class ProxyData(object):
 
         return args
 
+    def finish_response( self ):
+        self.cache.close()
+        self.cache.stat()
+        if self.descriptor.path != self.cache.abspath():
+            self.descriptor.path = self.cache.abspath()
+        self.finish_data()
+        self.close()
+
     def move( self ):
-        if Params.DEBUG_BE:
-            log("ProxyData.move", Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.move")
 
     def set_broken( self ):
-        if Params.DEBUG_BE:
-            log("ProxyData.set_broken", Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.set_broken")
 
     def close(self):
-        if Params.DEBUG_BE:
-            log("ProxyData.close", Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.close")
         del self.cache
         del self.descriptor
 
@@ -450,7 +461,8 @@ class SessionMixin(object):
         try:
             return self.fetch(*args)#, qdict=qdict)
         except NoResultFound, e:
-            log("No results for %s" % (args,), Params.LOG_INFO)
+            get_log(Params.LOG_INFO, 'backend')\
+                    ( "No results for %s", args )
 
     def fetch(self, *args):
         """
@@ -554,9 +566,11 @@ def get_session(dbref, initialize=False):
     engine = create_engine(dbref)#, encoding='utf8')
     #engine.raw_connection().connection.text_factory = unicode
     if initialize:
-        log("Applying SQL DDL to DB %s " % (dbref,), Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("Applying SQL DDL to DB %s ", dbref)
         SqlBase.metadata.create_all(engine)  # issue DDL create 
-        log("Updated data schema", Params.LOG_INFO)
+        get_log(Params.LOG_INFO, 'backend')\
+            ("Updated data schema")
     session = sessionmaker(bind=engine)()
     return session
 
@@ -566,22 +580,9 @@ def get_session(dbref, initialize=False):
 
 # Query commands 
 
-def list_locations():
-    global backend
-    get_backend()
-
-    for res in backend.query(Resource).all():
-        print res
-        for d in res.descriptors:
-            print '\t', str(d).replace('\n', '\n\t')
-    
-    backend.close()
-
-def list_urls():
-    global backend
-    get_backend()
-    for url in backend.resources:
-        res = backend.find(url)
+def print_records():
+    rs = get_backend().query(Resource).all()
+    for res in rs:
         print res
         for d in res.descriptors:
             print '\t', str(d).replace('\n', '\n\t')
@@ -593,11 +594,29 @@ def print_record(url):
     for d in res.descriptors:
         print '\t', str(d).replace('\n', '\n\t')
 
+def list_locations():
+    global backend
+    get_backend()
+
+    for res in backend.query(Resource).all():
+        for d in res.descriptors:
+            print d.path
+    
+    backend.close()
+
+def list_urls():
+    global backend
+    get_backend()
+    for url in backend.resources:
+        res = backend.find(url)
+        print res.url
+
 def print_location(url):
     get_backend()
-    res = Resource().fetch(Resource.url == url[5:])
+    netpath = url[5:]
+    res = Resource().fetch(Resource.url == netpath)
     for d in res.descriptors:
-        d.path
+        print d.path
 
 
 # TODO: find_records by attribute query
@@ -635,7 +654,9 @@ def find_records(q):
 #                    if res[4][k2] == props[k][k2]:
 #                        print path
     backend.close()
-    log("End of findinfo", Params.LOG_DEBUG)
+    get_log(Params.LOG_DEBUG, 'backend')\
+            ("End of findinfo", Params.LOG_DEBUG)
+
 
 # TODO: integrate with other print_info
 def print_info(*paths):
@@ -648,7 +669,8 @@ def print_info(*paths):
             path = Params.ROOT + path
 #        path = path.replace(Params.ROOT, '')
         if path not in backend:
-            log("Unknown cache location: %s" % path, Params.LOG_CRIT)
+            get_log(Params.LOG_DEBUG, 'backend')\
+                    ("Unknown cache location: %s", path)
         else:
             print path, backend.find(path)
             recordcnt += 1
@@ -659,7 +681,7 @@ def print_info(*paths):
     else:
         print >>sys.stderr, "No record found"
     backend.close()
-    log("End of printinfo", Params.LOG_DEBUG)
+
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"

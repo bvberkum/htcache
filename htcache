@@ -20,7 +20,7 @@ import Cache
 import Protocol, Request, Response
 import Resource
 import Rules
-from util import log
+from util import get_log
 
 
 
@@ -39,10 +39,16 @@ to locally stored data.
 
 def HTCache_fiber_handler( client, address ):
 
-    log('New Request from %s:%i, downloads: %s; +1' % (
-        address + (len(DOWNLOADS),)), Params.LOG_DEBUG)
+#    import sys
+#    print 'PID', sys.getpid()
+#    print 'PPID', sys.getppid()
 
-    log("Log level is at %s" % Runtime.VERBOSE, Params.LOG_INFO)
+    get_log(Params.LOG_DEBUG)\
+            ('New Request from %s:%i, downloads: %s; +1', 
+                address + (len(DOWNLOADS),))
+
+    get_log(Params.LOG_DEBUG)\
+            ("Log level is at %s", Runtime.VERBOSE)
 
     protocol = None
     request = Request.HtRequest()
@@ -55,7 +61,8 @@ def HTCache_fiber_handler( client, address ):
             protocol = DOWNLOADS[ request ]
             if protocol.Response:
                 if issubclass( protocol.Response, Response.DataResponse ):
-                    log('Joining running download', Params.LOG_INFO)
+                    get_log(Params.LOG_INFO)\
+                            ('Joining running download')
                     assert not hasattr( protocol.data, 'cache' ),\
                             protocol.data.cache
                     protocol.data.init_and_open()
@@ -68,9 +75,11 @@ def HTCache_fiber_handler( client, address ):
             else:
                 yield fiber.WAIT()
         else:
-            log('Switching to %s'% request.Protocol.__name__, Params.LOG_NOTE)
+            get_log(Params.LOG_INFO)\
+                    ('Switching to %s', request.Protocol.__name__)
             protocol = DOWNLOADS[ request ] = request.Protocol( request )
-            server = protocol.socket()
+            if not protocol.Response:
+                server = protocol.socket()
             while not protocol.Response:
                 if protocol.hasdata():
                     yield fiber.SEND( server, Params.TIMEOUT )
@@ -78,11 +87,13 @@ def HTCache_fiber_handler( client, address ):
                 else:
                     yield fiber.RECV( server, Params.TIMEOUT )
                     protocol.recv( server )
-        log('Switching to %s'% protocol.Response.__name__, Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE)\
+                ('Switching to %s', protocol.Response.__name__)
         response = protocol.Response( protocol, request )
         server = protocol.socket()
     except Exception, e:
-        log('Warning: Switching to ExceptionResponse, reason: %s' % e, Params.LOG_CRIT)
+        get_log(Params.LOG_CRIT)\
+                ('Warning: Switching to ExceptionResponse, reason: %s', e)
         response = Response.ExceptionResponse( protocol, request )
 
     # blocks while client has not read data
@@ -96,7 +107,7 @@ def HTCache_fiber_handler( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    log('Transaction completed', Params.LOG_NOTE)
+    get_log(Params.LOG_NOTE)('Transaction completed')
 
     assert protocol
 
@@ -106,6 +117,8 @@ def HTCache_fiber_handler( client, address ):
 
 
 if __name__ == '__main__':
+
+    get_log(Params.LOG_DEBUG)("ARGV: %r", sys.argv)
 
     try:
 

@@ -43,6 +43,7 @@ class AbstractRuleset:
         """
         Load new rules from file, or reload configured rules.
         """
+
         if not fpath:
             fpath = klass.main_file
         if fpath == klass.main_file:
@@ -51,6 +52,7 @@ class AbstractRuleset:
         else:
             if fpath in klass.files:
                 return
+
         if os.path.isfile(fpath):
 
             klass.files.append(fpath)

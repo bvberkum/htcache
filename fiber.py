@@ -1,7 +1,7 @@
 import sys, os, select, time, socket, traceback
 
 import Params
-from util import log
+from util import *
 
 
 class Restart(Exception): pass
@@ -116,8 +116,8 @@ class DebugFiber( Fiber ):
         try:
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
-            if Params.DEBUG:
-                log('Waiting at %s'% self, Params.LOG_DEBUG)
+            get_log(Params.LOG_DEBUG, 'fiber')\
+                    ('Waiting at %s', self)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -131,6 +131,8 @@ class DebugFiber( Fiber ):
 
 
 def fork( output, pid_file ):
+
+    #print 'Forking current process'
 
     try:
         log = open( output, 'w' )
@@ -186,6 +188,7 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
         Filename.
     """
 
+#    print 'Spawning'
     import Runtime
 
     # set up listening socket
@@ -200,7 +203,7 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
         listener.bind( 
                 ( hostname, port ) )
     except:
-        log("unable to bind to %s:%i" %(hostname, port), Params.LOG_ERR)
+        get_log(Params.LOG_ERR)("unable to bind to %s:%i", hostname, port)
         raise
     listener.listen( 5 )
 
@@ -214,8 +217,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
     else:
         myFiber = GatherFiber
 
-    log('[ INIT ] %s started at %s:%i' % (generator.__name__, hostname, port ),
-            Params.LOG_NOTE)
+    get_log(Params.LOG_NOTE, 'fiber')\
+            ('[ INIT ] %s started at %s:%i', generator.__name__, hostname, port )
 
     try:
 
@@ -230,8 +233,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
             i = len( fibers )
             if Params.DEBUG:
-                log('[ STEP ] at %s, %s fibers'% (time.ctime(), len(fibers)),
-                        Params.LOG_DEBUG)
+                get_log(Params.LOG_DEBUG)\
+                        ('[ STEP ] at %s, %s fibers', time.ctime(), len(fibers))
             while i:
                 i -= 1
                 state = fibers[ i ].state
@@ -258,12 +261,14 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
                     expire = state.expire
 
             if expire is None:
-                log('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+                get_log(Params.LOG_NOTE, 'fiber')\
+                        ('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
                 if len(fibers) == 0:
                     assert len(Runtime.DOWNLOADS) == 0
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-                log('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+                get_log(Params.LOG_NOTE, 'fiber')\
+                        ('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
             else:
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -281,11 +286,13 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
                 trysend[ fileno ].step()
 
     except KeyboardInterrupt, e:
-        log('[ DONE ] %s closing normally'% (generator.__name__), Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE)\
+            ('[ DONE ] %s closing normally', generator.__name__)
         sys.exit( 0 )
 
     except Restart:
-        log('[ RESTART ] %s will now respawn' % generator.__name__, Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE)\
+            ('[ RESTART ] %s will now respawn', generator.__name__)
         i = len( fibers )
         while i:
             i -= 1
@@ -295,7 +302,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
         raise
 
     except Exception, e:
-        log('[ CRITICAL ] %s crashed: %s' % (generator.__name__, e), Params.LOG_CRIT)
+        get_log(Params.LOG_CRIT)\
+                ('[ CRITICAL ] %s crashed: %s', generator.__name__, e)
         traceback.print_exc( file=sys.stdout )
         sys.exit( 1 )
 

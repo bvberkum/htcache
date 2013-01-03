@@ -12,6 +12,10 @@ except:
 json_read = _json.loads
 json_write = _json.dumps
 
+import Params
+import Runtime
+
+
 
 class LowercaseDict(IterableUserDict):
 
@@ -92,17 +96,51 @@ def print_str(s, l = 79):
         print_line = print_line[:hl] +' [...] '+ print_line[-hl:]
     return print_line
 
-def log(msg, threshold=5):
+
+class Log:
+
+    instances = {}
+
+    def __init__(self, level, facility):
+        self.level = level
+        self.facility = facility
+
+    def __nonzero__(self):
+        return \
+                Runtime.ERROR_LEVEL >= self.level \
+            or ( 
+                    ( self.facility in Runtime.LOG_FACILITIES ) \
+                and \
+                    ( Runtime.VERBOSE >= self.level )
+            )
+
+    def __call__(self, msg, *args):
+        if self:
+            if args:
+                print msg % args
+            else:
+                print msg
+
+
+def get_log(threshold=Params.LOG_NOTE, facility='default'):
+    """
+    Return a "no-op" logger (that evaluates to None but does have the pertinent
+    methods). This allows to contain code that should only be run in debug
+    modes in conditional scopes. k
+    """
+    key = "%s.%i" % (facility, threshold)
+    if key not in Log.instances:
+        Log.instances[key] = Log(threshold, facility)
+    return Log.instances[key]
+
+
+def log(msg, threshold=Params.LOG_NOTE, facility='default'):
     """
     Not much of a log..
     Output if VERBOSE >= threshold
     Use (r)syslog integer levels.
     """
-    #assert not threshold == 0
-    # see fiber.py which manages stdio
-    import Runtime
-    if Runtime.VERBOSE >= threshold:
-        print msg
+    return get_log(threshold, facility)(msg)
 
 
 def strstr(s):

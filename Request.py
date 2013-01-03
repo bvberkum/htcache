@@ -49,7 +49,8 @@ class HtRequest:
 
         line = chunk[ :eol ]
 
-        log('Client sends %r' % print_str(line, 96), Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE)\
+                ('Client sends %r', print_str(line, 96))
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
         self.__verb, self.__reqpath, self.__prototag = fields
@@ -72,13 +73,15 @@ class HtRequest:
 
         line = chunk[ :eol ]
         if ':' in line:
-            log('> '+ line.rstrip(), Params.LOG_DEBUG)
+            get_log(Params.LOG_DEBUG)\
+                    ('> '+ line.rstrip())
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                log("Warning: %r not a known HTTP (request) header (%r)"%(
-                    key, value.strip()), Params.LOG_WARN)
+                get_log(Params.LOG_WARN)\
+                        ("Warning: %r not a known HTTP (request) header (%r)", 
+                        key, value.strip())
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
@@ -87,14 +90,16 @@ class HtRequest:
             if self.__size:
                 assert self.__verb == 'POST', \
                         '%s request conflicts with message body' % self.__verb
-                log('Opening temporary file for POST upload', Params.LOG_INFO)
+                get_log(Params.LOG_INFO)\
+                        ('Opening temporary file for POST upload')
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
             else:
                 self.__body = None
                 self.__parse = None
         else:
-            log('Error: Ignored header line: %r' % line, Params.LOG_ERROR)
+            get_log(Params.LOG_INFO)\
+                    ('Error: Ignored header line: %r', line)
 
         return eol
 

@@ -65,8 +65,9 @@ class DataResponse:
         #assert protocol._HttpProtocol__status in (200, 206),\
         #    protocol._HttpProtocol__status
         args = protocol.data.prepare_response()
+
         assert protocol.data.cache
-        assert protocol.data.descriptor.id
+        assert protocol.data.descriptor.mediatype
 
         self.__protocol = protocol
         self.__pos, self.__end = request.range()
@@ -197,7 +198,7 @@ class DataResponse:
                 #        (pattern, substitute), count))
 
     def finalize(self, client):
-        self.__protocol.close()
+        self.__protocol.finish()
 
 
 class ChunkedDataResponse( DataResponse ):

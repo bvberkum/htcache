@@ -25,3 +25,16 @@
 2012-12-31 01:23:37+01:00, dandy, dev_relstore, fb8da916fd62c8b3f59ed074f09a1b3da7e5f886, unit, 0, 0
 2013-01-03 06:50:03+01:00, dandy, dev_sqlstore, 79a29fd44d6a172c31c32fd0d4e1e603cdd0d45c, system, 28, 24
 2013-01-03 06:50:07+01:00, dandy, dev_sqlstore, 79a29fd44d6a172c31c32fd0d4e1e603cdd0d45c, protocol, 1, 70
+2013-01-03 08:04:16+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 26, 26
+2013-01-03 19:07:22+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 28, 20
+2013-01-03 19:13:43+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, unit, 0, 0
+2013-01-03 19:14:18+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 28, 14
+2013-01-03 19:14:22+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, protocol, 1, 71
+2013-01-03 19:56:10+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, unit, 0, 0
+2013-01-03 19:56:52+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 28, 14
+2013-01-03 19:56:56+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, protocol, 1, 70
+2013-01-03 21:43:27+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, unit, 0, 3
+2013-01-03 21:44:12+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 26, 16
+2013-01-03 21:44:17+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, protocol, 1, 70
+2013-01-03 22:18:00+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 28, 20
+2013-01-03 22:22:59+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 30, 25

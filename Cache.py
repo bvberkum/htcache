@@ -54,6 +54,7 @@ class File(object):
             self.init(path)
 
     def init(self, path):
+        assert Params.PARTIAL not in path
         assert not path.startswith(os.sep), \
                 "File.init: saving in other roots not supported,"\
                 " only paths relative to Runtime.ROOT allowed."
@@ -71,7 +72,8 @@ class File(object):
         # make archive path
         if Runtime.ARCHIVE:
             path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path
-        
+       
+        assert Runtime.PARTIAL not in path
         self.path = path
         self.file = None
 
@@ -81,6 +83,7 @@ class File(object):
         self.stat()
 
     def stat( self ):
+        assert Runtime.PARTIAL not in self.path
         abspath = os.path.join( Runtime.ROOT, self.path )
         partial = suffix_ext( abspath, Runtime.PARTIAL )
         if os.path.isfile( partial ):
@@ -92,6 +95,7 @@ class File(object):
         return self.partial or self.full
 
     def abspath( self ):
+        assert Runtime.PARTIAL not in self.path
         abspath = os.path.join( Runtime.ROOT, self.path )
         if self.full:
             return abspath
@@ -165,7 +169,8 @@ class File(object):
                 abspath = os.path.join( Runtime.ROOT, self.path )
                 os.rename( 
                         suffix_ext( abspath, Runtime.PARTIAL ),
-                        abspath  )
+                        abspath 
+                    )
                 if self.mtime >= 0:
                     os.utime( abspath, ( self.mtime, self.mtime ) )
                 self.stat()

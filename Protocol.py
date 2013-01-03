@@ -178,9 +178,8 @@ class CachingProtocol(object):
     def tell( self ):
         return self.cache.tell()
 
-    def close( self ):
-        self.cache.close()
-        self.data.close()
+    def finish( self ):
+        self.data.finish_response()
 
 
 class HttpProtocol(CachingProtocol):
@@ -196,6 +195,7 @@ class HttpProtocol(CachingProtocol):
         # Serve direct response 
         self.prepare_direct_response(request)
         if self.Response:
+            self.__socket = None
             return
 
         # Prepare to forward request

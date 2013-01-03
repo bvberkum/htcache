@@ -11,7 +11,7 @@ import Params
 import Runtime
 import Resource
 import Rules
-from util import json_write, log
+from util import json_write, get_log
 
 
 ## optparse callbacks
@@ -36,6 +36,14 @@ def opt_posnum(option, opt_str, value, parser):
         assert value > 0
     except:
         raise optparse.OptionValueError("%s requires a positive numerical argument" % opt_str)
+    setattr(parser.values, option.dest, value)
+
+def opt_loglevel(option, opt_str, value, parser):
+    try:
+        value = int(value)
+        assert -1 < value < 8
+    except:
+        raise optparse.OptionValueError("%s requires a numerical argument in the range 0, 7" % opt_str)
     setattr(parser.values, option.dest, value)
 
 def opt_datadir(option, opt_str, value, parser):
@@ -248,14 +256,22 @@ class CLIParams:
                 "increase output, XXX: use twice to show http headers", dict(
                     action="count"
             )),
+            (("--error-level",),
+                "set output level to override log-level", dict(
+                    metavar="[0-7]",
+                    type=int,
+                    default=Params.ERROR_LEVEL,
+                    action="callback",
+                    callback=opt_loglevel
+            )),
             (("--log-level",),
-                "set output level explicitly", dict(
+                "set output level for selected facilities", dict(
                     metavar="[0-7]",
                     type=int,
                     dest="verbose",
                     default=Params.VERBOSE,
                     action="callback",
-                    callback=opt_posnum
+                    callback=opt_loglevel
             )),
             (("-q", "--quiet"),
                 "XXX: turn of output printing?", dict(
@@ -263,9 +279,16 @@ class CLIParams:
                     default=Params.QUIET
             )),
             (('--debug',),
-                "Switch from gather to debug fiber handler.", dict(
+                "Enable Switch from gather to debug fiber handler.", dict(
                     action="store_true",
                     default=Params.DEBUG
+            )),
+            (('--log-facility',),
+                ".", dict(
+                    type=str,
+                    action="append",
+                    default=[],#Params.LOG_FACILITIES,
+                    dest='log_facilities'
             ))
         )),
         ( "Query", 
@@ -289,6 +312,10 @@ class CLIParams:
             (("--find-records", ),
                 "XXX: Query for one or more records by regular expression.", 
                 _attr(_cmd, metavar="KEY[.KEY]:PATTERN", type=str)
+            ),
+            (("--print-records", ),
+                "",
+                _attr(_cmd)
             ),
             (("--print-record", ),
                 "",
@@ -357,6 +384,9 @@ gives access to the stored data. """, (
             prsr.add_option_group(subprsr)
 
         (options, arguments) = prsr.parse_args(argv)
+
+        if options.log_facilities == []:
+            options.log_facilities = [ 'default' ]
 
         varnames = [ x for x in dir(options) 
                 if not callable(getattr(options, x))
@@ -469,9 +499,11 @@ cmdfunc = {
         'info': print_info,
         'list-locations': Resource.list_locations,
         'list-resources': Resource.list_urls,
+        'print-location': Resource.print_location,
+        
         'find-records': Resource.find_records,
         'print-record': Resource.print_record,
-        'print-location': Resource.print_location,
+        'print-records': Resource.print_records,
 
 # Rules
         'run-join-rules': Rules.Join.run,
@@ -505,7 +537,7 @@ def run(cmds={}):
                 cmdfunc[cmdid]()
 
         except Exception, e:
-            log("Error: %s" % (e), Params.LOG_ERR)
+            get_log(Params.LOG_ERR, 'command')("Error: %s", e)
             etype, value, tb = sys.exc_info()
             exceptions.append((etype, value, tb))
 

@@ -17,17 +17,23 @@ LOG_DEBUG = range(0, 8)
 
 
 # defaults
-ONLINE = True
-DEBUG = False
+QUIET = False
+VERBOSE = 3 # error
+ERROR_LEVEL = VERBOSE
+DEBUG = []
 DEBUG_BE = False
 DEBUG_FIBER = False
-LIMIT = False
+LOG_FACILITIES = []
+
 LOG = False
+ONLINE = True
+LIMIT = False
 TIMEOUT = 15
 STATIC = False
 FAMILY = socket.AF_INET
 PORT = 8080
 HOSTNAME = socket.gethostname()
+
 ROOT = os.getcwd() + os.sep
 DATA_DIR = '/var/lib/htcache/'
 DATA = 'sqlite:///'+DATA_DIR+'resources.sql'
@@ -37,9 +43,6 @@ CACHE = 'caches.FileTree'
 ARCHIVE = ''
 NODIR = False
 ENCODE_PATHSEP = ''
-
-QUIET = False
-VERBOSE = 3 # error
 
 DROP_FILE = '/etc/htcache/rules.drop'
 JOIN_FILE = '/etc/htcache/rules.join'
