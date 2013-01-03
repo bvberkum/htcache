@@ -116,7 +116,8 @@ class DebugFiber( Fiber ):
         try:
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
-            log('Waiting at %s'% self, Params.LOG_DEBUG)
+            if Params.DEBUG:
+                log('Waiting at %s'% self, Params.LOG_DEBUG)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -228,8 +229,9 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
             now = time.time()
 
             i = len( fibers )
-            log('[ STEP ] at %s, %s fibers'% (time.ctime(), len(fibers)),
-                    Params.LOG_DEBUG)
+            if Params.DEBUG:
+                log('[ STEP ] at %s, %s fibers'% (time.ctime(), len(fibers)),
+                        Params.LOG_DEBUG)
             while i:
                 i -= 1
                 state = fibers[ i ].state

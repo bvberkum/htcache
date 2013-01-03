@@ -2,6 +2,8 @@
 Resource storage and descriptor facade.
 """
 import anydbm, os, urlparse
+import time
+import calendar
 from os.path import join
 
 try:
@@ -11,7 +13,7 @@ except AssertionError:
     from sets import Set as set
 
 from sqlalchemy import Column, Integer, String, Boolean, Text, \
-    ForeignKey, Table, Index, DateTime, \
+    ForeignKey, Table, Index, DateTime, Float, \
     create_engine
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.ext.declarative import declarative_base
@@ -71,6 +73,77 @@ class ProxyData(object):
         self.descriptor = None
         self.cache = None
 
+    
+        self.mtime = None
+        self.size = -1
+                   
+    def set_content_length(self, value):
+        self.descriptor.size = int( value )
+        self.cache.size = int( value )
+
+    def set_last_modified(self, value):
+        mtime = None
+        try:
+            mtime = calendar.timegm( time.strptime(
+                value, Params.TIMEFMT ) )
+        except:
+            log('Error: illegal time format in Last-Modified: %s.' %
+                value, Params.LOG_ERR)
+            # XXX: Try again, should make a list of alternate (but invalid) date formats
+            try:
+                tmhdr = re.sub(
+                        '\ [GMT0\+-]+$', 
+                        '',
+                        value)
+                mtime = calendar.timegm( time.strptime(
+                    tmhdr, 
+                    Params.TIMEFMT[:-4] ) )
+            except:
+                try:
+                    mtime = calendar.timegm( time.strptime(
+                        value,
+                        Params.ALTTIMEFMT ) )
+                except:
+                    log('Fatal: unable to parse Last-Modified: %s.' %
+                        value, Params.LOG_ERR)
+        if mtime:
+            self.cache.mtime = mtime
+#            self.descriptor.mtime = mtime
+
+    def get_last_modified(self):
+        mtime = self.cache.mtime
+        if mtime == -1 and ( self.cache.partial or self.cache.full ):
+            mtime = os.path.getmtime(
+                        self.cache.abspath() )
+        if mtime != -1:
+            return time.strftime(
+                        Params.TIMEFMT, time.gmtime( mtime ) )
+
+    def set_content_type(self, value):
+        data = {}
+        if ';' in value:
+            v = value.split(';')
+            data['mediatype'] = v.pop(0).strip()
+            while v:
+                hp = v.pop(0).strip().split('=')
+                param_name, param_value = hp[0].strip(), hp[1].strip()
+                attr_type, attr_name = self._attr_map[param_name]
+                data[attr_name] = attr_type(param_value)
+        else:
+            data['mediatype'] = value.strip()
+        while data:
+            k = data.keys()[0]
+            setattr( self.descriptor, k, data[k] )
+            del data[k]
+
+    def get_content_type(self):
+        mediatype = self.descriptor.mediatype
+        if self.descriptor.charset:
+            mediatype += '; charset=%s' % self.descriptor.charset
+        if self.descriptor.quality:
+            mediatype += '; qs=%i' % self.descriptor.quality
+        return mediatype
+
     def is_open( self ):
         return self.cache and self.cache.file != None
 
@@ -86,18 +159,13 @@ class ProxyData(object):
         netpath = protocol.url[2:]
         # XXX: record rewrites in descriptor DB?
         log( "Init cache: %s" % ( Runtime.CACHE, ), Params.LOG_DEBUG )
+        netpath = Rules.Join.rewrite(netpath)
         self.cache = Cache.load_backend_type( Runtime.CACHE )( netpath )
-        self.partial, self.complete = self.cache.partial(), self.cache.full()
         log( 'Prepped cache, position: %s' % self.cache.path, Params.LOG_INFO )
 
     def open_cache( self ):
         assert self.cache.path
-        if self.partial:
-            self.cache.open_partial()
-        elif self.complete:
-            self.cache.open_full()
-        else:
-            self.cache.open_new()
+        self.cache.open()
 
     def init_data(self):
         """
@@ -111,11 +179,12 @@ class ProxyData(object):
         self.descriptor = descriptor.find(
             Descriptor.path == self.cache.path
         )
-        if not self.descriptor or self.descriptor.id:
+        if not self.descriptor or not self.descriptor.id:
             descriptor.path = self.cache.path
             self.descriptor = descriptor
-        log('ProxyData.init_data %r '%( self.descriptor ),
-                Params.LOG_DEBUG)
+        if Params.DEBUG_BE:
+            log('ProxyData.init_data %r '%( self.descriptor ),
+                    Params.LOG_DEBUG)
         
     def init_and_open(self):
         """
@@ -124,7 +193,7 @@ class ProxyData(object):
         """
         self.init_cache()
         self.init_data()
-        assert self.descriptor.id and self.complete, \
+        assert self.descriptor.id and self.cache.full,\
                 "Nothing there to open. "
         self.open_cache()
         #assert self.data.is_open() and self.cache.full(), \
@@ -132,26 +201,86 @@ class ProxyData(object):
 
     def update_data(self):
 # after server response headers
-        data = HTTP.map_headers_to_descriptor(
-                self.protocol.headers )
-        for k in data:
-            if not hasattr( self.descriptor, k ):
-                log("Unknown descriptor field from headers: %s" % k, Params.LOG_ERR)
-                continue
-            setattr( self.descriptor, k, data[k] )
-        log('ProxyData.update_data %r %r '%( data, self.descriptor ),
-                Params.LOG_DEBUG)
+        if not self.descriptor.resource:
+            self.descriptor.resource = Resource()
+        self.map_to_data( HTTP.filter_entity_headers( self.protocol.args() ) )
+        if Params.DEBUG_BE:
+            log('ProxyData.update_data %r %r '%( data, self.descriptor ),
+                    Params.LOG_DEBUG)
 
 # before client response headers
     def finish_data(self):
         if not self.descriptor.id:
-            res = Resource()
-            res.url = self.protocol.url
-            self.descriptor.resource = res
-            res.commit()
+            self.descriptor.resource.commit()
             self.descriptor.commit()
-        log('ProxyData.finish_data %r %r '%( self.descriptor, self.descriptor.resource ),
-                Params.LOG_DEBUG)
+        if Params.DEBUG_BE:
+            log('ProxyData.finish_data %r %r '%( self.descriptor, self.descriptor.resource ),
+                    Params.LOG_DEBUG)
+
+    ###
+
+    header_data_map = {
+#        'allow': (str,'resource.allow'),
+        'content-length': (int, 'size'),
+        'content-language': (str, 'language'),
+#        'content-location': (str,'resource.location'),
+# XXX:'content-md5': (str,'content.md5'),
+        #'content-range': '',
+        #'vary': 'vary',
+#        'last-modified': (str, 'mtime'),
+#        'expires': (str,'resource.expires'),
+        'etag': (strstr,'etag'),
+    }
+
+    _attr_map = {
+        'qs': (float, 'quality'),
+        'charset': (str, 'charset'),
+    }
+
+    def map_to_data( self, headers=None ):
+        if not headers:
+            headers = self.protocol.args()
+
+        headerdict = HeaderDict(headers)
+        data = {}
+        
+        for hn, hv in headerdict.items():
+            h = "set_%s" % hn.lower().replace('-','_')
+            if hasattr( self, h ):
+                getattr( self, h )(hv)
+            elif hn.lower() in self.header_data_map:
+                ht, hm = self.header_data_map[hn.lower()]
+                if hm.startswith('resource.'):
+                    hm = hm.replace('resource.', '')
+                    setattr( self.descriptor.resource, hm, ht(hv) )
+                else:
+                    setattr( self.descriptor, hm, ht(hv) )
+            else:
+                log("Unrecognized entity header %s" % hn, Params.LOG_ERR)
+
+    def map_to_headers(self):
+        headerdict = HeaderDict()
+        headerdict.update({
+            'Content-Length': self.descriptor.size,
+        })
+#        if self.descriptor.resource:
+#            headerdict.update({
+#                'Content-Location': self.descriptor.resource.url
+#            })
+        if self.cache.mtime >= 0:
+            headerdict.update({
+                'Last-Modified': self.get_last_modified(),
+            })
+        if self.descriptor.mediatype:
+            headerdict.update({
+                'Content-Type': self.get_content_type(),
+            })
+        if self.descriptor.etag:
+            headerdict.update({
+                'ETag': '"%s"' % self.descriptor.etag,
+            })
+        return headerdict
+
 
     ## Proxy lifecycle hooks
 
@@ -164,6 +293,10 @@ class ProxyData(object):
 
         self.init_cache()
         self.init_data()
+
+        via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
+        if req_headers.setdefault('Via', via) != via:
+            req_headers['Via'] += ', '+ via
 
         req_headers.pop( 'Accept-Encoding', None )
         htrange = req_headers.pop( 'Range', None )
@@ -180,29 +313,31 @@ class ProxyData(object):
         #        assert cache_control.strip() == "no-cache"
         #        req_headers['Cache-Control'] = "no-cache"
 
-        if self.is_open():
-            mdtime = time.strftime(
-                Params.TIMEFMT, time.gmtime( self.cache.mtime ) )
+        if ( self.cache.partial or self.cache.full ):
+            mdtime = self.get_last_modified()
 
-            if self.partial:
-                size = self.cache.size
-                log('Requesting resume of partial file in cache: '
-                    '%i bytes, %s' % ( size, mdtime ))
-                req_headers[ 'Range' ] = 'bytes=%i-' % size
-                req_headers[ 'If-Range' ] = mdtime
+        if self.cache.partial:
+            size = self.cache.size
+            log('Requesting resume of partial file in cache: '
+                '%i bytes, %s' % ( size, mdtime ), Params.LOG_NOTE)
+            req_headers[ 'Range' ] = 'bytes=%i-' % size
+            req_headers[ 'If-Range' ] = mdtime
 
-            elif self.complete:
-                log('Checking complete file in cache: %i bytes, %s' %
-                    ( size, mdtime ), 1)
-                # XXX: treat as unspecified end-to-end revalidation
-                # should detect existing cache-validating conditional?
-                # TODO: Validate client validator against cached entry
-                req_headers[ 'If-Modified-Since' ] = mdtime
+        elif self.cache.full:
+            log('Checking complete file in cache: %s' %
+                ( mdtime, ), Params.LOG_INFO)
+            # XXX: treat as unspecified end-to-end revalidation
+            # should detect existing cache-validating conditional?
+            # TODO: Validate client validator against cached entry
+            req_headers[ 'If-Modified-Since' ] = mdtime
 
                 # XXX: don't gateway conditions, client seems to have cache but this is
                 # a miss for the proxy
 #            req_headers.pop( 'If-None-Match', None )
 #            req_headers.pop( 'If-Modified-Since', None )
+
+        if self.descriptor.etag:
+            req_headers[ 'If-None-Match' ] = '"%s"' % self.descriptor.etag
 
         # TODO: Store relationship with referer
         relationtype = req_headers.pop('X-Relationship', None)
@@ -213,33 +348,52 @@ class ProxyData(object):
 
         return req_headers
 
-    def prepare_response( self ):
-        log("ProxyData.prepare_response", Params.LOG_DEBUG)
-
+    def finish_request( self ):
         if not self.descriptor.id:
             # XXX: allow for opaque moves of descriptors
             if self.cache.path != self.descriptor.path:
-                assert not ( self.partial or self.complete )
+                assert not ( self.cache.partial or self.cache.full )
                 self.cache.path = self.descriptor.path
-                self.partial, self.complete = self.cache.partial(), self.cache.partial()
             # /XXX
+
+            # set new data
             self.update_data()
+            res = Resource().find( Resource.url == self.protocol.url )
+            if not res:
+                if not self.descriptor.resource.url:
+                    self.descriptor.resource.url = self.protocol.url
         else:
             assert self.cache.path == self.descriptor.path
 
         self.open_cache()
+
+    def prepare_response( self ):
+
+        args = self.protocol.args()
+
+        args.update(self.map_to_headers())
+
         self.finish_data()
 
-        return self.protocol.headers
+        via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
+        if args.setdefault('Via', via) != via:
+            args['Via'] += ', '+ via
+
+        args[ 'Connection' ] = 'close'
+
+        return args
 
     def move( self ):
-        log("ProxyData.move", Params.LOG_DEBUG)
+        if Params.DEBUG_BE:
+            log("ProxyData.move", Params.LOG_DEBUG)
 
     def set_broken( self ):
-        log("ProxyData.set_broken", Params.LOG_DEBUG)
+        if Params.DEBUG_BE:
+            log("ProxyData.set_broken", Params.LOG_DEBUG)
 
     def close(self):
-        log("ProxyData.close", Params.LOG_DEBUG)
+        if Params.DEBUG_BE:
+            log("ProxyData.close", Params.LOG_DEBUG)
         del self.cache
         del self.descriptor
 
@@ -292,21 +446,21 @@ class SessionMixin(object):
         session.add(self)
         session.commit()
 
-    def find(self, qdict=None):
+    def find(self, *args):#, qdict=None):
         try:
-            return self.fetch(qdict=qdict)
+            return self.fetch(*args)#, qdict=qdict)
         except NoResultFound, e:
-            log("No results for %s.find(%s)" % (cn(self), qdict),
-                    Params.LOG_INFO)
+            log("No results for %s" % (args,), Params.LOG_INFO)
 
-    def fetch(self, qdict=None):
+    def fetch(self, *args):
         """
         Keydict must be filter parameters that return exactly one record.
         """
         session = SessionMixin.get_instance()
-        if not qdict:
-            qdict = self.key()
-        return session.query(self.__class__).filter(**qdict).one()
+        qdict = {}
+#        if not qdict:
+#            qdict = self.key()
+        return session.query(self.__class__).filter(*args, **qdict).one()
 
     def exists(self):
         return self.fetch() != None 
@@ -346,7 +500,7 @@ class Descriptor(SqlBase, SessionMixin):
     charset = Column(String(255), nullable=True)
     language = Column(String(255), nullable=True)
     size = Column(Integer, nullable=True)
-    quality = Column(Integer, nullable=True)
+    quality = Column(Float, nullable=True)
     etag = Column(String(255), nullable=True)
 #    key_names = [id]
    
@@ -407,6 +561,8 @@ def get_session(dbref, initialize=False):
     return session
 
 
+###
+
 
 # Query commands 
 
@@ -436,6 +592,13 @@ def print_record(url):
     print res
     for d in res.descriptors:
         print '\t', str(d).replace('\n', '\n\t')
+
+def print_location(url):
+    get_backend()
+    res = Resource().fetch(Resource.url == url[5:])
+    for d in res.descriptors:
+        d.path
+
 
 # TODO: find_records by attribute query
 def find_records(q):
@@ -528,9 +691,9 @@ def check_data(cache, uripathnames, mediatype, d1, d2, meta, features):
     if not Params.VERBOSE:
         Params.VERBOSE = 1
     pathname = cache.path
-    if cache.partial():
+    if cache.partial:
         pathname += '.incomplete'
-    if not (cache.partial() or cache.full()):
+    if not (cache.partial or cache.full):
         log("Missing %s" % pathname)
         return
     if 'Content-Length' not in meta:

@@ -19,6 +19,8 @@ LOG_DEBUG = range(0, 8)
 # defaults
 ONLINE = True
 DEBUG = False
+DEBUG_BE = False
+DEBUG_FIBER = False
 LIMIT = False
 LOG = False
 TIMEOUT = 15

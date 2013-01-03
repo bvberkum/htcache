@@ -294,6 +294,10 @@ class CLIParams:
                 "",
                 _attr(_cmd, metavar="URL", type=str)
             ),
+            (("--print-location", ),
+                "",
+                _attr(_cmd, metavar="URL", type=str)
+            ),
         )),
         ( "Maintenance", 
 """See the documentation in ReadMe regarding configuration of the proxy. The
@@ -467,6 +471,7 @@ cmdfunc = {
         'list-resources': Resource.list_urls,
         'find-records': Resource.find_records,
         'print-record': Resource.print_record,
+        'print-location': Resource.print_location,
 
 # Rules
         'run-join-rules': Rules.Join.run,

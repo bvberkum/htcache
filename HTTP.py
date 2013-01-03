@@ -1,5 +1,4 @@
 
-from util import HeaderDict
 
 
 class HTTP:
@@ -142,47 +141,9 @@ class HTTP:
     # use these lists to create a mapping to retrieve the properly cased string.
     Header_Map = dict([(k.lower(), k) for k in Message_Headers ])
 
-
-def strstr(s):
-    return s.strip('"')
-
-
-def map_headers_to_descriptor(headers):
-    data = {}
-    headerdict = HeaderDict(headers)
-    
-    mapping = {
-#        'allow': (str,'resource.allow'),
-#XXX:        'content-encoding': (str,'content.encodings'),
-        'content-length': (int,'size'),
-        'content-language': (str,'language'),
-#        'content-location': (str,'resource.location'),
-# XXX:'content-md5': (str,'content.md5'),
-        #'content-range': '',
-        #'vary': 'vary',
-        #'content-type': 'mediatype',
-#        'last-modified': (str,'resource.mtime'),
-#        'expires': (str,'resource.expires'),
-        'etag': (strstr,'etag'),
-    }
-
-    for hn, hv in headerdict.items():
-        if hn.lower() == 'content-type':
-            if ';' in hv:
-                hv = hv.split(';')
-                data['mediatype'] = hv.pop(0).strip()
-                while hv:
-                    hp = hv.pop(0).strip().split('=')
-                    data[hp[0].strip()] = hp[1].strip()
-                if 'qs' in data:
-                    data['qs'] = float(data['qs'])
-            else:
-                data['mediatype'] = hv.strip()
-                
-        elif hn.lower() in mapping:
-            ht, hm = mapping[hn.lower()]
-            data[hm] = ht(hv)
-
-    return data
-
+def filter_entity_headers(headers):
+    for k in headers.keys():
+        if k not in HTTP.Entity_Headers:
+            del headers[k]
+    return headers
 

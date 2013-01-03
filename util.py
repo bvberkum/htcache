@@ -1,3 +1,4 @@
+import sys
 from UserDict import UserDict, IterableUserDict
 
 # XXX: Dont use cjson, its buggy, see comments at
@@ -102,6 +103,18 @@ def log(msg, threshold=5):
     import Runtime
     if Runtime.VERBOSE >= threshold:
         print msg
+
+
+def strstr(s):
+    return s.strip('"')
+
+def min_pos(*args):
+    "Return smallest of all arguments (but >0)"
+    r = sys.maxint
+    for a in args:
+        if a > -1:
+            r = min( a, r )
+    return r
 
 
 

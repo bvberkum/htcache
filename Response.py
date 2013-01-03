@@ -62,52 +62,32 @@ class DataResponse:
 
         log("New DataResponse for "+str(request.url), Params.LOG_DEBUG)
 
+        #assert protocol._HttpProtocol__status in (200, 206),\
+        #    protocol._HttpProtocol__status
+        args = protocol.data.prepare_response()
         assert protocol.data.cache
         assert protocol.data.descriptor.id
 
         self.__protocol = protocol
         self.__pos, self.__end = request.range()
         if self.__end == -1:
-        #    self.__end = protocol.cache.size
             self.__end = protocol.data.descriptor.size
+        assert self.__end >= 0
 
         # TODO: on/off:
         #if protocol.capture:
         #    self.__hash = hashlib.sha1()
 
-# FIXME:
-        self.__protocol.data.finish_data()
-
-        args = protocol.headers
-
-        cached_headers = {}
-
-# XXX: if protocol.descriptor:
-        #  log("Descriptor: %s" % pformat(descr))
-            #urirefs, cached_args = protocol.get_descriptor()
-          # Abuse feature dict to store headers
-          # TODO: parse mediatype, charset, language..
-          #if descr[-1]:
-          #  for k, v in descr[-1].items():
-          #    #if 'encoding' in k.lower(): continue
-          #    args[k] = v
-        #else:
-        #  log("No descriptor for %s" % protocol.cache.path)
 # XXX: this may need to be on js serving..
 #        if self.__protocol.rewrite:
 #            args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
 
-        args[ 'Connection' ] = 'close'
-        if self.__protocol.mtime >= 0:
-            args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, \
-                    time.gmtime( self.__protocol.mtime ) )
+        assert 'Last-Modified' in args
+        assert 'Content-Length' in args
+        assert 'Content-Type' in args
 
         if self.__pos == 0 and self.__end == self.__protocol.size:
             head = 'HTTP/1.1 200 OK'
-            if self.__protocol.size >= 0:
-                args[ 'Content-Length' ] = str( self.__protocol.size )
-            if 'Content-Type' in cached_headers:
-                args['Content-Type'] = cached_headers['Content-Type']
         elif self.__end >= 0:
             head = 'HTTP/1.1 206 Partial Content'
             args[ 'Content-Length' ] = str( self.__end - self.__pos )
@@ -123,15 +103,18 @@ class DataResponse:
             args[ 'Content-Length' ] = '0'
 
         log('HTCache responds %s' % head, Params.LOG_NOTE)
-        if Runtime.VERBOSE > 1:
+
+        if Runtime.VERBOSE == Params.LOG_DEBUG:
             for key in args:
-                log('> %s: %s' % (
-                    key, args[ key ].replace( '\r\n', ' > ' ) ),
+                if not args[key]:
+                    log("Error: no value %s" % key, Params.LOG_ERR)
+                    continue
+                log('> %s: %s' % ( key, args[ key ] ), #.replace( '\r\n', ' > ' ) ),
                     Params.LOG_DEBUG)
 
         # Prepare response for client
         self.__sendbuf = '\r\n'.join( [ head ] +
-                map( ': '.join, args.items() ) + [ '', '' ] )
+                map( ': '.join, map( lambda x:(x[0],str(x[1])), args.items() )) + [ '', '' ] )
         if Runtime.LIMIT:
             self.__nextrecv = 0
 
@@ -166,8 +149,7 @@ class DataResponse:
             except:
                 log("Error writing to client, aborted!", Params.LOG_ERR)
                 self.Done = True
-                # Unittest 2: keep partial file
-                #if not self.__protocol.cache.full():
+                #XXX:if not self.__protocol.cache.full():
                 #    self.__protocol.cache.remove_partial()
                 return
         self.Done = not self.__sendbuf and (
@@ -215,7 +197,7 @@ class DataResponse:
                 #        (pattern, substitute), count))
 
     def finalize(self, client):
-        self.__protocol.data.close()
+        self.__protocol.close()
 
 
 class ChunkedDataResponse( DataResponse ):

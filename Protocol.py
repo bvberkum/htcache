@@ -158,9 +158,9 @@ class CachingProtocol(object):
             self.Response = Response.BlockedContentResponse
 
     def get_size( self ):
-        return self.cache.size;
+        return self.data.descriptor.size;
     def set_size( self, size ):
-        self.cache.size = size
+        self.data.descriptor.size = size
     size = property( get_size, set_size )
 
     def get_mtime( self ):
@@ -178,9 +178,9 @@ class CachingProtocol(object):
     def tell( self ):
         return self.cache.tell()
 
-    def __del__( self ):
-        super(CachingProtocol, self).__del__()
-        del self.data
+    def close( self ):
+        self.cache.close()
+        self.data.close()
 
 
 class HttpProtocol(CachingProtocol):
@@ -202,13 +202,19 @@ class HttpProtocol(CachingProtocol):
         self.data = Resource.ProxyData( self )
 
         # Skip server-round trip in static mode
-        if Runtime.STATIC and self.cache.full(): # FIXME
+        if Runtime.STATIC and self.cache.full: # FIXME
             log('Static mode; serving file directly from cache', Params.LOG_NOTE)
             self.data.init_and_open()
             self.Response = Response.DataResponse
             return
 
         proxy_req_headers = self.data.prepare_request( request )
+
+        log("Prepared request headers", Params.LOG_DEBUG)
+        for key in proxy_req_headers:
+            log('> %s: %s' % (
+                key, proxy_req_headers[ key ].replace( '\r\n', ' > ' ) ),
+                Params.LOG_DEBUG)
 
         # Forward request to remote server, fiber will handle this
         head = 'GET /%s HTTP/1.1' % path
@@ -313,7 +319,7 @@ class HttpProtocol(CachingProtocol):
         # 2xx
         if self.__status in ( HTTP.OK, ):
 
-            self.data.prepare_response()
+            self.data.finish_request()
             self.recv_entity()
             self.set_dataresponse();
 
@@ -321,9 +327,12 @@ class HttpProtocol(CachingProtocol):
             assert False, HTTP.MULTIPLE_CHOICES
 
         elif self.__status == HTTP.PARTIAL_CONTENT \
-                and self.cache.partial():
+                and self.cache.partial:
 
-            self.data.prepare_response()
+            self.__args = self.data.prepare_response()
+            if self.__args['ETag']:
+                assert self.__args['ETag'] == self.data.descriptor.etag, (
+                        self.__args['ETag'], self.data.descriptor.etag )
             self.recv_part()
             self.set_dataresponse();
 
@@ -340,15 +349,15 @@ class HttpProtocol(CachingProtocol):
 
         elif self.__status == HTTP.NOT_MODIFIED:
 
-            assert self.cache.full(), "XXX sanity"
+            assert self.cache.full, "XXX sanity"
 
-            self.descriptor.update( self.__args )
             if not self.request.is_conditional():
                 # serve non-conditional client request normally
                 log("Reading complete file from cache at %s" %
                         self.cache.path, Params.LOG_INFO)
                 self.cache.open_full()
                 self.Response = Response.DataResponse
+
             else:
                 # Transparent response
                 self.Response = Response.ProxyResponse
@@ -367,10 +376,10 @@ class HttpProtocol(CachingProtocol):
             #    self.descriptor.update( self.__args )
 
         elif self.__status in ( HTTP.REQUEST_RANGE_NOT_STATISFIABLE, ):
-            if self.cache.partial():
+            if self.cache.partial:
                 log("Warning: Cache corrupted?: %s" % self.url, Params.LOG_WARN)
                 self.cache.remove_partial()
-            elif self.cache.full():
+            elif self.cache.full:
                 self.cache.remove_full()
 # XXX
 #            if self.descriptor:
@@ -387,46 +396,17 @@ class HttpProtocol(CachingProtocol):
         """
         Prepare to receive new entity.
         """
-        if self.cache.full():
+        if self.cache.full:
             log("HttpProtocol.recv_entity: overwriting cache: %s" %
                     self.url, Params.LOG_NOTE)
             self.cache.remove_full()
             self.cache.open_new()
         else:
-            log("HttpProtocol.recv_entity: new cache : %s" %
+            log("HttpProtocol.recv_entity: new cache: %s" %
                     self.url, Params.LOG_NOTE)
             self.cache.open_new()
-            assert self.cache.partial()
-        # TODO: load http entity, perhaps response headers from shelve
-        #self.descriptors.map_path(self.cache.path, uriref)
-        #self.descriptors.put(uriref,
-        #descr = self.get_descriptor()
-        #self.mtime, self.size = scriptor.last_modified, descr.
-
-        if 'Last-Modified' in self.__args:
-            try:
-                self.mtime = calendar.timegm( time.strptime(
-                    self.__args[ 'Last-Modified' ], Params.TIMEFMT ) )
-            except:
-                log('Error: illegal time format in Last-Modified: %s.' %
-                    self.__args[ 'Last-Modified' ], Params.LOG_ERR)
-                # XXX: Try again, should make a list of alternate (but invalid) date formats
-                try:
-                    tmhdr = re.sub('\ [GMT0\+-]+$', '',
-                        self.__args[ 'Last-Modified' ])
-                    self.mtime = calendar.timegm( time.strptime(
-                        tmhdr, Params.TIMEFMT[:-4] ) )
-                except:
-                    try:
-                        self.mtime = calendar.timegm( time.strptime(
-                            self.__args[ 'Last-Modified' ],
-                            Params.ALTTIMEFMT ) )
-                    except:
-                        log('Fatal: unable to parse Last-Modified: %s.' %
-                            self.__args[ 'Last-Modified' ], Params.LOG_ERR)
-
-        if 'Content-Length' in self.__args:
-            self.size = int( self.__args[ 'Content-Length' ] )
+            self.cache.stat()
+            assert self.cache.partial
 
     def recv_part(self):
         """
@@ -442,7 +422,7 @@ class HttpProtocol(CachingProtocol):
         assert self.size == int( end ) + 1, \
                 "Complete range %r should match entity size of %s"%(end, self.size)
         self.cache.open_partial( int( beg ) )
-        assert self.cache.partial(), "Missing cache but receiving partial entity. "
+        assert self.cache.partial, "Missing cache but receiving partial entity. "
 
     def set_dataresponse(self):
         mediatype = self.__args.get( 'Content-Type', None )
@@ -468,21 +448,10 @@ class HttpProtocol(CachingProtocol):
             map( ': '.join, args.items() ) + [ '', '' ] )
 
     def responsebuf( self ):
-        args = self.headers
-        return self.print_message(args)
+        return self.print_message(self.__args)
 
     def args( self ):
         return self.__args.copy()
-
-    @property
-    def headers( self ):
-        args = self.args()
-
-        via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
-        if args.setdefault('Via', via) != via:
-            args['Via'] += ', '+ via
-
-        return args
 
     def socket( self ):
         return self.__socket
@@ -495,7 +464,7 @@ class FtpProtocol( CachingProtocol ):
     def __init__( self, request ):
         super(FtpProtocol, self).__init__( request )
 
-        if Runtime.STATIC and self.cache.full():
+        if Runtime.STATIC and self.cache.full:
           self.__socket = None
           log("Static FTP cache : %s" % self.url)
           self.cache.open_full()
@@ -587,12 +556,12 @@ class FtpProtocol( CachingProtocol ):
             line.rstrip(), '%Y%m%d%H%M%S' ) )
         log('Modification time: %s' % time.strftime(
             Params.TIMEFMT, time.gmtime( self.mtime ) ))
-        stat = self.cache.partial()
+        stat = self.cache.partial
         if stat and stat.st_mtime == self.mtime:
             self.__sendbuf = 'REST %i\r\n' % stat.st_size
             self.__handle = FtpProtocol.__handle_resume
         else:
-            stat = self.cache.full()
+            stat = self.cache.full
             if stat and stat.st_mtime == self.mtime:
                 log("Unmodified FTP cache : %s" % self.url)
                 self.cache.open_full()
