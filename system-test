@@ -279,7 +279,9 @@ case $1 in
     http_proxy=localhost:$PORT download http://$URL_HTTP cached & abort $WAIT
     check_log "Aborted client read" "Error writing to client"
     check_url_cached "record exists" http://$URL_HTTP
-    check_exists "file cached, not finalized" cache/$URL_HTTP.incomplete
+    INCOMPLETE=$(htcache_command --print-location http://$URL_HTTP)
+    print $INCOMPLETE
+#    check_exists "file cached, not finalized" cache/$$$URL_HTTP.incomplete
     # XXX: No headers are ever present, need to check if older versions did
     #    splitheaders cached
     #    check_equal "headers are equal" normal.entity.headers cached.entity.headers
@@ -291,9 +293,7 @@ case $1 in
     startserver
     download http://$URL_HTTP out
     http_proxy=localhost:$PORT download http://$URL_HTTP out1
-    htcache_command --list-locations
     http_proxy=localhost:$PORT download http://$URL_HTTP out2
-    htcache_command --list-locations
     check_exists "first file cached and finalized" cache/$URL_HTTP
     check_url_cached "record exists" http://$URL_HTTP
     check_equal "cached and normal file are equal" cache/$URL_HTTP out
