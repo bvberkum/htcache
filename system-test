@@ -23,9 +23,13 @@ PREFIX="/tmp/htcache-systemtest$NUM"
 LOG_LEVEL=7
 ERR_LEVEL=7
 LOG_FACILITIES="--log-facility protocol --log-facility cache"
-URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
-URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
-URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
+[ -n "$URL_HTTP" ] && [ -n "$URL_CHUNKED" ] && [ -n "$URL_FTP" ] || {
+    echo "Must provide URL_* env vars for testing. "
+    exit 1
+}
+#URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
+#URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
+#URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
 ABORT=0.6
 WAIT=0.5
@@ -161,7 +165,7 @@ if which curl > /dev/null; then
     splitheaders $2
   }
 else
-  echo "error: no download tool available, install curl"
+  echo "ERROR: no download tool available, install curl"
   exit 1
 fi
 
@@ -173,7 +177,7 @@ function abort
     echo
     sleep 1
   else
-    echo "error: download finished unexpectedly soon"
+    echo "ERROR: download finished unexpectedly soon"
     exit 1
   fi
 }
@@ -228,7 +232,7 @@ elif which md5sum cut > /dev/null; then
     md5sum $1 | cut -d ' ' -f 1
   }
 else
-  echo "error: no checksum tool available"
+  echo "ERROR: no checksum tool available"
   exit 1
 fi
 
