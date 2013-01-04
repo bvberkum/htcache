@@ -147,8 +147,8 @@ class DataResponse:
                 self.__protocol.size += delta
             try:
                 self.__pos += sock.send( chunk )
-            except:
-                log("Error writing to client, aborted!", Params.LOG_ERR)
+            except Exception, e:
+                log("Failed writing to client, aborted: %s" % e, Params.LOG_ERR)
                 self.Done = True
                 #XXX:if not self.__protocol.cache.full():
                 #    self.__protocol.cache.remove_partial()

@@ -63,9 +63,9 @@ def HTCache_fiber_handler( client, address ):
                 if issubclass( protocol.Response, Response.DataResponse ):
                     get_log(Params.LOG_INFO)\
                             ('Joining running download')
-                    assert not hasattr( protocol.data, 'cache' ),\
-                            protocol.data.cache
-                    protocol.data.init_and_open()
+#                    assert not hasattr( protocol.data, 'cache' ),\
+#                            "" protocol.data.cache
+                    protocol.data.prepare_static()
                     #assert hasattr( protocol.data, 'descriptor' )
                     #protocol.data.init_cache()
                     #protocol.data.open_cache()

@@ -337,18 +337,10 @@ Not everything about a cachable resource can be recorded on the filesystem,
 unless we use an AsIs storage and store the message entirely but obscuring its 
 contents for other applications.
 
-As a generic web proxy, losing metadata other than 
+The storage should contain the normalized data.
 
-cache-path <=> uris
-cache-path => headers
-
-The descriptor backend (which contains URI, mediatype, charset, language and
-other resource-header data) is by default a flat index DB storage.
-No additional backends available at this time.
-
-TODO: a file-based header storage or perhaps even an Apache mod_asis
-compatible storage are under consideration. Depending on query/maintenance
-requirements.
+The data is created once the server reports status OK and is ready to
+start transferring content.
 
 
 Rule Syntax

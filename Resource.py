@@ -324,12 +324,13 @@ class ProxyData(object):
             req_headers['Via'] += ', '+ via
         # XXX: should it do something with encoding?
         req_headers.pop( 'Accept-Encoding', None )
-        # TODO: range requests
+        # TODO: RFC 2616 14.35.2 Range requests and partial content response
         htrange = req_headers.pop( 'Range', None )
         # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
         cache_control = req_headers.pop( 'Cache-Control', None )
-        # TODO: Store relationship with referer
+        # TODO: Store relationship with 
         relationtype = req_headers.pop('X-Relationship', None)
+        # XXX: anonymize, check with [RFC 2616 14.36]
         referer = req_headers.get('Referer', None)
         # FIXME: Client may have a cache too that needs to be
         # validated by the proxy.
@@ -379,7 +380,7 @@ class ProxyData(object):
 
             # set new data
             self.update_data()
-            assert self.descriptor.etag
+            #assert self.descriptor.etag
 
             res = Resource().find( Resource.url == self.protocol.url )
             if not res:
@@ -450,11 +451,17 @@ class ProxyData(object):
         """
         Set cache location and open any partial or complete file, 
         then fetch descriptor if it exists. 
+
+        XXX: Even when the current download is still running, this needs to have the
+        descriptor already.
         """
         self.init_cache( self.protocol.url )
-        self.init_data()
-        assert self.descriptor.id and self.cache.full,\
-                "Nothing there to open. "
+        self.init_data( self.protocol.url )
+        print self.cache.stat()
+        assert self.descriptor.id,\
+                "Nothing there to open: no descriptor. "
+        assert self.cache.full,\
+                "Nothing there to open: no content. "
         self.open_cache()
         #assert self.data.is_open() and self.cache.full(), \
         #    "XXX: sanity check, cannot have partial served content, serve error instead"

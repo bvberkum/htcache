@@ -1,107 +1,121 @@
+./Resource.py:335:        # FIXME: Client may have a cache too that needs to be
+./Resource.py:615:#/FIXME
+./Protocol.py:205:        if Runtime.STATIC and self.cache.full: # FIXME
 ./protocol-test:4:- FIXME: should cover a good deal of HTTP stuff.
-./main.rst:280:  the first argument being prefixed with '?'. FIXME: does not solve anything?
-./Rules.py:165:                    log('FIXME: Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
-./Rules.py:175:# FIXME: drop rules
-./Rules.py:207:# FIXME: parse rewrite rules
+./Rules.py:167:                    log('FIXME: Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
+./Rules.py:177:# FIXME: drop rules
+./Rules.py:209:# FIXME: parse rewrite rules
 
-./Resource.py:236:        raise "TODO"
-./Resource.py:243:        # TODO: set_broken
-./Resource.py:331:# TODO: find_records by attribute query
-./Resource.py:367:# TODO: integrate with other print_info
-./Resource.py:394:        # TODO: documents
-./Protocol.py:245:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
-./Protocol.py:269:                # TODO: Validate client validator against cached entry
-./Protocol.py:277:        # TODO: Store relationship with referer
-./Protocol.py:481:        # TODO: load http entity, perhaps response headers from shelve
+./Cache.py:2:TODO:
+./Resource.py:327:        # TODO: RFC 2616 14.35.2 Range requests and partial content response
+./Resource.py:329:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+./Resource.py:331:        # TODO: Store relationship with 
+./Resource.py:686:# TODO: find_records by attribute query
+./Resource.py:725:# TODO: integrate with other print_info
+./Resource.py:753:        # TODO: documents
 ./Request.py:3:TODO: determine cachability.
-./main.rst:28:            - TODO: ``--keep-cache`` mark location revisioning
-./main.rst:29:            - TODO: ``--validate-tree`` resource cache should match size, checksum
-./main.rst:30:            - TODO: ``--validate-joinlist`` resource should have been rewritten
-./main.rst:31:            - TODO: ``--validate-joinlist --auto`` rename if possible
-./main.rst:32:            - TODO: ``--validate-lists`` 
-./main.rst:33:            - TODO: ``--check-joinlist`` run testlines from JOIN,  
-./main.rst:34:            - TODO: ``--check-lists``
-./main.rst:35:            - TODO: abstract, refactor query/maintenance mode handling. Allow
-./main.rst:37:            - TODO: ``--print-allrecords`` simply dump?
-./main.rst:38:            - TODO: ``--print-record`` query
-./main.rst:39:            - TODO: ``--print-records`` query
-./main.rst:40:            - TODO: ``--print-media`` query
-./main.rst:233:TODO: Rewriting and content filtering is not implemented.
-./main.rst:316:TODO: a file-based header storage or perhaps even an Apache mod_asis
+./main.rst:30:            - TODO: ``--keep-cache`` mark location revisioning
+./main.rst:31:            - TODO: ``--validate-tree`` resource cache should match size, checksum
+./main.rst:32:            - TODO: ``--validate-joinlist`` resource should have been rewritten
+./main.rst:33:            - TODO: ``--validate-joinlist --auto`` rename if possible
+./main.rst:34:            - TODO: ``--validate-lists`` 
+./main.rst:35:            - TODO: ``--check-joinlist`` run testlines from JOIN,  
+./main.rst:36:            - TODO: ``--check-lists``
+./main.rst:37:            - TODO: abstract, refactor query/maintenance mode handling. Allow
+./main.rst:39:            - TODO: ``--print-allrecords`` simply dump?
+./main.rst:40:            - TODO: ``--print-record`` query
+./main.rst:41:            - TODO: ``--print-records`` query
+./main.rst:42:            - TODO: ``--print-media`` query
+./main.rst:349:TODO: a file-based header storage or perhaps even an Apache mod_asis
 ./CHANGELOG.rst:1:TODO htcache version 1.0 (planned)
-./Response.py:70:        # TODO: on/off:
-./Response.py:82:          # TODO: parse mediatype, charset, language..
-./Response.py:169:        # TODO: store hash for new recv'd content
-./Response.py:394:        # TODO: echos only
-./Command.py:78:                # TODO: allow port in address
-./Command.py:113:                "TODO: limit download rate at a fixed K/s", dict(
-./Command.py:191:                "TODO: bypass caching for requests based on URL regex pattern", 
-./Command.py:245:                "TODO: ", _cmd()
-./Command.py:280:#                "TODO: iterate cache references", _cmd()
-./Command.py:283:                "TODO: Remove resources no longer online.", _cmd()
-./Command.py:290:                "TODO: Symlink duplicate content, check by size and hash."
-./Command.py:293:#     TODO --print-mode line|tree
-./Command.py:294:#     TODO --print-url
-./Command.py:295:#     TODO --print-path
-./Command.py:297:#     TODO --print-documents
-./Command.py:298:#     TODO --print-videos
-./Command.py:299:#     TODO --print-audio
-./Command.py:300:#     TODO --print-images
-./init.sh:42:        # TODO: check htcache status before redirecting output to lock
+./Response.py:78:        # TODO: on/off:
+./Response.py:160:        # TODO: store hash for new recv'd content
+./Response.py:390:        # TODO: echos only
+./Command.py:103:                # TODO: allow port in address
+./Command.py:138:                "TODO: limit download rate at a fixed K/s", dict(
+./Command.py:228:                "TODO: bypass caching for requests based on URL regex pattern", 
+./Command.py:297:                "TODO: ", 
+./Command.py:341:#                "TODO: iterate cache references", _attr(_cmd)
+./Command.py:344:                "TODO: Remove resources no longer online.", _attr(_cmd)
+./Command.py:351:                "TODO: Symlink duplicate content, check by size and hash."
+./Command.py:354:#     TODO --print-mode line|tree
+./Command.py:355:#     TODO --print-url
+./Command.py:356:#     TODO --print-path
+./Command.py:358:#     TODO --print-documents
+./Command.py:359:#     TODO --print-videos
+./Command.py:360:#     TODO --print-audio
+./Command.py:361:#     TODO --print-images
 
-./newcache.rst:23:XXX: could a deeper tree be created by symlinking? think so..
-./Cache.py:67:                # XXX: todo: keep largest partial only
-./Resource.py:87:        # XXX:
-./Resource.py:132:        # XXX: work in progress
-./Resource.py:142:# XXX:        HTTP.map_headers_to_descriptor( request.headers )
-./Resource.py:226:        #            "XXX: update"
-./Resource.py:447:# XXX old
-./Resource.py:485:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:493:# XXX: cannot reconstruct--, or should always normalize?
-./Resource.py:525:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:533:# XXX: cannot reconstruct--, or should always normalize?
-./Protocol.py:92:    "XXX: old indicator to track hashsum of response entity."
-./Protocol.py:119:        # XXX: record rewrites in descriptor DB?
-./Protocol.py:142:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
-./Protocol.py:267:                # XXX: treat as unspecified end-to-end revalidation
-./Protocol.py:333:                key = key.title() # XXX: bad? :)
-./Protocol.py:389:            # XXX: should create preliminary Descriptor, or delete file.
-./Protocol.py:415:# XXX:
-./Protocol.py:456:# XXX
-./Protocol.py:493:                # XXX: Try again, should make a list of alternate (but invalid) date formats
-./Protocol.py:529:            log("XXX: Rewriting HTML resource: "+self.url)
-./Request.py:166:            # XXX self.Protocol = Protocol.BlindProtocol
-./Request.py:194:# XXX: need a test for this
-./Request.py:234:        # XXX: If-Range
-./Request.py:267:        # XXX: used before protocol is determined,  assert self.Protocol
+./Resource.py:93:            # XXX: Try again, should make a list of alternate (but invalid) date formats
+./Resource.py:112:# XXX:            if self.cache.stat():
+./Resource.py:189:        # XXX: record rewrites in descriptor DB?
+./Resource.py:228:# XXX
+./Resource.py:244:# XXX:'content-md5': (str,'content.md5'),
+./Resource.py:287:        if self.descriptor.id: assert self.cache.mtime > -1, "XXX"
+./Resource.py:325:        # XXX: should it do something with encoding?
+./Resource.py:333:        # XXX: anonymize, check with [RFC 2616 14.36]
+./Resource.py:372:            # XXX: allow for opaque moves of descriptors
+./Resource.py:379:            # /XXX
+./Resource.py:415:# XXX: this should mve into Cache again:
+./Resource.py:438:# XXX
+./Resource.py:446:# XXX
+./Resource.py:461:        #    "XXX: sanity check, cannot have partial served content, serve error instead"
+./Resource.py:478:        # XXX: read_only
+./Resource.py:495:    # XXX: SessionMixin.key_names
+./Resource.py:806:# XXX old
+./Resource.py:844:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:852:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:884:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:892:# XXX: cannot reconstruct--, or should always normalize?
+./Protocol.py:90:    "XXX: old indicator to track hashsum of response entity."
+./Protocol.py:94:        # XXX: update this with data from content-location
+./Protocol.py:124:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
+./Protocol.py:231:# XXX: the other way around?
+./Protocol.py:274:                key = key.title() # XXX: bad? :)
+./Protocol.py:309:# XXX: chunking..
+./Protocol.py:346:# XXX:
+./Protocol.py:354:            assert self.cache.full, "XXX sanity"
+./Protocol.py:386:# XXX
+./Protocol.py:432:            log("XXX: Rewriting HTML resource: "+self.url, Params.LOG_NOTE)
+./Request.py:29:    XXX: HtRequest may want to skip buffering large uploads into memory.
+./Request.py:177:            # XXX self.Protocol = Protocol.BlindProtocol
+./Request.py:205:# XXX: need a test for this
+./Request.py:245:        # XXX: If-Range
+./Request.py:278:        # XXX: used before protocol is determined,  assert self.Protocol
 ./control.rst:21:        May cache and serve. XXX: while fresh?
 ./HTCache.hx:34:        // XXX: figure out a way to set global cookie? iframe from proxy?
-./util.py:3:# XXX: Dont use cjson, its buggy, see comments at
-./Response.py:89:# XXX: this may need to be on js serving..
-./Command.py:99:# XXX: write macro to fix this:
-./Command.py:111:#/XXX
-./Command.py:127:                "XXX: try ipv6 addresses if available", dict(
-./Command.py:152:            (("--data-dir",), "XXX: Change location of var datafiles. Note: cannot change "
-./Command.py:156:            (("--static-dir",), "XXX: Change location of static datafiles.", 
-./Command.py:164:            (("-b", "--backend",), "XXX:initialize metadata backend from reference", dict(
-./Command.py:195:                "XXX: content rewrite any webresource by selecting on URL or ...??", 
-./Command.py:201:                " may be a problem if its contents has any differences. XXX: read"
-./Command.py:206:                "XXX: append manual rule", dict()
-./Command.py:209:                "XXX: validate and run tests", 
-./Command.py:213:                "XXX: re-run", 
-./Command.py:219:                "increase output, XXX: use twice to show http headers", dict(
-./Command.py:232:                "XXX: turn of output printing?", dict(
-./Command.py:260:                "XXX: Query for one or more records by regular expression.", 
-./Command.py:278:# XXX:
-./Command.py:414:# XXX:
-./Command.py:443:# XXX: Maintenance
+./main.rst:188:- XXX: caches.FileTreeQ - encodes each query argument into a separate directory,
+./main.rst:230:XXX:
+./main.rst:301:                      |            `--------ok--> XXX:RewrittenDataResponse (6)
+./main.rst:312:XXX: states
+./main.rst:434:XXX: could a deeper tree be created by symlinking? think so..
+./util.py:6:# XXX: Dont use cjson, its buggy, see comments at
+./Response.py:82:# XXX: this may need to be on js serving..
+./Response.py:153:                #XXX:if not self.__protocol.cache.full():
+./Command.py:124:# XXX: write macro to fix this:
+./Command.py:136:#/XXX
+./Command.py:152:                "XXX: try ipv6 addresses if available", dict(
+./Command.py:195:            (("--static-dir",), "XXX: Change location of static datafiles. "
+./Command.py:232:                "XXX: content rewrite any webresource by selecting on URL or ...??", 
+./Command.py:238:                " may be a problem if its contents has any differences. XXX: read"
+./Command.py:243:                "XXX: append manual rule", dict()
+./Command.py:246:                "XXX: validate and run tests", 
+./Command.py:250:                "XXX: re-run", 
+./Command.py:256:                "increase output, XXX: use twice to show http headers", dict(
+./Command.py:277:                "XXX: turn of output printing?", dict(
+./Command.py:313:                "XXX: Query for one or more records by regular expression.", 
+./Command.py:339:# XXX:
+./Command.py:482:# XXX:
+./Command.py:514:# XXX: Maintenance
 ./Terminal.py:1:# XXX: unintegrated ANSI terminal wrapper
 ./Rules.py:33:# XXX: could put tab back into JOIN rules file, also parse continuous
-./Params.py:52:ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
-./system-test:97:# XXX: could not figure out a way to make wget save (headers) for non 200
-./system-test:270:    # XXX: No headers are ever present, need to check if older versions did
+./Params.py:59:ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
+./system-test:139:# XXX: could not figure out a way to make wget save (headers) for non 200
+./system-test:348:    # XXX: No headers are ever present, need to check if older versions did
+./system-test:402:# XXX: cannot test without descriptor of aux. command to load descriptor into DB
 ./htcache:9:# XXX: development tooling:
 ./htcache:36:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
-./htcache:123:        # XXX: programming catch
+./htcache:73:                # XXX: continues to handle response
+./htcache:147:        # XXX: programming catch
 
 

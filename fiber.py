@@ -203,6 +203,7 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
     try:
         listener.bind( 
                 ( hostname, port ) )
+        get_log(Params.LOG_NOTE)("serving at %s:%i", hostname, port)
     except:
         get_log(Params.LOG_ERR)("unable to bind to %s:%i", hostname, port)
         raise

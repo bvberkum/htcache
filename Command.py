@@ -101,14 +101,14 @@ class CLIParams:
         ( "Proxy", "These options set parameters for the proxy service behaviour. ", (
             (('-a', '--address', '--hostname'),
                 # TODO: allow port in address
-                "listen on this port for incoming connections, default: %(default)i", dict(
+                "listen on this port for incoming connections, default: %default", dict(
                     metavar="HOST",
                     default=Params.HOSTNAME,
                     dest="hostname",
                     type=str,
             )),
             (('-p', '--port'),
-                "listen on this port for incoming connections, default: %(default)i", dict(
+                "listen on this port for incoming connections, default: %default", dict(
                     metavar="PORT",
                     default=Params.PORT,
                     type=int,
@@ -141,7 +141,7 @@ class CLIParams:
             )),
             (("-t", "--timeout"),
                 "break connection after so many seconds of inactivity,"
-                " default %(default)i", dict(
+                " default %default", dict(
                     metavar="SEC",
                     type=int,
                     default=Params.TIMEOUT,
@@ -406,7 +406,6 @@ def print_info(return_data=False):
 
     """
     """
-    backend = Resource.get_backend(True)
     Rules.load()
 
     data = {
@@ -444,18 +443,6 @@ def print_info(return_data=False):
             },
             "statistics": {
                 "data": {
-                    "records": {
-                        "resources": 
-                            backend.query(Resource.Resource).count(),
-                        "descriptors": 
-                            backend.query(Resource.Descriptor).count(),
-                    },
-                    "mappings": {
-#                        "cachemap": 
-#                            backend.query(Resource.Resource).count(),
-#                        "resourcemap": 
-#                            backend.query(Resource.Resource).count(),
-                    }
                 },
                 "rules": {
                         "drop": len(Rules.Drop.rules),
@@ -466,6 +453,21 @@ def print_info(return_data=False):
                 }
             }
         }
+    backend = None#Resource.get_backend(True)
+    if backend:
+        data["htcache"]["statistics"]["data"].update({
+                    "records": {
+                        "resources": 
+                            backend.query(Resource.Resource).count(),
+                        "descriptors": 
+                            backend.query(Resource.Descriptor).count(),
+                   },
+                   "mappings": {
+                        "cachemap": 
+                            backend.query(Resource.Resource).count(),
+                        "resourcemap": 
+                            backend.query(Resource.Resource).count(),
+            }})
     if return_data:
         return data
 

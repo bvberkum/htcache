@@ -20,9 +20,11 @@ set -e # check all commands
 DAEMON=/usr/bin/htcache
 LOG=/var/log/htcache.log 
 PID_FILE=/var/run/htcache.pid
-#DATADIR=/var/cache/http/
-DATADIR=/var/cache/www/
-FLAGS=" -p 8081 -v --cache caches.FileTree --nodir , "
+DATADIR=/var/lib/htcache/
+ROOT=/var/cache/www/
+LOG_LEVEL=0
+ERR_LEVEL=5
+FLAGS=" -p 8081 -v --cache caches.FileTree --nodir , --log-level $LOG_LEVEL --error-level $ERR_LEVEL "
 #FLAGS="--cache caches.FileTree -a %Y/%m/%d/%H:%M- --nodir , "
 #--static --offline
 
@@ -39,9 +41,7 @@ htcache_start()
     if test ! -e $PID_FILE
     then
         echo "Starting htcache"
-        # TODO: check htcache status before redirecting output to lock
-        echo $DAEMON -r $DATADIR --daemon $LOG $FLAGS --pid-file $PID_FILE
-        $DAEMON -r $DATADIR --daemon $LOG $FLAGS --pid-file $PID_FILE
+        $DAEMON -r $ROOT -d $DATADIR --daemon $LOG $FLAGS --pid-file $PID_FILE
     else
         echo "Found "$PID_FILE", htcache already running? (PID: $PID)"
     fi

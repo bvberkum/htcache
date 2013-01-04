@@ -59,7 +59,8 @@ class ProtocolTest:
                 difflib.unified_diff(
                     expected_content.split('\n'), 
                     result_content.split('\n'))))
-            print diff
+            print diff[:255]
+            print len(diff[255:]), 'more characters'
         else:
             print " [PASSED] "
         print "-"*79
