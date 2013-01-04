@@ -343,6 +343,7 @@ class HttpProtocol(CachingProtocol):
                     HTTP.MOVED_PERMANENTLY,
                     HTTP.TEMPORARY_REDIRECT):
 
+            self.data.finish_request()
 # XXX:
             #location = self.__args.pop( 'Location', None )
 #            self.descriptor.move( self.cache.path, self.__args )
@@ -352,17 +353,10 @@ class HttpProtocol(CachingProtocol):
         elif self.__status == HTTP.NOT_MODIFIED:
 
             assert self.cache.full, "XXX sanity"
-
-            if not self.request.is_conditional():
-                # serve non-conditional client request normally
-                log("Reading complete file from cache at %s" %
-                        self.cache.path, Params.LOG_INFO)
-                self.cache.open_full()
-                self.Response = Response.DataResponse
-
-            else:
-                # Transparent response
-                self.Response = Response.ProxyResponse
+            log("Reading complete file from cache at %s" %
+                    self.cache.path, Params.LOG_INFO)
+            self.data.finish_request()
+            self.Response = Response.DataResponse
 
         # 4xx: client error
         elif self.__status in ( HTTP.FORBIDDEN, HTTP.METHOD_NOT_ALLOWED ):

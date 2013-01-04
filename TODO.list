@@ -1,5 +1,5 @@
-./Resource.py:335:        # FIXME: Client may have a cache too that needs to be
-./Resource.py:615:#/FIXME
+./Resource.py:342:        # FIXME: Client may have a cache too that needs to be
+./Resource.py:632:#/FIXME
 ./Protocol.py:205:        if Runtime.STATIC and self.cache.full: # FIXME
 ./protocol-test:4:- FIXME: should cover a good deal of HTTP stuff.
 ./Rules.py:167:                    log('FIXME: Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
@@ -7,12 +7,12 @@
 ./Rules.py:209:# FIXME: parse rewrite rules
 
 ./Cache.py:2:TODO:
-./Resource.py:327:        # TODO: RFC 2616 14.35.2 Range requests and partial content response
-./Resource.py:329:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
-./Resource.py:331:        # TODO: Store relationship with 
-./Resource.py:686:# TODO: find_records by attribute query
-./Resource.py:725:# TODO: integrate with other print_info
-./Resource.py:753:        # TODO: documents
+./Resource.py:334:        # TODO: RFC 2616 14.35.2 Range requests and partial content response
+./Resource.py:336:        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+./Resource.py:338:        # TODO: Store relationship with 
+./Resource.py:703:# TODO: find_records by attribute query
+./Resource.py:742:# TODO: integrate with other print_info
+./Resource.py:770:        # TODO: documents
 ./Request.py:3:TODO: determine cachability.
 ./main.rst:30:            - TODO: ``--keep-cache`` mark location revisioning
 ./main.rst:31:            - TODO: ``--validate-tree`` resource cache should match size, checksum
@@ -26,9 +26,8 @@
 ./main.rst:40:            - TODO: ``--print-record`` query
 ./main.rst:41:            - TODO: ``--print-records`` query
 ./main.rst:42:            - TODO: ``--print-media`` query
-./main.rst:349:TODO: a file-based header storage or perhaps even an Apache mod_asis
 ./CHANGELOG.rst:1:TODO htcache version 1.0 (planned)
-./Response.py:78:        # TODO: on/off:
+./Response.py:77:        # TODO: on/off:
 ./Response.py:160:        # TODO: store hash for new recv'd content
 ./Response.py:390:        # TODO: echos only
 ./Command.py:103:                # TODO: allow port in address
@@ -48,49 +47,50 @@
 
 ./Resource.py:93:            # XXX: Try again, should make a list of alternate (but invalid) date formats
 ./Resource.py:112:# XXX:            if self.cache.stat():
-./Resource.py:189:        # XXX: record rewrites in descriptor DB?
-./Resource.py:228:# XXX
-./Resource.py:244:# XXX:'content-md5': (str,'content.md5'),
-./Resource.py:287:        if self.descriptor.id: assert self.cache.mtime > -1, "XXX"
-./Resource.py:325:        # XXX: should it do something with encoding?
-./Resource.py:333:        # XXX: anonymize, check with [RFC 2616 14.36]
-./Resource.py:372:            # XXX: allow for opaque moves of descriptors
-./Resource.py:379:            # /XXX
-./Resource.py:415:# XXX: this should mve into Cache again:
-./Resource.py:438:# XXX
-./Resource.py:446:# XXX
-./Resource.py:461:        #    "XXX: sanity check, cannot have partial served content, serve error instead"
-./Resource.py:478:        # XXX: read_only
-./Resource.py:495:    # XXX: SessionMixin.key_names
-./Resource.py:806:# XXX old
-./Resource.py:844:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:852:# XXX: cannot reconstruct--, or should always normalize?
-./Resource.py:884:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
-./Resource.py:892:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:155:        XXX: The associated resource should be initalized later.
+./Resource.py:221:# XXX
+./Resource.py:237:# XXX:'content-md5': (str,'content.md5'),
+./Resource.py:280:        if self.descriptor.id: assert self.cache.mtime > -1, "XXX"
+./Resource.py:332:        # XXX: should it do something with encoding?
+./Resource.py:340:        # XXX: anonymize, check with [RFC 2616 14.36]
+./Resource.py:382:            # XXX: allow for opaque moves of descriptors
+./Resource.py:389:            # /XXX
+./Resource.py:425:# XXX: this should mve into Cache again:
+./Resource.py:449:# XXX
+./Resource.py:457:# XXX
+./Resource.py:466:        XXX: Even when the current download is still running, this needs to have the
+./Resource.py:478:        #    "XXX: sanity check, cannot have partial served content, serve error instead"
+./Resource.py:495:        # XXX: read_only
+./Resource.py:512:    # XXX: SessionMixin.key_names
+./Resource.py:823:# XXX old
+./Resource.py:861:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:869:# XXX: cannot reconstruct--, or should always normalize?
+./Resource.py:901:# XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
+./Resource.py:909:# XXX: cannot reconstruct--, or should always normalize?
 ./Protocol.py:90:    "XXX: old indicator to track hashsum of response entity."
 ./Protocol.py:94:        # XXX: update this with data from content-location
 ./Protocol.py:124:        # XXX: Respond by writing message as plain text, e.g echo/debug it:
 ./Protocol.py:231:# XXX: the other way around?
 ./Protocol.py:274:                key = key.title() # XXX: bad? :)
 ./Protocol.py:309:# XXX: chunking..
-./Protocol.py:346:# XXX:
-./Protocol.py:354:            assert self.cache.full, "XXX sanity"
-./Protocol.py:386:# XXX
-./Protocol.py:432:            log("XXX: Rewriting HTML resource: "+self.url, Params.LOG_NOTE)
+./Protocol.py:347:# XXX:
+./Protocol.py:355:            assert self.cache.full, "XXX sanity"
+./Protocol.py:380:# XXX
+./Protocol.py:426:            log("XXX: Rewriting HTML resource: "+self.url, Params.LOG_NOTE)
 ./Request.py:29:    XXX: HtRequest may want to skip buffering large uploads into memory.
-./Request.py:177:            # XXX self.Protocol = Protocol.BlindProtocol
-./Request.py:205:# XXX: need a test for this
-./Request.py:245:        # XXX: If-Range
-./Request.py:278:        # XXX: used before protocol is determined,  assert self.Protocol
+./Request.py:179:            # XXX self.Protocol = Protocol.BlindProtocol
+./Request.py:207:# XXX: need a test for this
+./Request.py:248:        # XXX: If-Range
+./Request.py:285:        # XXX: used before protocol is determined,  assert self.Protocol
 ./control.rst:21:        May cache and serve. XXX: while fresh?
 ./HTCache.hx:34:        // XXX: figure out a way to set global cookie? iframe from proxy?
 ./main.rst:188:- XXX: caches.FileTreeQ - encodes each query argument into a separate directory,
 ./main.rst:230:XXX:
 ./main.rst:301:                      |            `--------ok--> XXX:RewrittenDataResponse (6)
 ./main.rst:312:XXX: states
-./main.rst:434:XXX: could a deeper tree be created by symlinking? think so..
+./main.rst:426:XXX: could a deeper tree be created by symlinking? think so..
 ./util.py:6:# XXX: Dont use cjson, its buggy, see comments at
-./Response.py:82:# XXX: this may need to be on js serving..
+./Response.py:81:# XXX: this may need to be on js serving..
 ./Response.py:153:                #XXX:if not self.__protocol.cache.full():
 ./Command.py:124:# XXX: write macro to fix this:
 ./Command.py:136:#/XXX
@@ -109,10 +109,11 @@
 ./Command.py:514:# XXX: Maintenance
 ./Terminal.py:1:# XXX: unintegrated ANSI terminal wrapper
 ./Rules.py:33:# XXX: could put tab back into JOIN rules file, also parse continuous
-./Params.py:59:ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
+./Params.py:60:ALTTIMEFMT = '%a, %d %b %H:%M:%S CEST %Y' # XXX: foksuk.nl
 ./system-test:139:# XXX: could not figure out a way to make wget save (headers) for non 200
-./system-test:348:    # XXX: No headers are ever present, need to check if older versions did
-./system-test:402:# XXX: cannot test without descriptor of aux. command to load descriptor into DB
+./system-test:355:    # XXX: No headers are ever present, need to check if older versions did
+./system-test:411:# XXX: cannot test without descriptor of aux. command to load descriptor into DB
+./system-test:447:# XXX: cannot test without descriptor of aux. command to load descriptor into DB
 ./htcache:9:# XXX: development tooling:
 ./htcache:36:XXX: This also allows local lookup of resources, ie. to rewrite the cache location
 ./htcache:73:                # XXX: continues to handle response

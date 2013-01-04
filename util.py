@@ -109,6 +109,8 @@ class Log:
 
     def __nonzero__(self):
         return \
+                not Runtime.QUIET \
+            and \
                 Runtime.ERROR_LEVEL >= self.level \
             or ( 
                     ( self.facility in Runtime.LOG_FACILITIES ) \

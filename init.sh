@@ -22,9 +22,14 @@ LOG=/var/log/htcache.log
 PID_FILE=/var/run/htcache.pid
 DATADIR=/var/lib/htcache/
 ROOT=/var/cache/www/
-LOG_LEVEL=0
+LOG_LEVEL=7
 ERR_LEVEL=5
-FLAGS=" -p 8081 -v --cache caches.FileTree --nodir , --log-level $LOG_LEVEL --error-level $ERR_LEVEL "
+LOG_FACILITIES=""
+LOG_FACILITIES="$LOG_FACILITIES --log-facility caches "
+LOG_FACILITIES="$LOG_FACILITIES --log-facility cache "
+LOG_FACILITIES="$LOG_FACILITIES --log-facility resource"
+#--log-facility protocol"
+FLAGS=" -p 8081 --cache caches.FileTree --nodir , --log-level $LOG_LEVEL --error-level $ERR_LEVEL $LOG_FACILITIES"
 #FLAGS="--cache caches.FileTree -a %Y/%m/%d/%H:%M- --nodir , "
 #--static --offline
 
