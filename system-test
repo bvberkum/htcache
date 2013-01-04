@@ -29,7 +29,7 @@ URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
 ABORT=0.6
-WAIT=0.5
+WAIT=1.5
 
 ########## AUXILIARY FUNCTIONS ################################################
 
@@ -169,8 +169,8 @@ fi
 function abort
 {
   sleep $1
-  if kill %% 2> /dev/null; then
-    #if kill -int $(cat $PID); then
+  if kill %%
+  then
     echo
     sleep 1
   else
@@ -274,7 +274,7 @@ function check_notlog
 
 function check_log_errors
 {
-  check_notlog "Clean log" "error\|exception\|failure\|\<warn\>\|\<crit\>" -i
+  check_notlog "log is clean" "error\|exception\|failure\|\<warn\>\|\<crit\>" -i
 }
 
 function check_headers
@@ -338,11 +338,11 @@ case $1 in
     clean
     startserver
     download http://$URL_HTTP normal
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP cached & abort $WAIT
-    splitheaders cached
+    ( ( http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP cached & abort $ABORT; splitheaders cached ) & )
+    sleep $WAIT
     stopserver
 
-    check_log "Aborted client read" "Client aborted"
+    check_log "aborted client read" "Client aborted"
     check_url_cached "record exists" http://$URL_HTTP
 
     #htcache_command --print-location http://$URL_HTTP
@@ -391,14 +391,12 @@ case $1 in
 
     clean
     download http://$URL_HTTP out
-    download http://$URL_HTTP out1 & abort $ABORT
-    splitheaders out1
+    ( ( download http://$URL_HTTP out1 & abort $ABORT; splitheaders out1 ) & )
     startserver
     cp $PREFIX.out1 $PREFIX.out2
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
     sleep $WAIT
     stopserver
-    sleep $WAIT
 
     check_log "received complete file" "Server responds HTTP/1.1 200 OK"
     check_log "served partial file" "HTCache responds HTTP/1.1 206 Partial Content"
@@ -429,17 +427,18 @@ case $1 in
     
     clean
     startserver
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 & abort $ABORT
+    ( ( http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 & abort $ABORT ) &)
 #    echo $(stat -c "%s" $PREFIX.out1) bytes
 #    splitheaders out1
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
     stopserver
+    sleep 0.5
 
+    check_equal "cached and served file are equal" cache/$URL_HTTP out2
     check_log "htcache asks for missing part" "Requesting resume of partial file in cache"
     check_log "server sends part" "Server responds HTTP/1.1 206 Partial Content"
     check_log "htcache resumes content" "Resuming partial file in cache"
     check_log "finalized file" "Finalized"
-    check_equal "cached and served file are equal" cache/$URL_HTTP out2
     check_log_errors
     ;;
 
@@ -464,14 +463,18 @@ case $1 in
     
     clean
     startserver
+    download http://$URL_HTTP out
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 0.16
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2 > /dev/null & sleep 0.2
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out3
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out4
     stopserver
 
-    check_log "downloads are joined" "Joined running download"
-    check_equal "cached and first served file are equal" cache/$URL_HTTP out1
-    check_equal "cached and second served file are equal" cache/$URL_HTTP out2
-    tree $PREFIX.cache
+    check_equal "cache and normal download are equal" cache/$URL_HTTP out
+    check_log "downloads are joined" "Joining running download"
+    check_equal "cache and first concurrent download are equal" cache/$URL_HTTP out2
+    check_equal "cache and second concurrent download are equal" cache/$URL_HTTP out3
+    check_equal "cache and subsequent download are equal" cache/$URL_HTTP out4
     check_log_errors
     ;;
 
@@ -550,15 +553,17 @@ case $1 in
     ;;
 
   14)
-#    summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
-#    clean
-#    startserver
-#    ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out1 & abort $WAIT
-#    ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out2
-#    stopserver
-#    check_log "htcache resumes file" "Resuming partial file in cache"
-#    check_equal "cached and served file are equal" cache/$URL_FTP out2
-#    check_log_errors
+    summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
+
+    clean
+    startserver
+    ( ( ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out1 & abort $ABORT ) & )
+    ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out2
+    stopserver
+
+    check_log "htcache resumes file" "Resuming partial file in cache"
+    check_equal "cached and served file are equal" cache/$URL_FTP out2
+    check_log_errors
     ;;
 
   15)
@@ -604,9 +609,9 @@ case $1 in
     clean
     startserver
     http_proxy=$HOSTNAME:$PORT download \
-      http://jeelabs.net/projects/hardware/wiki/AA_Power_Board out1
+          http://jeelabs.net/projects/hardware/wiki/AA_Power_Board out1
     http_proxy=$HOSTNAME:$PORT download \
-      http://jethomson.wordpress.com/2011/08/18/project-ouroboros-reflashing-a-betemcu-usbasp-programmer/ out2
+          http://jethomson.wordpress.com/2011/08/18/project-ouroboros-reflashing-a-betemcu-usbasp-programmer/ out2
     stopserver
 
     check_log_errors

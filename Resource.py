@@ -75,6 +75,8 @@ class ProxyData(object):
         self.cache = None
     
         self.mtime = None
+
+        log("Started ProxyData at %s" % hex(id(self)), Params.LOG_DEBUG)
                    
     def set_content_length(self, value):
         if self.cache.file:
@@ -107,13 +109,18 @@ class ProxyData(object):
                 except:
                     get_log(Params.LOG_ERR)\
                             ( 'Fatal: unable to parse Last-Modified: %s.', value )
+        
+        print 'set_last_modified', value, mtime
         if mtime:
             self.descriptor.mtime = mtime
 # XXX:            if self.cache.stat():
 #                self.cache.utime( mtime )
 
     def get_last_modified(self):
-        mtime = self.descriptor.mtime
+        if self.descriptor.mtime >= 0:
+            mtime = self.descriptor.mtime
+        else:
+            mtime = self.cache.mtime
         return time.strftime(
                     Params.TIMEFMT, time.gmtime( mtime ) )
 
@@ -154,6 +161,8 @@ class ProxyData(object):
         before we have any content data available.
         XXX: The associated resource should be initalized later.
         """
+        assert not self.descriptor or not ( self.descriptor.mtime or self.descriptor.path or self.descriptor.size ), ( self.descriptor.mtime, self.descriptor.path, self.descriptor.size )
+
         self.descriptor = Descriptor.find_latest(url)
         if not self.descriptor or not self.descriptor.id:
             self.descriptor = Descriptor()
@@ -199,10 +208,10 @@ class ProxyData(object):
                 ("ProxyData.set_broken")
 
     def close(self):
+        self.cache = None
+        self.descriptor = None
         get_log(Params.LOG_DEBUG)\
-                ("ProxyData.close")
-        del self.cache
-        del self.descriptor
+                ("ProxyData.closed: %s", hex(id(self)))
 
     def set_data(self, attribute, value):
         assert not getattr( self.descriptor, attribute ), attribute
@@ -273,15 +282,16 @@ class ProxyData(object):
         headerdict.update({
             'Content-Length': self.descriptor.size,
         })
+        print self.descriptor.size
 #        if self.descriptor.resource:
 #            headerdict.update({
 #                'Content-Location': self.descriptor.resource.url
 #            })
-        if self.descriptor.id: assert self.cache.mtime > -1, "XXX"
-        if self.cache.mtime >= 0:
-            headerdict.update({
-                'Last-Modified': self.get_last_modified(),
-            })
+        if self.descriptor.id: 
+            assert self.cache.mtime > -1, "XXX"
+        headerdict.update({
+            'Last-Modified': self.get_last_modified(),
+        })
         if self.descriptor.mediatype:
             headerdict.update({
                 'Content-Type': self.get_content_type(),
@@ -409,6 +419,8 @@ class ProxyData(object):
 
         args.update(self.map_to_headers())
 
+        print 'args', args
+
         via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
         if args.setdefault('Via', via) != via:
             args['Via'] += ', '+ via
@@ -419,7 +431,7 @@ class ProxyData(object):
 
     def finish_response( self ):
         size = self.cache.tell()
-        print 'finish_response', size, self.descriptor.size, size == self.descriptor.size
+        print 'finish_response', size, self.descriptor.size, size == self.descriptor.size, self.descriptor.mtime, self.cache.mtime
         if size == self.descriptor.size:
             if self.cache.partial:
 # XXX: this should mve into Cache again:
@@ -466,9 +478,10 @@ class ProxyData(object):
         XXX: Even when the current download is still running, this needs to have the
         descriptor already.
         """
-        self.init_cache( self.protocol.url )
         self.init_data( self.protocol.url )
-        print self.cache.stat()
+        self.init_cache( )
+        self.cache.path = self.descriptor.path.replace( Runtime.PARTIAL, '' )
+        self.cache.stat()
         assert self.descriptor.id,\
                 "Nothing there to open: no descriptor. "
         assert self.cache.full,\
@@ -595,6 +608,7 @@ class Descriptor(SqlBase, SessionMixin):
             charset=self.charset,
             language=self.language,
             quality=self.quality,
+            mtime=self.mtime,
             mediatype=self.mediatype
         ))
 

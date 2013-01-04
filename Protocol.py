@@ -81,9 +81,6 @@ class CachingProtocol(object):
     Filter requests using Drop, NoCache and .. rules.
     """
 
-    cache = None
-    "resource entity storage"
-
     Response = None
     "the htcache response class"
     capture = None
@@ -99,6 +96,7 @@ class CachingProtocol(object):
         super(CachingProtocol, self).__init__()
 
         self.request = request
+        self.data = None
 
         # Track server response
         self.__status, self.__message = None, None
