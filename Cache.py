@@ -4,7 +4,7 @@ TODO:
 - Option to merge path elements into one directory while file count
   is below treshold.
 """
-import time, os, sys, shutil
+import time, os, sys
 import re
 
 import Params
@@ -46,10 +46,9 @@ class File(object):
         local path name. 
         """
         super( File, self ).__init__()
-        self.size = -1
-        self.mtime = -1
         self.partial = None
         self.full = None
+        self.file = None
         if path:
             self.init(path)
 
@@ -96,17 +95,35 @@ class File(object):
 
     def abspath( self ):
         assert Runtime.PARTIAL not in self.path
+        if not (self.partial or self.full):
+            self.stat()
         abspath = os.path.join( Runtime.ROOT, self.path )
         if self.full:
             return abspath
         else:
             return suffix_ext( abspath, Runtime.PARTIAL )
 
-#    def getsize(self):
-#        return (self.partial or self.full).st_size
+    @property
+    def size( self ):
+        stat = ( self.partial or self.full )
+        if stat:
+            return stat.st_size
+
+    @property
+    def mtime(self):
+        stat = ( self.partial or self.full )
+        if stat:
+            return stat.st_mtime
+
+    def utime(self, mtime):
+        os.utime( self.abspath(), ( mtime, mtime ) )
+        self.stat()
 
     def open_new( self ):
-        log('Preparing new file in cache', Params.LOG_INFO)
+        assert not self.file
+
+        get_log(Params.LOG_NOTE, 'cache')\
+                ('Preparing new file in cache')
     
         new_file = self.abspath()
         
@@ -117,21 +134,24 @@ class File(object):
         try:
             self.file = open( new_file, 'w+' )
         except Exception, e:
-            log('Failed to open file: %s' %  e, Params.LOG_ERR)
+            get_log(Params.LOG_NOTE, 'cache')\
+                    ('Failed to open file: %s' %  e)
             self.file = os.tmpfile()
 
     def open_partial( self, offset=-1 ):
+        assert not self.file
         self.file = open( self.abspath(), 'a+' )
         if offset >= 0:
             assert offset <= self.tell(), 'range does not match file in cache'
             self.file.seek( offset )
             self.file.truncate()
-        log('Resuming partial file in cache at byte %s' % self.tell(),
-                Params.LOG_INFO)
+        get_log(Params.LOG_INFO, 'cache')\
+                ('Resuming partial file in cache at byte %s' % self.tell())
 
     def open_full( self ):
+        assert not self.file
         self.file = open( self.abspath(), 'r' )
-        self.size = self.tell()
+#        self.size = self.tell()
 
     def open( self ):
         if self.full:
@@ -143,10 +163,12 @@ class File(object):
 
     def remove_full( self ):
         os.remove( self.abspath() )
-        log('Removed complete file from cache', Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE, 'cache')\
+                ('Removed complete file from cache')
 
     def remove_partial( self ):
-        log('Removed partial file from cache', Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE, 'cache')\
+                ('Removed partial file from cache')
         os.remove( self.abspath() + Runtime.PARTIAL )
 
     def read( self, pos, size ):
@@ -162,30 +184,19 @@ class File(object):
         return self.file.tell()
 
     def close( self ):
-        size = self.tell()
+        assert self.file
         self.file.close()
-        if self.size == size:
-            if self.partial:
-                abspath = os.path.join( Runtime.ROOT, self.path )
-                os.rename( 
-                        suffix_ext( abspath, Runtime.PARTIAL ),
-                        abspath 
-                    )
-                if self.mtime >= 0:
-                    os.utime( abspath, ( self.mtime, self.mtime ) )
-                self.stat()
-                assert self.full
-                log("Finalized %r" % self.path, Params.LOG_NOTE)
-        else:
-            log("Closed partial %r" % self.path, Params.LOG_NOTE)
-#
+        self.file = None
+        self.partial, self.full = None, None
+
 #    def __nonzero__(self):
 #      return ( self.complete() or self.partial ) != None
 
     def __del__( self ):
-      try:
-          self.close()
-      except:
-          pass
+      if self.file:
+          try:
+              self.close()
+          except Exception, e:
+              log("Error on closing cache file: %s" % e, Params.LOG_WARN)
 
 

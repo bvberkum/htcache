@@ -49,7 +49,7 @@ class HtRequest:
 
         line = chunk[ :eol ]
 
-        get_log(Params.LOG_NOTE)\
+        get_log(Params.LOG_NOTE, 'request')\
                 ('Client sends %r', print_str(line, 96))
         fields = line.split()
         assert len( fields ) == 3, 'invalid header line: %r' % line
@@ -73,13 +73,13 @@ class HtRequest:
 
         line = chunk[ :eol ]
         if ':' in line:
-            get_log(Params.LOG_DEBUG)\
+            get_log(Params.LOG_DEBUG, 'request')\
                     ('> '+ line.rstrip())
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                get_log(Params.LOG_WARN)\
+                get_log(Params.LOG_WARN, 'request')\
                         ("Warning: %r not a known HTTP (request) header (%r)", 
                         key, value.strip())
                 key = key.title() 
@@ -90,7 +90,7 @@ class HtRequest:
             if self.__size:
                 assert self.__verb == 'POST', \
                         '%s request conflicts with message body' % self.__verb
-                get_log(Params.LOG_INFO)\
+                get_log(Params.LOG_INFO, 'request')\
                         ('Opening temporary file for POST upload')
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
@@ -98,7 +98,7 @@ class HtRequest:
                 self.__body = None
                 self.__parse = None
         else:
-            get_log(Params.LOG_INFO)\
+            get_log(Params.LOG_INFO, 'request')\
                     ('Error: Ignored header line: %r', line)
 
         return eol
@@ -194,8 +194,8 @@ class HtRequest:
         else:
             hostinfo = "%s:%s" % (host, port)
 
-        log('scheme=%s, host=%s, port=%s, path=%s' % 
-                (scheme, host, port, path), Params.LOG_DEBUG)
+        get_log(Params.LOG_DEBUG, 'request')\
+                ('scheme=%s, host=%s, port=%s, path=%s' % (scheme, host, port, path))
 
         self.__scheme = scheme
         self.__host = host
@@ -277,7 +277,8 @@ class HtRequest:
     def headers(self):
         # XXX: used before protocol is determined,  assert self.Protocol
         if not self.Protocol and self.__parse == self.__parse_args:
-            log("Warning: parsing headers is not finished. ", Params.LOG_WARN)
+            get_log(Params.LOG_WARN, 'request')\
+                    ("Warning: parsing headers is not finished. ")
         return self.__headers.copy()
 
     def range(self):

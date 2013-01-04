@@ -180,8 +180,9 @@ class DataResponse:
                 self.__nextrecv = time.time() + len( chunk ) / Runtime.LIMIT
         else:
             if self.__protocol.size >= 0:
-                assert self.__protocol.size == self.__protocol.tell(), \
-                        'connection closed prematurely'
+                if self.__protocol.size != self.__protocol.tell():
+                    log('connection closed prematurely', Params.LOG_ERR)
+                    
             else:
                 self.__protocol.size = self.__protocol.tell()
                 log('Connection closed at byte %i' % self.__protocol.size,

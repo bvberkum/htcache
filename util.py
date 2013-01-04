@@ -1,5 +1,7 @@
+import os
 import sys
 from UserDict import UserDict, IterableUserDict
+import traceback
 
 # XXX: Dont use cjson, its buggy, see comments at
 # http://pypi.python.org/pypi/python-cjson
@@ -122,12 +124,24 @@ class Log:
                 print msg
 
 
-def get_log(threshold=Params.LOG_NOTE, facility='default'):
+def get_log(threshold=Params.LOG_NOTE, facility=None):
     """
     Return a "no-op" logger (that evaluates to None but does have the pertinent
     methods). This allows to contain code that should only be run in debug
     modes in conditional scopes. k
     """
+    trace = [ 
+            ( os.path.basename(q), x, y, z )
+            for q,x,y,z 
+            in traceback.extract_stack() 
+        ]
+    trace.pop()
+    if trace:
+        if trace[-1][0] == 'util.py':
+            trace.pop()
+        facility = trace[-1][0].replace('.py', '').lower()
+    else:
+        facility = 'htcache'
     key = "%s.%i" % (facility, threshold)
     if key not in Log.instances:
         Log.instances[key] = Log(threshold, facility)

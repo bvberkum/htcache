@@ -35,6 +35,7 @@ class HTTP:
         'Content-Range',
         'Content-Type',
         'Expires',
+        'ETag',
         'Last-Modified',
     # extension-header
     )
@@ -73,7 +74,6 @@ class HTTP:
         # RFC 2616
         'Accept-Ranges',
         'Age',
-        'ETag',
         'Location',
         'Proxy-Authenticate',
         'Retry-After',
@@ -88,8 +88,7 @@ class HTTP:
         'Srv',
         'P3P',
     )
-    Cache_Headers = (
-        'ETag',
+    Cache_Headers = ( # Cachable stuff beyond entity?
     )
 
 

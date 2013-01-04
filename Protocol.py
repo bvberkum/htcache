@@ -204,7 +204,7 @@ class HttpProtocol(CachingProtocol):
         # Skip server-round trip in static mode
         if Runtime.STATIC and self.cache.full: # FIXME
             log('Static mode; serving file directly from cache', Params.LOG_NOTE)
-            self.data.init_and_open()
+            self.data.prepare_static()
             self.Response = Response.DataResponse
             return
 
@@ -319,8 +319,9 @@ class HttpProtocol(CachingProtocol):
         # 2xx
         if self.__status in ( HTTP.OK, ):
 
+            log("Caching new download. ", Params.LOG_INFO)
             self.data.finish_request()
-            self.recv_entity()
+#            self.recv_entity()
             self.set_dataresponse();
 
         elif self.__status in ( HTTP.MULTIPLE_CHOICES, ):
@@ -329,9 +330,10 @@ class HttpProtocol(CachingProtocol):
         elif self.__status == HTTP.PARTIAL_CONTENT \
                 and self.cache.partial:
 
+            log("Updating partial download. ", Params.LOG_INFO)
             self.__args = self.data.prepare_response()
             if self.__args['ETag']:
-                assert self.__args['ETag'] == self.data.descriptor.etag, (
+                assert self.__args['ETag'].strip('"') == self.data.descriptor.etag, (
                         self.__args['ETag'], self.data.descriptor.etag )
             self.recv_part()
             self.set_dataresponse();
@@ -392,21 +394,21 @@ class HttpProtocol(CachingProtocol):
                     Params.LOG_WARN)
             self.Response = Response.BlindResponse
 
-    def recv_entity(self):
-        """
-        Prepare to receive new entity.
-        """
-        if self.cache.full:
-            log("HttpProtocol.recv_entity: overwriting cache: %s" %
-                    self.url, Params.LOG_NOTE)
-            self.cache.remove_full()
-            self.cache.open_new()
-        else:
-            log("HttpProtocol.recv_entity: new cache: %s" %
-                    self.url, Params.LOG_NOTE)
-            self.cache.open_new()
-            self.cache.stat()
-            assert self.cache.partial
+#    def recv_entity(self):
+#        """
+#        Prepare to receive new entity.
+#        """
+#        if self.cache.full:
+#            log("HttpProtocol.recv_entity: overwriting cache: %s" %
+#                    self.url, Params.LOG_NOTE)
+#            self.cache.remove_full()
+#            self.cache.open_new()
+#        else:
+#            log("HttpProtocol.recv_entity: new cache: %s" %
+#                    self.url, Params.LOG_NOTE)
+#            self.cache.open_new()
+#            self.cache.stat()
+#            assert self.cache.partial
 
     def recv_part(self):
         """

@@ -384,9 +384,9 @@ gives access to the stored data. """, (
             prsr.add_option_group(subprsr)
 
         (options, arguments) = prsr.parse_args(argv)
-
-        if options.log_facilities == []:
-            options.log_facilities = [ 'default' ]
+#
+#        if options.log_facilities == []:
+#            options.log_facilities = [ 'htcache' ]
 
         varnames = [ x for x in dir(options) 
                 if not callable(getattr(options, x))

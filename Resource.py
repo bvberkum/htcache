@@ -1,5 +1,6 @@
 """
 Resource storage and descriptor facade.
+
 """
 import anydbm, os, urlparse
 import time
@@ -72,14 +73,14 @@ class ProxyData(object):
         self.protocol = protocol
         self.descriptor = None
         self.cache = None
-
     
         self.mtime = None
-        self.size = -1
                    
     def set_content_length(self, value):
+        if self.cache.file:
+            assert self.cache.size == int( value ),\
+                ( self.cache.size, int( value ) )
         self.descriptor.size = int( value )
-        self.cache.size = int( value )
 
     def set_last_modified(self, value):
         mtime = None
@@ -107,8 +108,9 @@ class ProxyData(object):
                     get_log(Params.LOG_ERR)\
                             ( 'Fatal: unable to parse Last-Modified: %s.', value )
         if mtime:
-            self.cache.mtime = mtime
-#            self.descriptor.mtime = mtime
+            self.descriptor.mtime = mtime
+# XXX:            if self.cache.stat():
+#                self.cache.utime( mtime )
 
     def get_last_modified(self):
         mtime = self.cache.mtime
@@ -118,6 +120,12 @@ class ProxyData(object):
         if mtime != -1:
             return time.strftime(
                         Params.TIMEFMT, time.gmtime( mtime ) )
+
+    def get_content_location(self):
+        return self.descriptor.resource.url
+
+    def set_content_location(self, url):
+        self.descriptor.resource.url = url
 
     def set_content_type(self, value):
         data = {}
@@ -144,58 +152,68 @@ class ProxyData(object):
             mediatype += '; qs=%i' % self.descriptor.quality
         return mediatype
 
-    def is_open( self ):
-        return self.cache and self.cache.file != None
-
-    def init_cache( self ):
-        """
-        Opens the cache location for the current URL.
-
-        The location will be subject to the specific heuristics of the backend
-        type, this path will be readable from cache.path.
-        """
-        protocol = self.protocol
-        assert protocol.url[:2] == '//', protocol.url
-        netpath = protocol.url[2:]
-        # XXX: record rewrites in descriptor DB?
-        get_log(Params.LOG_DEBUG)( "Init cache: %s", Runtime.CACHE )
-        netpath = Rules.Join.rewrite(netpath)
-        self.cache = Cache.load_backend_type( Runtime.CACHE )( netpath )
-        get_log(Params.LOG_INFO)( 'Prepped cache, position: %s', self.cache.path)
-
-    def open_cache( self ):
-        assert self.cache.path
-        self.cache.open()
-
-    def init_data(self):
+    def init_data(self, url):
         """
         After a client sends request headers, 
         initialize check for existing data or initialize a new descriptor.
         If new, the associated resource is initalized later.
         """
-        assert self.cache.path and self.cache.path[0] != os.sep,\
-            "call init_cache, should be relative path"
+        self.descriptor = Descriptor.find_latest(url)
+        if not self.descriptor or not self.descriptor.id:
+            self.descriptor = Descriptor()
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ('ProxyData.init_data %r ', self.descriptor)
+
+    def init_data_descriptor(self, path):
         descriptor = Descriptor()
         self.descriptor = descriptor.find(
-            Descriptor.path == self.cache.abspath()
+            Descriptor.path == path
         )
         if not self.descriptor or not self.descriptor.id:
-            descriptor.path = self.cache.abspath()
             self.descriptor = descriptor
         get_log(Params.LOG_DEBUG, 'backend')('ProxyData.init_data %r ', self.descriptor)
-        
-    def init_and_open(self):
+
+    def exists( self ):
+        return self.descriptor.id != None
+
+    def is_open( self ):
+        return self.cache and self.cache.file != None
+
+    def init_cache( self, url ):
         """
-        Set cache location and open any partial or complete file, 
-        then fetch descriptor if it exists. 
+        The location will be subject to the specific heuristics of the backend
+        type, this path will be readable from cache.path.
         """
-        self.init_cache()
-        self.init_data()
-        assert self.descriptor.id and self.cache.full,\
-                "Nothing there to open. "
-        self.open_cache()
-        #assert self.data.is_open() and self.cache.full(), \
-        #    "XXX: sanity check, cannot have partial served content, serve error instead"
+        assert url[:2] == '//', url
+        netpath = url[2:]
+        # XXX: record rewrites in descriptor DB?
+        get_log(Params.LOG_DEBUG)( "Init cache: %s", Runtime.CACHE )
+        netpath = Rules.Join.rewrite(netpath)
+        self.cache = Cache.load_backend_type( Runtime.CACHE )( netpath )
+        get_log(Params.LOG_INFO)( 'Prepped cache, position: %s',
+                self.cache.abspath() )
+
+    def open_cache( self ):
+        assert self.cache.path
+        self.cache.open()
+
+    def move( self ):
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.move")
+
+    def set_broken( self ):
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.set_broken")
+
+    def close(self):
+        get_log(Params.LOG_DEBUG, 'backend')\
+                ("ProxyData.close")
+        del self.cache
+        del self.descriptor
+
+    def set_data(self, attribute, value):
+        assert not getattr( self.descriptor, attribute ), attribute
+        setattr( self.descriptor, attribute, value )
 
     def update_data(self):
 # after server response headers
@@ -241,7 +259,6 @@ class ProxyData(object):
             headers = self.protocol.args()
 
         headerdict = HeaderDict(headers)
-        data = {}
         
         for hn, hv in headerdict.items():
             h = "set_%s" % hn.lower().replace('-','_')
@@ -267,6 +284,7 @@ class ProxyData(object):
 #            headerdict.update({
 #                'Content-Location': self.descriptor.resource.url
 #            })
+        if self.descriptor.id: assert self.cache.mtime > -1, "XXX"
         if self.cache.mtime >= 0:
             headerdict.update({
                 'Last-Modified': self.get_last_modified(),
@@ -286,72 +304,70 @@ class ProxyData(object):
 
     def prepare_request( self, request ):
         """
-        Called by protocol to provide updated request headers.
+        Protocol is about to proxy the request, prepare the cache
+        and descriptor instances, and return the updated headers.
         """
         get_log(Params.LOG_DEBUG, 'backend')\
-                ("ProxyData.prepare_request")
+                ( "Preparing for request to %s", self.protocol.url )
+
         req_headers = request.headers
 
-        self.init_cache()
-        self.init_data()
+        self.init_data( self.protocol.url )
+        self.init_cache( self.protocol.url )
 
+        if not self.descriptor.path:
+            self.set_data( 'path', self.cache.abspath() )
+
+        # Prepare proxied request headers
         via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
         if req_headers.setdefault('Via', via) != via:
             req_headers['Via'] += ', '+ via
-
+        # XXX: should it do something with encoding?
         req_headers.pop( 'Accept-Encoding', None )
+        # TODO: range requests
         htrange = req_headers.pop( 'Range', None )
-        assert not htrange,\
-                "XXX: Req for %s had a range: %s" % (self.protocol.url, htrange)
-
-        # if expires < now: revalidate
         # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
         cache_control = req_headers.pop( 'Cache-Control', None )
-        # HTTP/1.0 compat
-        #if not cache_control:
-        #    cache_control = req_headers.pop( 'Pragma', None )
-        #    if cache_control:
-        #        assert cache_control.strip() == "no-cache"
-        #        req_headers['Cache-Control'] = "no-cache"
-
-        if ( self.cache.partial or self.cache.full ):
-            mdtime = self.get_last_modified()
-
-        if self.cache.partial:
-            size = self.cache.size
-            get_log(Params.LOG_NOTE, 'backend')\
-                    ('Requesting resume of partial file in cache: '
-                    '%i bytes, %s', size, mdtime )
-            req_headers[ 'Range' ] = 'bytes=%i-' % size
-            req_headers[ 'If-Range' ] = mdtime
-
-        elif self.cache.full:
-            get_log(Params.LOG_INFO, 'backend')\
-                    ( 'Checking complete file in cache: %s', mdtime )
-            # XXX: treat as unspecified end-to-end revalidation
-            # should detect existing cache-validating conditional?
-            # TODO: Validate client validator against cached entry
-            req_headers[ 'If-Modified-Since' ] = mdtime
-
-                # XXX: don't gateway conditions, client seems to have cache but this is
-                # a miss for the proxy
-#            req_headers.pop( 'If-None-Match', None )
-#            req_headers.pop( 'If-Modified-Since', None )
-
-        if self.descriptor.etag:
-            req_headers[ 'If-None-Match' ] = '"%s"' % self.descriptor.etag
-
         # TODO: Store relationship with referer
         relationtype = req_headers.pop('X-Relationship', None)
         referer = req_headers.get('Referer', None)
-        if referer:
-            #self.relate(relationtype, self.url, referer)
-            pass
+        # FIXME: Client may have a cache too that needs to be
+        # validated by the proxy.
+        req_headers.pop( 'If-None-Match', None )
+        req_headers.pop( 'If-Modified-Since', None )
+
+        # Fill in from datastore if we have a local file
+        if self.descriptor.exists():
+
+            if ( self.cache.partial or self.cache.full ):
+                mdtime = self.get_last_modified()
+
+            if self.cache.partial:
+                assert self.cache.size < self.descriptor.size, \
+                        ( self.cache.size, self.descriptor.size )
+                get_log(Params.LOG_NOTE, 'backend')\
+                        ('Requesting resume of partial file in cache: '
+                        '%i bytes, %s', self.cache.size, mdtime )
+                req_headers[ 'Range' ] = 'bytes=%i-' % ( self.cache.size,) # self.descriptor.size+1 )
+                req_headers[ 'If-Range' ] = mdtime
+
+            elif self.cache.full:
+                get_log(Params.LOG_INFO, 'backend')\
+                        ( 'Checking complete file in cache: %s', mdtime )
+                req_headers[ 'If-Modified-Since' ] = mdtime
+                if self.descriptor.etag:
+                    req_headers[ 'If-None-Match' ] = '"%s"' % self.descriptor.etag
+        
 
         return req_headers
 
     def finish_request( self ):
+        """
+        Protocol has parsed then response headers and determined the appropiate 
+        Response type.
+        """
         if not self.descriptor.id:
+
             # XXX: allow for opaque moves of descriptors
             if self.cache.path != self.descriptor.path:
                 assert not ( self.cache.partial or self.cache.full )
@@ -363,6 +379,8 @@ class ProxyData(object):
 
             # set new data
             self.update_data()
+            assert self.descriptor.etag
+
             res = Resource().find( Resource.url == self.protocol.url )
             if not res:
                 if not self.descriptor.resource.url:
@@ -387,26 +405,59 @@ class ProxyData(object):
         return args
 
     def finish_response( self ):
+        size = self.cache.tell()
         self.cache.close()
-        self.cache.stat()
+        print 'finish_response', size, self.descriptor.size, size == self.descriptor.size
+        if size == self.descriptor.size:
+            self.cache.stat()
+            if self.cache.partial:
+# XXX: this should mve into Cache again:
+                abspath = os.path.join( Runtime.ROOT, self.cache.path )
+                os.rename( 
+                        Cache.suffix_ext( abspath, Runtime.PARTIAL ),
+                        abspath 
+                    )
+                os.utime( abspath, ( self.descriptor.mtime, self.descriptor.mtime ) )
+                get_log(Params.LOG_NOTE, 'cache')\
+                        ("Finalized %r at %i", abspath, size )
+        else:
+            get_log(Params.LOG_NOTE, 'cache')\
+                    ("Closed partial %r at %s bytes", self.descriptor.path, size )
+            os.utime( self.descriptor.path, ( self.descriptor.mtime, self.descriptor.mtime ) )
         if self.descriptor.path != self.cache.abspath():
             self.descriptor.path = self.cache.abspath()
+        path = self.descriptor.path
+        url = self.get_content_location()
         self.finish_data()
         self.close()
 
-    def move( self ):
-        get_log(Params.LOG_DEBUG, 'backend')\
-                ("ProxyData.move")
+        get_log(Params.LOG_INFO, 'backend')\
+                ("ProxyData.finish_response is done. ")
+        return
+# XXX
+        complete = '/tmp/htcache-systemtest3.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt'
+        while not os.path.exists( complete ):
+            log("NO STAT", Params.LOG_CRIT)
+            time.sleep(1)
+        get_log(Params.LOG_INFO, 'backend')\
+                ("STAT %s", os.stat(complete))
 
-    def set_broken( self ):
-        get_log(Params.LOG_DEBUG, 'backend')\
-                ("ProxyData.set_broken")
-
-    def close(self):
-        get_log(Params.LOG_DEBUG, 'backend')\
-                ("ProxyData.close")
-        del self.cache
-        del self.descriptor
+# XXX
+#        if url:
+#            print url, Resource().find( Resource.url == url )
+#        print path, Descriptor().find( Descriptor.path == path )
+    def prepare_static(self):
+        """
+        Set cache location and open any partial or complete file, 
+        then fetch descriptor if it exists. 
+        """
+        self.init_cache( self.protocol.url )
+        self.init_data()
+        assert self.descriptor.id and self.cache.full,\
+                "Nothing there to open. "
+        self.open_cache()
+        #assert self.data.is_open() and self.cache.full(), \
+        #    "XXX: sanity check, cannot have partial served content, serve error instead"
 
 
 ### Descriptor Storage types:
@@ -457,24 +508,22 @@ class SessionMixin(object):
         session.add(self)
         session.commit()
 
-    def find(self, *args):#, qdict=None):
+    def find(self, *args):
         try:
-            return self.fetch(*args)#, qdict=qdict)
+            return self.fetch(*args)
         except NoResultFound, e:
             get_log(Params.LOG_INFO, 'backend')\
-                    ( "No results for %s", args )
+                    ( "No results for %r", args )
 
     def fetch(self, *args):
         """
         Keydict must be filter parameters that return exactly one record.
         """
         session = SessionMixin.get_instance()
-        qdict = {}
-#        if not qdict:
-#            qdict = self.key()
-        return session.query(self.__class__).filter(*args, **qdict).one()
+        return session.query(self.__class__).filter(*args).one()
 
     def exists(self):
+        return self.id != None
         return self.fetch() != None 
 
     def __repr__(self):
@@ -497,6 +546,7 @@ class Resource(SqlBase, SessionMixin):
             url=self.url,
         ))
 
+
 class Descriptor(SqlBase, SessionMixin):
     """
     """
@@ -512,6 +562,7 @@ class Descriptor(SqlBase, SessionMixin):
     charset = Column(String(255), nullable=True)
     language = Column(String(255), nullable=True)
     size = Column(Integer, nullable=True)
+    mtime = Column(Integer, nullable=False)
     quality = Column(Float, nullable=True)
     etag = Column(String(255), nullable=True)
 #    key_names = [id]
@@ -519,6 +570,7 @@ class Descriptor(SqlBase, SessionMixin):
     def __str__(self):
         return "Descriptor(%s)" % pformat(dict(
             id=self.id,
+            resource_id=self.resource_id,
             path=self.path,
             etag=self.etag,
             size=self.size,
@@ -527,6 +579,17 @@ class Descriptor(SqlBase, SessionMixin):
             quality=self.quality,
             mediatype=self.mediatype
         ))
+
+    @staticmethod
+    def find_latest( url ):
+        descriptor = get_backend().query(Descriptor)\
+            .join("resource").filter(
+                Resource.url == url
+            ).order_by(
+                Descriptor.mtime 
+            ).first()
+        return descriptor
+
 
 class Relation(SqlBase, SessionMixin):
     """

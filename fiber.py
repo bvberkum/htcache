@@ -1,6 +1,8 @@
 import sys, os, select, time, socket, traceback
 
 import Params
+import Resource
+import Rules
 from util import *
 
 
@@ -57,10 +59,10 @@ class Fiber:
         except StopIteration:
             del self.__generator
             pass
-        except AssertionError, msg:
-            if not str(msg):
-                msg = traceback.format_exc()
-            log('Assertion failure: %s'% msg)
+#        except AssertionError, msg:
+#            if not str(msg):
+#                msg = traceback.format_exc()
+#            log('Assertion failure: %s'% msg)
         except:
             traceback.print_exc()
 
@@ -162,7 +164,7 @@ def fork( output, pid_file ):
         print 'error:', e
         sys.exit( 1 )
 
-    if pid:
+    if pid != 0: # where not on the child process
         open(pid_file, 'wb').write(str(pid))
         print 'Forked process, htcache now at PID', pid
         sys.exit( 0 )
@@ -188,7 +190,6 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
         Filename.
     """
 
-#    print 'Spawning'
     import Runtime
 
     # set up listening socket
@@ -207,9 +208,8 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
         raise
     listener.listen( 5 )
 
-    # fork and exit for deamon mode
     if daemon_log:
-        fork( daemon_log, pid_file )
+        fork( daemon_log, pid_file ) # exits parent process
 
     # stay attached to console
     if debug:
@@ -219,6 +219,9 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
     get_log(Params.LOG_NOTE, 'fiber')\
             ('[ INIT ] %s started at %s:%i', generator.__name__, hostname, port )
+
+    Resource.get_backend()
+    Rules.load()
 
     try:
 
@@ -288,6 +291,7 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
     except KeyboardInterrupt, e:
         get_log(Params.LOG_NOTE)\
             ('[ DONE ] %s closing normally', generator.__name__)
+        Resource.get_backend().close()
         sys.exit( 0 )
 
     except Restart:
@@ -299,11 +303,13 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
             #state = fibers[ i ].state
         # close before sending response 
         listener.close()
+        Resource.get_backend().close()
         raise
 
     except Exception, e:
         get_log(Params.LOG_CRIT)\
                 ('[ CRITICAL ] %s crashed: %s', generator.__name__, e)
         traceback.print_exc( file=sys.stdout )
+        Resource.get_backend().close()
         sys.exit( 1 )
 

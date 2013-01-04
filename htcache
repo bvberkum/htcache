@@ -44,8 +44,8 @@ def HTCache_fiber_handler( client, address ):
 #    print 'PPID', sys.getppid()
 
     get_log(Params.LOG_DEBUG)\
-            ('New Request from %s:%i, downloads: %s; +1', 
-                address + (len(DOWNLOADS),))
+            ('New Request from %r, downloads: %s; +1', 
+                address, len(DOWNLOADS))
 
     get_log(Params.LOG_DEBUG)\
             ("Log level is at %s", Runtime.VERBOSE)
@@ -116,8 +116,7 @@ def HTCache_fiber_handler( client, address ):
     del DOWNLOADS[request]
 
 
-if __name__ == '__main__':
-
+def run():
     get_log(Params.LOG_DEBUG)("ARGV: %r", sys.argv)
 
     try:
@@ -153,8 +152,6 @@ if __name__ == '__main__':
     ### Normal proxy subroutine
 
     while True:
-        Resource.get_backend()
-        Rules.load()
         try:
             fiber.spawn(
                     HTCache_fiber_handler,
@@ -174,5 +171,10 @@ if __name__ == '__main__':
             sys.exit(1)
             break
 
-    Resource.get_backend().close()
+
+if __name__ == '__main__':
+
+
+    run()
+
 
