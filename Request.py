@@ -45,16 +45,18 @@ class HtRequest:
 
         eol = chunk.find( '\n' ) + 1
         if eol == 0:
-          return 0
+            return 0
 
         line = chunk[ :eol ]
 
         get_log(Params.LOG_NOTE, 'request')\
                 ('Client sends %r', print_str(line, 96))
+
         fields = line.split()
-        assert len( fields ) == 3, 'invalid header line: %r' % line
-        self.__verb, self.__reqpath, self.__prototag = fields
-        assert self.__reqpath, fields
+        assert len( fields ) == 3, 'Invalid header line: %r' % line
+
+        self.__verb, self.__requri, self.__prototag = fields
+        assert self.__requri, fields
         self.__headers = {}
         self.__parse = self.__parse_args
 
@@ -143,7 +145,7 @@ class HtRequest:
         assert not self.__recvbuf, 'client sends junk data after message header'
 
         # Headers are parsed, determine target server and resource
-        verb, proxied_url, proto = self.envelope
+        verb, proxied_url, proto = self.__verb, self.__requri, self.__prototag
 
         scheme = ''
         host = ''
@@ -183,8 +185,7 @@ class HtRequest:
         # Get the path
         if '/' in host:
             host, path = host.split( '/', 1 )
-#        else:
-#            path = ''
+        path = '/' + path
 
         # Parse hostinfo
         if ':' in host:
@@ -200,6 +201,7 @@ class HtRequest:
         self.__scheme = scheme
         self.__host = host
         self.__port = port
+        assert path[0] == '/', path
         self.__reqpath = path
 
 # XXX: need a test for this
@@ -229,6 +231,7 @@ class HtRequest:
 
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
+        assert self.__reqpath[0] == '/', self.__reqpath
         lines = [ '%s %s HTTP/1.1' % ( self.__verb, self.__reqpath ) ]
         lines.extend( map( ': '.join, self.__headers.items() ) )
         lines.append( '' )
@@ -250,6 +253,7 @@ class HtRequest:
         Used before protocol is determined. After recv finishes parsing
         Request.requrl and Request.hostinfo is used instead.
         """
+        assert self.__reqpath[0] == '/' , self.__reqpath
         return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
     @property
@@ -259,6 +263,7 @@ class HtRequest:
     @property
     def requri(self):
         assert self.Protocol, "Use request.envelope property. "
+        assert not ( self.__reqpath or self.__reqpath[0] == '/' )
         return self.__scheme, self.__host, self.__port, self.__reqpath
 
     @property
@@ -271,7 +276,9 @@ class HtRequest:
         else:
             hostinfo = host
 
-        return "//%s/%s" % ( hostinfo, self.__reqpath )
+        assert self.__reqpath[0] == '/'
+        
+        return "//%s/%s" % ( hostinfo, self.__reqpath[1:] )
 
     @property
     def headers(self):
@@ -300,6 +307,7 @@ class HtRequest:
 
     def __hash__( self ):
         assert self.Protocol, "no protocol"
+        assert self.__reqpath[0] == '/', self.__reqpath
         return hash(( self.__host, self.__port, self.__reqpath ))
 
     def __eq__( self, other ):

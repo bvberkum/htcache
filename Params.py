@@ -18,7 +18,7 @@ LOG_DEBUG = range(0, 8)
 
 # defaults
 QUIET = False
-VERBOSE = 3 # error
+VERBOSE = 7 # error
 ERROR_LEVEL = VERBOSE
 DEBUG = []
 DEBUG_BE = False
@@ -51,6 +51,7 @@ REWRITE_FILE = '/etc/htcache/rules.rewrite'
 
 PROXY_INJECT = False
 PARTIAL = '.incomplete'
+DEFAULT = 'default'
 
 # non user-configurable
 MAX_PATH_LENGTH = 256

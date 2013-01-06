@@ -21,6 +21,7 @@ class FileTreeQ(Cache.File):
     """
 
     def init(self, path):  
+        assert Params.PARTIAL not in path
         get_log(Params.LOG_DEBUG, 'cache')\
                 ("FileTreeQ.init %r", path)
         psep = Runtime.ENCODE_PATHSEP
@@ -56,6 +57,11 @@ class FileTreeQ(Cache.File):
         # make archive path    
         if Runtime.ARCHIVE:
             path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
+        
+        # add default part
+        if path[-1] == os.sep:
+            path += Params.DEFAULT
+
         self.path = path
         self.file = None
 
@@ -68,6 +74,7 @@ class FileTreeQH(Cache.File):
   """
 
   def init(self, path):
+      assert Params.PARTIAL not in path
       get_log(Params.LOG_DEBUG, 'cache')\
                 ("FileTreeQH.init %r", path)
       # encode query if present
@@ -92,12 +99,18 @@ class FileTreeQH(Cache.File):
       # make archive path    
       if Runtime.ARCHIVE:
           path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
+        
+          # add default part
+          if path[-1] == os.sep:
+              path += Params.DEFAULT
+
       self.path = path
       self.file = None
 
 
 class PartialMD5Tree(Cache.File):
     def init(self, path):
+        assert Params.PARTIAL not in path
         get_log(Params.LOG_DEBUG, 'cache')\
                 ("PartialMD5Tree.init %r", path)
         if Runtime.ARCHIVE:
@@ -106,10 +119,16 @@ class PartialMD5Tree(Cache.File):
         s = Params.MAX_PATH_LENGTH - 34 - len(Runtime.ROOT)
         if len(path) + len(Runtime.ROOT) > Params.MAX_PATH_LENGTH:
             path = path[:s] + os.sep + '#' + md5(path[s:]).hexdigest()
+        
+        # add default part
+        if path[-1] == os.sep:
+            path += Params.DEFAULT
+
         self.path = path            
 
 class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
     def init(self, path):
+        assert Params.PARTIAL not in path
         get_log(Params.LOG_DEBUG, 'cache')\
                 ("FileTree.init %r", path)
         path2 = path

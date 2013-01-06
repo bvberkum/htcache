@@ -330,6 +330,10 @@ A tag within the path indicates where the content is complete.
 The content file has its mtime adjusted to the server reported Last-Modified
 time. 
 
+The file size, mtime and presence of the partial-tag is used in constructing
+subsequent requests for the same resource, and should implement proper
+cache validation.
+
 
 3. Descriptor backend
 ~~~~~~~~~~~~~~~~~~~~~
@@ -337,18 +341,25 @@ Not everything about a cachable resource can be recorded on the filesystem,
 unless we use an AsIs storage and store the message entirely but obscuring its 
 contents for other applications.
 
-As a generic web proxy, losing metadata other than 
+The storage should contain the normalized data. The exact model to be defined
+along the way.
 
-cache-path <=> uris
-cache-path => headers
+The data is created once the server reports status OK and is ready to
+start transferring content.
 
-The descriptor backend (which contains URI, mediatype, charset, language and
-other resource-header data) is by default a flat index DB storage.
-No additional backends available at this time.
+The data supplements the file metadata primarily by the etag for cache
+validation.
+Perhaps the etag when better understood can be used in the Cache backend.
 
-TODO: a file-based header storage or perhaps even an Apache mod_asis
-compatible storage are under consideration. Depending on query/maintenance
-requirements.
+The data should be usable to reconstruct at least the full entity headers
+without contacting the origin server. This is called static mode.
+
+Concurrent requests for the same resource are put on hold until the 
+first request commits the descriptor. Once a static initialization is possible,
+subsequent requests can skip the protocol and join in on the running 
+download by initializing a new response object. 
+
+TODO: expiration
 
 
 Rule Syntax

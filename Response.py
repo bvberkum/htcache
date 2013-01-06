@@ -73,7 +73,6 @@ class DataResponse:
         self.__pos, self.__end = request.range()
         if self.__end == -1:
             self.__end = protocol.data.descriptor.size
-        assert self.__end >= 0
 
         # TODO: on/off:
         #if protocol.capture:
@@ -89,6 +88,7 @@ class DataResponse:
 
         if self.__pos == 0 and self.__end == self.__protocol.size:
             head = 'HTTP/1.1 200 OK'
+
         elif self.__end >= 0:
             head = 'HTTP/1.1 206 Partial Content'
             args[ 'Content-Length' ] = str( self.__end - self.__pos )
@@ -147,8 +147,8 @@ class DataResponse:
                 self.__protocol.size += delta
             try:
                 self.__pos += sock.send( chunk )
-            except:
-                log("Error writing to client, aborted!", Params.LOG_ERR)
+            except Exception, e:
+                log("Client aborted: %s" % e, Params.LOG_ERR)
                 self.Done = True
                 #XXX:if not self.__protocol.cache.full():
                 #    self.__protocol.cache.remove_partial()

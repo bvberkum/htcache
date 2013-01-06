@@ -44,53 +44,72 @@ def HTCache_fiber_handler( client, address ):
 #    print 'PPID', sys.getppid()
 
     get_log(Params.LOG_DEBUG)\
-            ('New Request from %r, downloads: %s; +1', 
-                address, len(DOWNLOADS))
-
-    get_log(Params.LOG_DEBUG)\
             ("Log level is at %s", Runtime.VERBOSE)
 
     protocol = None
     request = Request.HtRequest()
+    get_log(Params.LOG_DEBUG)\
+            ('%s: New Request from %r, downloads: %s; +1', 
+                    hex(id(request)), address, len(DOWNLOADS))
+
     while not request.Protocol:
+        get_log(Params.LOG_DEBUG)\
+                ('%s: Reading request', hex(id(request)))
         yield fiber.RECV( client, Params.TIMEOUT )
         request.recv( client )
 
     try:
         while request in DOWNLOADS:
+            # Already downloading
             protocol = DOWNLOADS[ request ]
             if protocol.Response:
                 if issubclass( protocol.Response, Response.DataResponse ):
-                    get_log(Params.LOG_INFO)\
-                            ('Joining running download')
-                    assert not hasattr( protocol.data, 'cache' ),\
-                            protocol.data.cache
-                    protocol.data.init_and_open()
-                    #assert hasattr( protocol.data, 'descriptor' )
-                    #protocol.data.init_cache()
-                    #protocol.data.open_cache()
-                    break
-                # XXX: continues to handle response
-                del DOWNLOADS[ request ]
+                    get_log(Params.LOG_DEBUG)\
+                            ('Checking with %r for data for %r ' % (protocol.data, request))
+                    while not protocol.data.exists():
+                        get_log(Params.LOG_INFO)\
+                                ('Waiting to join downloads for %r' % request)
+                        yield fiber.WAIT()
+                        # XXX: wait till data has finished and closed, then
+                        # re-use it for this download???
+                        if not protocol.data.descriptor:
+                            protocol.data.prepare_static()
+                    else:
+                        get_log(Params.LOG_INFO)\
+                                ('Joining running download, re-using protocol')
+                        break
+#                del DOWNLOADS[ request ]
             else:
                 yield fiber.WAIT()
         else:
             get_log(Params.LOG_INFO)\
                     ('Switching to %s', request.Protocol.__name__)
             protocol = DOWNLOADS[ request ] = request.Protocol( request )
+            get_log(Params.LOG_DEBUG)\
+                    ('%s: New %s for %s', hex(id(protocol)),
+                            request.Protocol.__name__, hex(id(request)))
+
             if not protocol.Response:
                 server = protocol.socket()
+
             while not protocol.Response:
                 if protocol.hasdata():
+                    get_log(Params.LOG_DEBUG)\
+                            ('%s: Reading response for %s', hex(id(protocol)), hex(id(request)))
                     yield fiber.SEND( server, Params.TIMEOUT )
                     protocol.send( server )
                 else:
                     yield fiber.RECV( server, Params.TIMEOUT )
                     protocol.recv( server )
+
         get_log(Params.LOG_NOTE)\
                 ('Switching to %s', protocol.Response.__name__)
         response = protocol.Response( protocol, request )
+        get_log(Params.LOG_DEBUG)\
+                ('%s: New %s for %s', hex(id(response)),
+                        protocol.Response.__name__, hex(id(request)))
         server = protocol.socket()
+
     except Exception, e:
         get_log(Params.LOG_CRIT)\
                 ('Warning: Switching to ExceptionResponse, reason: %s', e)
@@ -99,6 +118,8 @@ def HTCache_fiber_handler( client, address ):
     # blocks while client has not read data
     while not response.Done:
         if response.hasdata():
+            get_log(Params.LOG_DEBUG)\
+                    ('%s: Writing response for %s', hex(id(response)), hex(id(request)))
             yield fiber.SEND( client, Params.TIMEOUT )
             response.send( client )
         elif response.needwait():
@@ -107,13 +128,15 @@ def HTCache_fiber_handler( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    get_log(Params.LOG_NOTE)('Transaction completed')
+    get_log(Params.LOG_NOTE)('Transaction completed for %r with data %s', 
+            hex(id(request)), hex(id(protocol.data)))
 
     assert protocol
 
     response.finalize(client)
 
-    del DOWNLOADS[request]
+    if request in DOWNLOADS:
+        del DOWNLOADS[request]
 
 
 def run():

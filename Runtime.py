@@ -8,6 +8,7 @@ PORT = None
 HOSTNAME = None
 ROOT = None
 PID_FILE = None
+QUIET = None
 VERBOSE = None
 ERROR_LEVEL = None
 LOG_FACILITIES = []#None

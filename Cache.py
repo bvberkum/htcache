@@ -54,6 +54,7 @@ class File(object):
 
     def init(self, path):
         assert Params.PARTIAL not in path
+
         assert not path.startswith(os.sep), \
                 "File.init: saving in other roots not supported,"\
                 " only paths relative to Runtime.ROOT allowed."
@@ -73,7 +74,14 @@ class File(object):
             path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path
        
         assert Runtime.PARTIAL not in path
+
+        # add default part
+        if path[-1] == os.sep:
+            path += Params.DEFAULT
+
         self.path = path
+
+        print 'Cache.init',path
         self.file = None
 
         assert len(self.abspath()) < 255, \
@@ -81,27 +89,32 @@ class File(object):
 
         self.stat()
 
+    def full_path(self):
+        return os.path.join( Runtime.ROOT, self.path )
+
+    def partial_path(self):
+        return suffix_ext( self.full_path(), Runtime.PARTIAL )
+
     def stat( self ):
         assert Runtime.PARTIAL not in self.path
-        abspath = os.path.join( Runtime.ROOT, self.path )
-        partial = suffix_ext( abspath, Runtime.PARTIAL )
+        abspath = self.full_path()
+        partial = self.partial_path()
         if os.path.isfile( partial ):
-            self.partial = os.stat( partial )
             self.full = False
+            self.partial = os.stat( partial )
         elif os.path.isfile( abspath ):
             self.full = os.stat( abspath )
             self.partial = False
         return self.partial or self.full
 
     def abspath( self ):
-        assert Runtime.PARTIAL not in self.path
+        assert Runtime.PARTIAL not in self.path, self.path
         if not (self.partial or self.full):
             self.stat()
-        abspath = os.path.join( Runtime.ROOT, self.path )
         if self.full:
-            return abspath
+            return self.full_path()
         else:
-            return suffix_ext( abspath, Runtime.PARTIAL )
+            return self.partial_path()
 
     @property
     def size( self ):
