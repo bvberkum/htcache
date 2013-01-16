@@ -60,6 +60,7 @@ test-code::
 		echo $$TOTAL - $$ERRORS - $$FAILURES;\
 		PASSED=$$(( $$TOTAL - $$ERRORS - $$FAILURES ));\
 		echo $$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS, $$FAILURES;\
+		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS, $$FAILURES" >> test-results.tab;\
 		echo "$$PASSED passed checks, $$ERRORS errors, $$FAILURES failures ($$TOTAL total)"
 
 test-system:: TESTS := 
