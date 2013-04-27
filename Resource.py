@@ -6,6 +6,7 @@ TODO: filter out unsupported headers, always merge with server headers
  to client.
 """
 import anydbm, datetime, os, re, urlparse
+from pprint import pformat
 
 
 try:
@@ -22,7 +23,7 @@ import Params, Cache
 
 
 
-class DescriptorStorage(object):
+class old_DescriptorStorage(object):
 
     """
     Base class.
@@ -158,8 +159,11 @@ class Descriptor(object):
         for hn in Protocol.HTTP.Cache_Headers:
             pass
 
+    def __str__(self):
+        return "[Descriptor %s]" % pformat(self.__data)
 
-class DescriptorStorage(object):
+
+class old_2_DescriptorStorage(object):
 
     """
     Item is the local path to a cached resource.
@@ -349,15 +353,15 @@ def get_backend(main=True):
     return Params.descriptor_storage_type(Params.RESOURCES, 'r') 
 
 
-class RelationalStorage(DescriptorStorage):
-
-    def __init__(self, dbref):
-        engine = create_engine(dbref)
-        self._session = sessionmaker(bind=engine)()
-
-    def get(self, url):
-        self._session.query(
-                taxus.data.Resource, taxus.data.Locator).join('lctr').filter_by(ref=url).all()
+#class RelationalStorage(DescriptorStorage):
+#
+#    def __init__(self, dbref):
+#        engine = create_engine(dbref)
+#        self._session = sessionmaker(bind=engine)()
+#
+#    def get(self, url):
+#        self._session.query(
+#                taxus.data.Resource, taxus.data.Locator).join('lctr').filter_by(ref=url).all()
 
 
 def _is_db(be):
@@ -408,7 +412,7 @@ def get_cache(hostinfo, req_path):
 def print_info(*paths):
     import sys
     recordcnt = 0
-    descriptors = get_backend()
+    backend = get_backend(False)
     for path in paths:
         if not path.startswith(os.sep):
             path = Params.ROOT + path
@@ -429,6 +433,7 @@ def print_info(*paths):
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
+    backend = get_backend(False)
     for m in media:
         # TODO: documents
         if m == 'image':
@@ -451,7 +456,7 @@ def print_media_list(*media):
 
 def find_info(q):
     import sys
-    global backend
+    backend = get_backend(False)
     print 'Searching for', q
     for path in backend:
         res = backend[path]

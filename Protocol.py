@@ -271,10 +271,12 @@ class HttpProtocol(CachingProtocol):
             args.pop( 'If-Modified-Since', None )
 
         # TODO: Store relationship with referer
-        relationtype = args.pop('X-Relationship', None)
+        relationtype = args.pop('X-Relationship', 'Linkback')
+        # RFC 2616 14.36, Referer header has absolute URI or relative to req.
+        # URI. Must not have fragment.
         referer = args.get('Referer', None)
         if referer:
-            #self.descriptors.relate(relationtype, self.requri, referer)
+            self.descriptors.relate(relationtype, self.requri, referer)
             pass
 
         #Params.log("HttpProtocol: Connecting to %s:%s" % request.hostinfo, 2)
@@ -432,8 +434,8 @@ class HttpProtocol(CachingProtocol):
             Params.log("Warning: unhandled: %s, %s" % (self.__status, self.requri))
             self.Response = Response.BlindResponse
 
-        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
-                "Chunked response: %s %s" % (self.__status, self.requri)
+#        assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
+#                "Chunked response: %s %s" % (self.__status, self.requri)
 
         # Cache headers
         # XXX:

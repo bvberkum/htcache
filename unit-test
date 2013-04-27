@@ -12,7 +12,7 @@ URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
 URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-unittest.$PORT"
 RESOURCES='resources.db'
-WAIT=0.5
+WAIT=0.4
 
 if test -z "$1"; then
   while $0 $((++i)); do true; done
@@ -265,13 +265,14 @@ case $1 in
     startserver
     download http://$URL_HTTP normal
     http_proxy=localhost:$PORT download http://$URL_HTTP cached & abort $WAIT
+    sleep $WAIT # wait for log to write
+    stopserver 
     check_log "aborted client read" "Error writing to client"
     check_exists "file cached, not finalized" cache/$URL_HTTP.incomplete
 # XXX: No headers are ever present, need to check if older versions did
 #    splitheaders cached
 #    check_equal "headers are equal" normal.entity.headers cached.entity.headers
 #    check_headers cached "served HTTP v1.1 OK" "HTTP/1.1 200 "
-    stopserver
     ;;
   3)
     summary "SERVING FILE FROM CACHE"
@@ -295,11 +296,12 @@ case $1 in
     startserver
     download http://$URL_HTTP out & abort $WAIT
     http_proxy=localhost:$PORT download http://$URL_HTTP out1
+    sleep $WAIT # wait for log to write
+    stopserver
     check_log "received complete file" "Server responds HTTP/1.1 200 OK"
     check_log "served partial file" "HTCache responds HTTP/1.1 206 Partial Content"
     check_headers out "served HTTP v1.1 OK" "HTTP/1.1 200 "
     check_equal "cached and served file are equal" cache/$URL_HTTP out1
-    stopserver
     ;;
   5)
     summary "REDOWNLOADING CHANGED FILE"
@@ -317,12 +319,13 @@ case $1 in
     startserver
     http_proxy=localhost:$PORT download http://$URL_HTTP out1 & abort $WAIT
     http_proxy=localhost:$PORT download http://$URL_HTTP out2
+    sleep $WAIT # wait for log to write
+    stopserver
     check_log "htcache asks for missing part" \
         "Requesting resume of partial file in cache"
     check_log "received partial file" \
         "Server responds HTTP/1.1 206 Partial Content"
     check_equal "cached and served file are equal" cache/$URL_HTTP out2
-    stopserver
     ;;
   7)
     summary "RESUMING PARTIAL CHANGED FILE IN CACHE"

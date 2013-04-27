@@ -141,6 +141,13 @@ Also create files in /etc/htcache:
 * rules.nocache
 * rules.sort
 
+Documentation
+-------------
+- This document; should focus on overall project status and software usage.
+- NewCache; work in progress, see also below for backends.
+- Cache Control; align implementation with standards for transparent proxy.
+- Then there are the original docs that came with http-replictor.
+
 Overview
 --------
 htcache client/server flow with emphasis on different types
@@ -255,7 +262,7 @@ with active proxy.
 See ``htcache [-h|--help]``.
 
 Cache backends
-______________________
+______________
 htcache uses a file-based Cache which may produce a file-tree similar to
 that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
 This can create problems with long filenames and the characters that appear
@@ -278,7 +285,7 @@ combines some aspects desirable to deal with a wider range of resources.
   filename. Simple and effective.
 
 Cache options
-_______________
+_____________
 The storage location is futher affected by ``--archive`` and ``--nodir``.
 
 Regular archival of a resources is possible by prefixing a formatted date to

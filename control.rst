@@ -2,12 +2,11 @@ Cache Control
 
 Applies to HTTP 1.1 if not explicit.
 
-
    - Also: http://www.askapache.com/seo/advanced-http-redirection.html  
 
-From RFC 2616
+----
 
-Fresh is
+From RFC 2616:
 
 Authentication
     Requests with Authenticate header, if Response Cache-Control is:
@@ -31,3 +30,9 @@ Three kinds of client cache control actions:
 
 Using directives:
     max-age
+
+----
+
+Accept-Ranges
+    - Sometimes the server reports this while the proxy does not.
+      See tests.
