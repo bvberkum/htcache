@@ -63,9 +63,18 @@ test-code::
 		echo "$$DATE, $$HOST, $$BRANCH, $$REV, unit, $$PASSED, $$ERRORS, $$FAILURES" >> test-results.tab;\
 		echo "$$PASSED passed checks, $$ERRORS errors, $$FAILURES failures ($$TOTAL total)"
 
-test-system:: TESTS := 
-test-system::
-	@COVERAGE_PROCESS_START=.coveragerc ./system-test $(TESTS) 2>&1 | tee systemtest.log
+# some simple test data
+TEST_DATA_ENV_$d := URL_HTTP="www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt" \
+URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript" \
+URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
+
+# use 'make test-system TESTS=x' to select test number
+test-system:: TEST_DATA := $(TEST_DATA_ENV_$d) 
+test-system:: TESTS :=
+test-system:: $/
+	@COVERAGE_PROCESS_START=.coveragerc \
+	   $(TEST_DATA) ./system-test $(TESTS) \
+	   2>&1 | tee systemtest.log
 	@\
 		DATE=$$(echo $$(date --rfc-3339=seconds));\
 		HOST=$$(echo $$(hostname -s));\
