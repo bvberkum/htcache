@@ -23,7 +23,7 @@ class FileTreeQ(Cache.File):
     def init(self, path):  
         assert Params.PARTIAL not in path
         get_log(Params.LOG_DEBUG, 'cache')\
-                ("FileTreeQ.init %r", path)
+                ("%s: init %r", self, path)
         psep = Runtime.ENCODE_PATHSEP
         # encode query and/or fragment parts
         sep = Cache.min_pos(path.find('#'), path.find( '?' )) 
@@ -76,7 +76,7 @@ class FileTreeQH(Cache.File):
   def init(self, path):
       assert Params.PARTIAL not in path
       get_log(Params.LOG_DEBUG, 'cache')\
-                ("FileTreeQH.init %r", path)
+              ("%s: init %r", self, path)
       # encode query if present
       sep = path.find( '?' )
       # other encoding in query/fragment part        
@@ -112,7 +112,7 @@ class PartialMD5Tree(Cache.File):
     def init(self, path):
         assert Params.PARTIAL not in path
         get_log(Params.LOG_DEBUG, 'cache')\
-                ("PartialMD5Tree.init %r", path)
+                ("%s: init %r", self, path)
         if Runtime.ARCHIVE:
             path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
 
@@ -130,7 +130,7 @@ class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
     def init(self, path):
         assert Params.PARTIAL not in path
         get_log(Params.LOG_DEBUG, 'cache')\
-                ("FileTree.init %r", path)
+                ("%s: init %r", self, path)
         path2 = path
         if Runtime.ARCHIVE:
             path2 = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path2
@@ -144,6 +144,9 @@ class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
                     PartialMD5Tree.init(self, path)
         else:                    
             FileTreeQ.init(self, path)
+
+    def __str__(self):
+        return "[FileTree %s]" % hex(id(self))
 
 
 class RefHash(Cache.File):
@@ -161,7 +164,7 @@ class RefHash(Cache.File):
     def open_new(self):
         self.path = Runtime.PARTIAL + os.sep + self.refhash
         get_log(Params.LOG_DEBUG, 'cache')\
-                ('Preparing new file in cache: %s', self.path)
+                ('%s: Preparing new file in cache: %s', self, self.path)
         self.file = open( self.abspath(), 'w+' )
 
     def open_full(self):

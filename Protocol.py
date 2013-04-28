@@ -114,6 +114,7 @@ class CachingProtocol(object):
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
+        print self, 'prepare_direct_response'
         if port == Runtime.PORT:
             log("Direct request: %s" % path, Params.LOG_INFO)
             assert host in LOCALHOSTS, "Cannot service for %s" % host
@@ -123,7 +124,7 @@ class CachingProtocol(object):
         #self.Response = Response.DirectResponse
 
         # Filter request by regex from rules.drop
-        filtered_path = "%s/%s" % ( host, path )
+        filtered_path = "%s%s" % ( host, path )
         m = Rules.Drop.match( filtered_path )
         if m:
             self.set_blocked_response( path )
@@ -178,6 +179,9 @@ class CachingProtocol(object):
 
     def finish( self ):
         self.data.finish_response()
+
+    def __str__(self):
+        return "[CachingProtocol %s]" % hex(id(self))
 
 
 class HttpProtocol(CachingProtocol):
@@ -245,7 +249,7 @@ class HttpProtocol(CachingProtocol):
         if eol == 0:
             return 0
         line = chunk[ :eol ]
-        log('Server responds '+ line.rstrip(), Params.LOG_NOTE)
+        get_log(Params.LOG_NOTE)("%s: Server responds %r", self, line.strip())
         fields = line.split()
         assert (2 <= len( fields )) \
             and fields[ 0 ].startswith( 'HTTP/' ) \
@@ -253,6 +257,7 @@ class HttpProtocol(CachingProtocol):
         self.__status = int( fields[ 1 ] )
         self.__message = ' '.join( fields[ 2: ] )
         self.__args = {}
+        get_log(Params.LOG_INFO)("%s: finished parse_head", self)
         self.__parse = HttpProtocol.__parse_args
         return eol
 
@@ -275,6 +280,7 @@ class HttpProtocol(CachingProtocol):
             else:
               self.__args[ key ] = value.strip()
         elif line in ( '\r\n', '\n' ):
+            get_log(Params.LOG_NOTE)("%s: finished parsing args", self)
             self.__parse = None
         else:
             log('Error: ignored server response header line: '+ line, Params.LOG_ERR)
@@ -290,6 +296,7 @@ class HttpProtocol(CachingProtocol):
         assert not self.hasdata(), "has data"
 
         chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
+        get_log(Params.LOG_INFO)("%s: chunk (%i)", self, len(chunk))
         assert chunk, 'server closed connection before sending '\
                 'a complete message header, '\
                 'parser: %r, data: %r' % (self.__parse, self.__recvbuf)
@@ -317,7 +324,7 @@ class HttpProtocol(CachingProtocol):
         # 2xx
         if self.__status in ( HTTP.OK, ):
 
-            log("Caching new download. ", Params.LOG_INFO)
+            get_log(Params.LOG_INFO)("%s: Caching new download. ", self)
             self.data.finish_request()
 #            self.recv_entity()
             self.set_dataresponse();
@@ -423,7 +430,9 @@ class HttpProtocol(CachingProtocol):
         if Runtime.PROXY_INJECT and mediatype and 'html' in mediatype:
             log("XXX: Rewriting HTML resource: "+self.url, Params.LOG_NOTE)
             self.rewrite = True
-        if self.__args.pop( 'Transfer-Encoding', None ) == 'chunked':
+        te = self.__args.get( 'Transfer-Encoding', None ) 
+        get_log(Params.LOG_INFO)("%s: set_dataresponse %s", self, te)
+        if te == 'chunked':
             self.Response = Response.ChunkedDataResponse
         else:
             self.Response = Response.DataResponse
@@ -449,6 +458,9 @@ class HttpProtocol(CachingProtocol):
 
     def socket( self ):
         return self.__socket
+
+    def __str__(self):
+        return "[HttpProtocol %s]" % hex(id(self))
 
 
 class FtpProtocol( CachingProtocol ):

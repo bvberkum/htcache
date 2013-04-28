@@ -81,7 +81,7 @@ class File(object):
 
         self.path = path
 
-        print 'Cache.init',path
+        get_log(Params.LOG_DEBUG)('%s: init %s', self, path)
         self.file = None
 
         assert len(self.abspath()) < 255, \
@@ -136,7 +136,7 @@ class File(object):
         assert not self.file
 
         get_log(Params.LOG_NOTE, 'cache')\
-                ('Preparing new file in cache')
+                ('%s: Preparing new file in cache', self)
     
         new_file = self.abspath()
         
@@ -148,7 +148,7 @@ class File(object):
             self.file = open( new_file, 'w+' )
         except Exception, e:
             get_log(Params.LOG_NOTE, 'cache')\
-                    ('Failed to open file: %s' %  e)
+                    ('%s: Failed to open file: %s', self, e)
             self.file = os.tmpfile()
 
     def open_partial( self, offset=-1 ):
@@ -159,7 +159,7 @@ class File(object):
             self.file.seek( offset )
             self.file.truncate()
         get_log(Params.LOG_INFO, 'cache')\
-                ('Resuming partial file in cache at byte %s' % self.tell())
+                ('%s: Resuming partial file in cache at byte %s', self, self.tell())
 
     def open_full( self ):
         assert not self.file
@@ -177,11 +177,11 @@ class File(object):
     def remove_full( self ):
         os.remove( self.abspath() )
         get_log(Params.LOG_NOTE, 'cache')\
-                ('Removed complete file from cache')
+                ('%s: Removed complete file from cache', self)
 
     def remove_partial( self ):
         get_log(Params.LOG_NOTE, 'cache')\
-                ('Removed partial file from cache')
+                ('%s: Removed partial file from cache', self)
         os.remove( self.abspath() + Runtime.PARTIAL )
 
     def read( self, pos, size ):
@@ -210,6 +210,6 @@ class File(object):
           try:
               self.close()
           except Exception, e:
-              log("Error on closing cache file: %s" % e, Params.LOG_WARN)
-
+              get_log(Params.LOG_WARN)\
+                      ("%s: Error on closing cache file: %s", self, e)
 

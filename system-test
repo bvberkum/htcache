@@ -32,7 +32,7 @@ LOG_FACILITIES="--log-facility protocol --log-facility cache"
 #URL_CHUNKED="jigsaw.w3.org/HTTP/ChunkedScript"
 #URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
-ABORT=0.6
+ABORT=0.4
 WAIT=1.5
 
 ########## AUXILIARY FUNCTIONS ################################################
@@ -46,7 +46,7 @@ function clean
 
 function startserver
 {
-  echo "Starting server at port $PORT"
+  echo "[ system-test] Starting server at port $PORT"
   for n in data cache
   do
     [ -d $PREFIX.$n ] || {
@@ -195,7 +195,7 @@ function summary
 {
   echo
   echo "============================================================================="
-  echo " UNIT-TEST $NUM: $1"
+  echo " SYSTEM-TEST $NUM: $1"
   echo " ---------------------------------------------------------------------------"
 }
 
@@ -402,8 +402,8 @@ case $1 in
     sleep $WAIT
     stopserver
 
-    check_log "received complete file" "Server responds HTTP/1.1 200 OK"
-    check_log "served partial file" "HTCache responds HTTP/1.1 206 Partial Content"
+    check_log "received complete file" "Server responds 'HTTP/1.1 200 OK'"
+    check_log "served partial file" "HTCache responds 'HTTP/1.1 206 Partial Content'"
 #    check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 OK"
     check_equal "cached and served file are equal" out out2
     check_log_errors
@@ -431,16 +431,16 @@ case $1 in
     
     clean
     startserver
-    ( ( http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 & abort $ABORT ) &)
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 & abort $ABORT
 #    echo $(stat -c "%s" $PREFIX.out1) bytes
 #    splitheaders out1
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
-    stopserver
     sleep 0.5
+    stopserver
 
     check_equal "cached and served file are equal" cache/$URL_HTTP out2
     check_log "htcache asks for missing part" "Requesting resume of partial file in cache"
-    check_log "server sends part" "Server responds HTTP/1.1 206 Partial Content"
+    check_log "server sends part" "Server responds 'HTTP/1.1 206 Partial Content'"
     check_log "htcache resumes content" "Resuming partial file in cache"
     check_log "finalized file" "Finalized"
     check_log_errors
@@ -468,17 +468,22 @@ case $1 in
     clean
     startserver
     download http://$URL_HTTP out
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 0.16
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2 > /dev/null & sleep 0.2
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out3
+    sleep 0.5
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 0.2
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2 > /dev/null & sleep 0.16
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out3 > /dev/null & sleep 0.2
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out4
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out5
+    sleep 0.5
     stopserver
 
     check_equal "cache and normal download are equal" cache/$URL_HTTP out
     check_log "downloads are joined" "Joining running download"
-    check_equal "cache and first concurrent download are equal" cache/$URL_HTTP out2
-    check_equal "cache and second concurrent download are equal" cache/$URL_HTTP out3
+    check_equal "cache and first download are equal" cache/$URL_HTTP out1
+    check_equal "cache and second concurrent download are equal" cache/$URL_HTTP out2
+    check_equal "cache and third concurrent download are equal" cache/$URL_HTTP out3
     check_equal "cache and subsequent download are equal" cache/$URL_HTTP out4
+    check_equal "cache and second subsequent download are equal" cache/$URL_HTTP out5
     check_log_errors
     ;;
 
@@ -488,7 +493,10 @@ case $1 in
     clean
     startserver
     download http://$URL_CHUNKED out1
+    echo "Giving ChunkedScript server a rest for 10 seconds.."
+    sleep 10 
     http_proxy=$HOSTNAME:$PORT download http://$URL_CHUNKED out2
+    sleep 0.5
     stopserver
 
     check_equal "separate download and served file are equal" out1 out2
@@ -503,6 +511,7 @@ case $1 in
     
     clean
     echo "www\.w3\.org\/Protocols\/HTTP.*" > $PREFIX-rules.drop
+    #htcache --drop $PREFIX-rules.drop --info | grep drop
     startserver --drop $PREFIX-rules.drop
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
     stopserver

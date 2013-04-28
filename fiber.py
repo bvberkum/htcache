@@ -134,7 +134,8 @@ class DebugFiber( Fiber ):
 
 def fork( output, pid_file ):
 
-    #print 'Forking current process'
+    get_log(Params.LOG_NOTE)\
+            ( '[ FORK ] %s %s ', output, pid_file )
 
     try:
         log = open( output, 'w' )
@@ -152,7 +153,7 @@ def fork( output, pid_file ):
 
     if pid:
         cpid, status = os.wait()
-        #print "PID, Status: ", cpid, status
+        print "PID, Status: ", cpid, status
         sys.exit( status >> 8 )
 
     try: 
@@ -201,11 +202,10 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
             socket.SO_REUSEADDR, 
             listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
     try:
-        listener.bind( 
-                ( hostname, port ) )
-        get_log(Params.LOG_NOTE)("serving at %s:%i", hostname, port)
+        listener.bind( ( hostname, port ) )
+        get_log(Params.LOG_DEBUG)("[ BIND ] serving at %s:%i", hostname, port)
     except:
-        get_log(Params.LOG_ERR)("unable to bind to %s:%i", hostname, port)
+        get_log(Params.LOG_ERR)("[ ERR ] unable to bind to %s:%i", hostname, port)
         raise
     listener.listen( 5 )
 
@@ -309,8 +309,11 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
     except Exception, e:
         get_log(Params.LOG_CRIT)\
-                ('[ CRITICAL ] %s crashed: %s', generator.__name__, e)
+                ('[ CRIT ] %s crashed: %s', generator.__name__, e)
         traceback.print_exc( file=sys.stdout )
         Resource.get_backend().close()
         sys.exit( 1 )
+
+    get_log(Params.LOG_CRIT)\
+            ('[ END ] %s ', generator)
 

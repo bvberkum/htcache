@@ -5,7 +5,7 @@ import anydbm
 
 import Runtime
 import Resource
-
+from Command import CLIParams
 
 
 class Resource_Storage(unittest.TestCase):
@@ -28,17 +28,18 @@ class Resource_backend(unittest.TestCase):
     """
 
     def test_1_init(self):
-        self.assertTrue(Resource.backend == None)
         Runtime.DATA_DIR = '/tmp/htache-unittest-data'
         if not os.path.exists(Runtime.DATA_DIR):
             os.mkdir(Runtime.DATA_DIR)
-        Resource.get_backend()
-        self.assertTrue(Resource.backend != None)
-        Resource.close_backend()
+        CLIParams.parse(['--data-dir', Runtime.DATA_DIR])
+        be = Resource.get_backend()
+        print Resource
+        #Resource.close_backend()
 
     def test_2_ro(self):
-        self.assertTrue(Resource.backend == None)
         Runtime.DATA_DIR = '/tmp/htache-unittest-data'
-        Resource.get_backend(True)
-        Resource.close_backend()
+        CLIParams.parse(['--data-dir', Runtime.DATA_DIR])
+        print Resource.get_backend(read_only=True)
+        print Resource
+        #Resource.close_backend()
 

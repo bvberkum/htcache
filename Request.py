@@ -35,6 +35,7 @@ class HtRequest:
         self.__parse = self.__parse_head
         self.__recvbuflen = 0
         self.__recvbuf = ''
+        self.__scheme = self.__host = self.__port = self.__reqpath = None
 
     def __parse_head( self, chunk ):
 
@@ -250,8 +251,8 @@ class HtRequest:
     @property
     def envelope(self):
         """
-        Used before protocol is determined. After recv finishes parsing
-        Request.requrl and Request.hostinfo is used instead.
+        Used before protocol is determined but while requet is received. After recv finishes parsing
+        the server response, Request.requrl and Request.hostinfo are available instead.
         """
         assert self.__reqpath[0] == '/' , self.__reqpath
         return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
@@ -317,5 +318,10 @@ class HtRequest:
         return request1 == request2
 
     def __str__(self):
-        return "<%s %s, %s>" % (cn(self), self.hostinfo, self.envelope)
+        if self.__host:
+            return "[%s %s: %s]" % (cn(self), hex(id(self)), self.url)
+        elif self.__reqpath:
+            return "[%s %s: %s]" % (cn(self), hex(id(self)), self.envelope)
+        else:
+            return "[%s %s]" % (cn(self), hex(id(self)))
 

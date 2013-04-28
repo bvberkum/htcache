@@ -2,7 +2,7 @@ import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
 import Params, Resource, Rules, HTTP, Runtime
-from util import log, json_write, json_read
+from util import log, json_write, json_read, get_log
 
 
 class BlindResponse:
@@ -103,7 +103,7 @@ class DataResponse:
             args[ 'Content-Range' ] = 'bytes */*'
             args[ 'Content-Length' ] = '0'
 
-        log('HTCache responds %s' % head, Params.LOG_NOTE)
+        log('HTCache responds %r' % head.strip(), Params.LOG_NOTE)
 
         if Runtime.VERBOSE == Params.LOG_DEBUG:
             for key in args:
@@ -124,8 +124,12 @@ class DataResponse:
         if self.__sendbuf:
             return True
         elif self.__pos >= self.__protocol.tell():
+            #get_log(Params.LOG_DEBUG)\
+            #        ("[%s hasdata (%s >= %s) ]", self, self.__pos, self.__protocol.tell())
             return False
         elif self.__pos < self.__end or self.__end == -1:
+            #get_log(Params.LOG_DEBUG)\
+            #        ("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
             return True
         else:
             return False
@@ -201,6 +205,9 @@ class DataResponse:
     def finalize(self, client):
         self.__protocol.finish()
 
+    def __str__(self):
+        return "[DataResponse %s]" % hex(id(self))
+
 
 class ChunkedDataResponse( DataResponse ):
 
@@ -231,6 +238,9 @@ class ChunkedDataResponse( DataResponse ):
             self.__protocol.write( tail[ :chunksize ] )
             self.__recvbuf = tail[ chunksize+2: ]
         protocol.data.close()
+
+    def __str__(self):
+        return "[ChunkedDataResponse %s]" % hex(id(self))
 
 
 class BlockedContentResponse:
@@ -266,6 +276,9 @@ class BlockedContentResponse:
     def finalize(self, client):
         pass
 
+    def __str__(self):
+        return "[BlockedContentResponse %s]" % hex(id(self))
+
 
 class BlockedImageContentResponse:
 
@@ -296,6 +309,9 @@ class BlockedImageContentResponse:
 
     def finalize(self, client):
         pass
+
+    def __str__(self):
+        return "[BlockedImageContentResponse %s]" % hex(id(self))
 
 
 class DirectResponse:
@@ -483,6 +499,9 @@ class DirectResponse:
     def recv( self ):
         raise AssertionError
 
+    def __str__(self):
+        return "[DirectResponse %s]" % hex(id(self))
+
 
 class NotFoundResponse( DirectResponse ):
 
@@ -498,6 +517,9 @@ class NotFoundResponse( DirectResponse ):
                     status='404 Not Found'
                 )
 
+    def __str__(self):
+        return "[NotFoundResponse %s]" % hex(id(self))
+
 
 class ExceptionResponse( DirectResponse ):
 
@@ -507,5 +529,8 @@ class ExceptionResponse( DirectResponse ):
                 protocol, request,
                 status='500 Internal Server Error'
             )
+
+    def __str__(self):
+        return "[ExceptionResponse %s]" % hex(id(self))
 
 
