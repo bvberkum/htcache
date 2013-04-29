@@ -1,5 +1,6 @@
 
 
+
 class HTTP:
 
     OK = 200
@@ -34,6 +35,7 @@ class HTTP:
         'Content-Range',
         'Content-Type',
         'Expires',
+        'ETag',
         'Last-Modified',
     # extension-header
     )
@@ -72,7 +74,6 @@ class HTTP:
         # RFC 2616
         'Accept-Ranges',
         'Age',
-        'ETag',
         'Location',
         'Proxy-Authenticate',
         'Retry-After',
@@ -87,8 +88,7 @@ class HTTP:
         'Srv',
         'P3P',
     )
-    Cache_Headers = (
-        'ETag',
+    Cache_Headers = ( # Cachable stuff beyond entity?
     )
 
 
@@ -140,43 +140,9 @@ class HTTP:
     # use these lists to create a mapping to retrieve the properly cased string.
     Header_Map = dict([(k.lower(), k) for k in Message_Headers ])
 
-
-def strstr(s):
-    return s.strip('"')
-
-def map_headers_to_resource(headers):
-    kwds = {}
-    mapping = {
-        'allow': (str,'allow'),
-        'content-encoding': (str,'content.encodings'),
-        'content-length': (int,'size'),
-        'content-language': (str,'language'),
-        'content-location': (str,'location'),
-        'content-md5': (str,'content.md5'),
-        #'content-range': '',
-        #'vary': 'vary',
-        #'content-type': 'mediatype',
-        'last-modified': (str,'mtime'),
-        'expires': (str,'content.expires'),
-        'last-modified': (str,'last_modified'),
-        'etag': (strstr,'etag'),
-    }
-    for hn, hv in headers.items():
-        hn, hv = hn.lower(), hv.lower()
-        if hn == 'content-type':
-            if ';' in hv:
-                hv = hv.split(';')
-                kwds['mediatype'] = hv.pop(0).strip()
-                while hv:
-                    hp = hv.pop(0).strip().split('=')
-                    kwds[hp[0].strip()] = hp[1].strip()
-                if 'qs' in kwds:
-                    kwds['qs'] = float(kwds['qs'])
-            else:
-                kwds['mediatype'] = hv.strip()
-        elif hn.lower() in mapping:
-            ht, hm = mapping[hn.lower()]
-            kwds[hm] = ht(hv)
-    return kwds
-
+def filter_entity_headers(headers):
+    for k in headers.keys():
+        if k not in HTTP.Entity_Headers:
+            del headers[k]
+    return headers
 

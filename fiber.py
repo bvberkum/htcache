@@ -1,6 +1,10 @@
 import sys, os, select, time, socket, traceback
 
 import Params
+import Resource
+import Rules
+from util import *
+
 
 class Restart(Exception): pass
 
@@ -55,10 +59,10 @@ class Fiber:
         except StopIteration:
             del self.__generator
             pass
-        except AssertionError, msg:
-            if not str(msg):
-                msg = traceback.format_exc()
-            Params.log('Assertion failure: %s'% msg)
+#        except AssertionError, msg:
+#            if not str(msg):
+#                msg = traceback.format_exc()
+#            log('Assertion failure: %s'% msg)
         except:
             traceback.print_exc()
 
@@ -114,8 +118,8 @@ class DebugFiber( Fiber ):
         try:
             sys.stdout = sys.stderr = self
             Fiber.step( self, throw )
-            if self.state:
-                Params.log('Waiting at %s'% self, 1)
+            get_log(Params.LOG_DEBUG, 'fiber')\
+                    ('Waiting at %s', self)
         finally:
             sys.stdout = stdout
             sys.stderr = stderr
@@ -129,6 +133,9 @@ class DebugFiber( Fiber ):
 
 
 def fork( output, pid_file ):
+
+    get_log(Params.LOG_NOTE)\
+            ( '[ FORK ] %s %s ', output, pid_file )
 
     try:
         log = open( output, 'w' )
@@ -146,7 +153,7 @@ def fork( output, pid_file ):
 
     if pid:
         cpid, status = os.wait()
-        #print "PID, Status: ", cpid, status
+        print "PID, Status: ", cpid, status
         sys.exit( status >> 8 )
 
     try: 
@@ -158,7 +165,7 @@ def fork( output, pid_file ):
         print 'error:', e
         sys.exit( 1 )
 
-    if pid:
+    if pid != 0: # where not on the child process
         open(pid_file, 'wb').write(str(pid))
         print 'Forked process, htcache now at PID', pid
         sys.exit( 0 )
@@ -168,22 +175,42 @@ def fork( output, pid_file ):
     os.dup2( nul.fileno(), sys.stdin.fileno()  )
 
 
-def spawn( generator, port, debug, log, pid_file ):
+def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
+
+    """
+    generator
+        A generator (callable that yields state changes), 
+    port
+        Integer.
+    debug
+        Boolean to indicated wether to use regular GatherFiber or
+        DebugFiber.
+    log
+        Callable.
+    pid_file
+        Filename.
+    """
+
+    import Runtime
 
     # set up listening socket
+    listener = socket.socket( 
+                socket.AF_INET, socket.SOCK_STREAM )
+    listener.setblocking( 0 )
+    listener.setsockopt( 
+            socket.SOL_SOCKET, 
+            socket.SO_REUSEADDR, 
+            listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
     try:
-        listener = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-        listener.setblocking( 0 )
-        listener.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
-        listener.bind( ( '', port ) )
-        listener.listen( 5 )
-    except Exception, e:
-        print 'error: failed to create socket:', e
-        sys.exit( 1 )
+        listener.bind( ( hostname, port ) )
+        get_log(Params.LOG_DEBUG)("[ BIND ] serving at %s:%i", hostname, port)
+    except:
+        get_log(Params.LOG_ERR)("[ ERR ] unable to bind to %s:%i", hostname, port)
+        raise
+    listener.listen( 5 )
 
-    # fork and exit for deamon mode
-    if log:
-        fork( log, pid_file )
+    if daemon_log:
+        fork( daemon_log, pid_file ) # exits parent process
 
     # stay attached to console
     if debug:
@@ -191,8 +218,11 @@ def spawn( generator, port, debug, log, pid_file ):
     else:
         myFiber = GatherFiber
 
-    Params.log('[ INIT ] %s started at %s:%i' % (generator.__name__,
-        Params.HOSTNAME, port ), 1)
+    get_log(Params.LOG_NOTE, 'fiber')\
+            ('[ INIT ] %s started at %s:%i', generator.__name__, hostname, port )
+
+    Resource.get_backend()
+    Rules.load()
 
     try:
 
@@ -206,7 +236,9 @@ def spawn( generator, port, debug, log, pid_file ):
             now = time.time()
 
             i = len( fibers )
-            #print '[ STEP ]', i, 'fiber(s)'
+            if Params.DEBUG:
+                get_log(Params.LOG_DEBUG)\
+                        ('[ STEP ] at %s, %s fibers', time.ctime(), len(fibers))
             while i:
                 i -= 1
                 state = fibers[ i ].state
@@ -233,10 +265,14 @@ def spawn( generator, port, debug, log, pid_file ):
                     expire = state.expire
 
             if expire is None:
-                Params.log('[ IDLE ] %s %s'% (time.ctime(), len(fibers)))
+                get_log(Params.LOG_NOTE, 'fiber')\
+                        ('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+                if len(fibers) == 0:
+                    assert len(Runtime.DOWNLOADS) == 0
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-                Params.log('[ BUSY ] %s %s'% (time.ctime(), len(fibers)))
+                get_log(Params.LOG_NOTE, 'fiber')\
+                        ('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
                 sys.stdout.flush()
             else:
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -254,22 +290,30 @@ def spawn( generator, port, debug, log, pid_file ):
                 trysend[ fileno ].step()
 
     except KeyboardInterrupt, e:
-        Params.log("Interrupt: %s" % e, 1)
-        Params.log('[ DONE ] %s interrupted'% (generator.__name__))
+        get_log(Params.LOG_NOTE)\
+            ('[ DONE ] %s closing normally', generator.__name__)
+        Resource.get_backend().close()
         sys.exit( 0 )
 
     except Restart:
-        print '[ RESTART ]', generator.__name__, 'will now respawn'
+        get_log(Params.LOG_NOTE)\
+            ('[ RESTART ] %s will now respawn', generator.__name__)
         i = len( fibers )
         while i:
             i -= 1
             #state = fibers[ i ].state
         # close before sending response 
         listener.close()
+        Resource.get_backend().close()
         raise
 
-    except:
-        print '[ DONE ]', generator.__name__, 'crashed', len(fibers)
+    except Exception, e:
+        get_log(Params.LOG_CRIT)\
+                ('[ CRIT ] %s crashed: %s', generator.__name__, e)
         traceback.print_exc( file=sys.stdout )
+        Resource.get_backend().close()
         sys.exit( 1 )
+
+    get_log(Params.LOG_CRIT)\
+            ('[ END ] %s ', generator)
 

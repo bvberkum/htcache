@@ -1,7 +1,16 @@
-import time, os, sys, shutil
+"""
+TODO:
+- Reimplement NODIR
+- Option to merge path elements into one directory while file count
+  is below treshold.
+"""
+import time, os, sys
+import re
 
 import Params
+import Runtime
 import Rules
+from util import *
 
 
 def load_backend_type(tp):
@@ -12,25 +21,23 @@ def load_backend_type(tp):
     return getattr( mod, name )
 
 
-def min_pos(*args):
-    "Return smallest of all arguments (but >0)"
-    r = sys.maxint
-    for a in args:
-        if a > -1:
-            r = min( a, r )
-    return r
+def suffix_ext(path, suffix):
+    x = re.match('.*\.([a-zA-Z0-9]+)$', path)
+    if x:
+        p = x.start(1)
+        path = path[:p-1] + suffix + path[p-1:]
+    return path      
 
 
 class File(object):
+
     """
-    Simple cache that stores at path/filename take from URL.
+    Simple cache that stores at path/filename taken from URL.
     The PARTIAL suffix (see Params) is used for partial downloads.
 
     Parameters ARCHIVE and ENCODE_PATHSEP also affect the storage location.
     ARCHIVE is applied after ENCODE_PATHSEP.
     """
-    size = -1
-    mtime = -1
 
     def __init__(self, path=None):
         """
@@ -39,49 +46,23 @@ class File(object):
         local path name. 
         """
         super( File, self ).__init__()
-        os.chdir(Params.ROOT)
+        self.partial = None
+        self.full = None
+        self.file = None
         if path:
-            rpath = self.apply_rules(path)
-            self.init(rpath)
-            # symlink to rewritten path
-            #if path != rpath and not os.path.exists(path):
-            #    Params.log("Symlink: %s -> %s" %(path, rpath))
-            #    os.makedirs(os.path.dirname(path))
-            #    os.symlink(rpath, path)
-            # check if target is symlink, must exist
-            if os.path.islink(rpath):
-                target = os.readlink(rpath)
-                if not os.path.exists(target):
-                    Params.log("Warning: broken symlink, replacing: %s" % target)
-                    os.unlink(rpath)
-            # check if target is partial, rename
-            i = 1
-            if os.path.exists(rpath + Params.PARTIAL):
-                while os.path.exists('%s.%s%s' % (rpath, i, Params.PARTIAL)):
-                    i+=1
-                shutil.copyfile(rpath+Params.PARTIAL, '%s.%s%s'
-                        %(rpath,i,Params.PARTIAL))
-                Params.log("Warning: backed up duplicate incomplete %s" % i)
-                # XXX: todo: keep largest partial only
-            assert len(self.path) < 255, \
-                    "LBYL, cache location path to long for Cache.File! "
-
-    def apply_rules(self, path):
-        """
-        Apply rules for path.
-        """
-        path = Rules.Join.rewrite(path)
-        return path
+            self.init(path)
 
     def init(self, path):
+        assert Params.PARTIAL not in path
+
         assert not path.startswith(os.sep), \
                 "File.init: saving in other roots not supported,"\
-                " only paths relative to Params.ROOT allowed."
+                " only paths relative to Runtime.ROOT allowed."
 
         # encode query and/or fragment parts
         sep = min_pos(path.find('#'), path.find( '?' ))
         # optional removal of directories in entire path
-        psep = Params.ENCODE_PATHSEP
+        psep = Runtime.ENCODE_PATHSEP
         if psep:
             path = path.replace( '/', psep)
         else:
@@ -89,64 +70,119 @@ class File(object):
             if sep != -1:
                 path = path[ :sep ] + path[ sep: ].replace( '/', psep)
         # make archive path
-        if Params.ARCHIVE:
-            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path
+        if Runtime.ARCHIVE:
+            path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path
+       
+        assert Runtime.PARTIAL not in path
 
-        self.path = os.path.join(Params.ROOT, path)
+        # add default part
+        if path[-1] == os.sep:
+            path += Params.DEFAULT
+
+        self.path = path
+
+        get_log(Params.LOG_DEBUG)('%s: init %s', self, path)
         self.file = None
 
-    def partial( self ):
-        return os.path.isfile( self.path + Params.PARTIAL ) \
-            and os.stat( self.path + Params.PARTIAL )
+        assert len(self.abspath()) < 255, \
+                "LBYL, cache location path to long for Cache.File! "
 
-    def full( self ):
-        return (
-            ( os.path.islink( self.path ) and os.stat(os.readlink(self.path)) )
-                or (os.path.isfile( self.path ) and os.stat( self.path )  )
-            )
+        self.stat()
 
-    def getsize(self):
-        if self.partial():
-            return os.path.getsize( self.path + Params.PARTIAL )
-        elif self.full():
-            return os.path.getsize( self.path )
+    def full_path(self):
+        return os.path.join( Runtime.ROOT, self.path )
+
+    def partial_path(self):
+        return suffix_ext( self.full_path(), Runtime.PARTIAL )
+
+    def stat( self ):
+        assert Runtime.PARTIAL not in self.path
+        abspath = self.full_path()
+        partial = self.partial_path()
+        if os.path.isfile( partial ):
+            self.full = False
+            self.partial = os.stat( partial )
+        elif os.path.isfile( abspath ):
+            self.full = os.stat( abspath )
+            self.partial = False
+        return self.partial or self.full
+
+    def abspath( self ):
+        assert Runtime.PARTIAL not in self.path, self.path
+        if not (self.partial or self.full):
+            self.stat()
+        if self.full:
+            return self.full_path()
+        else:
+            return self.partial_path()
+
+    @property
+    def size( self ):
+        stat = ( self.partial or self.full )
+        if stat:
+            return stat.st_size
+
+    @property
+    def mtime(self):
+        stat = ( self.partial or self.full )
+        if stat:
+            return stat.st_mtime
+
+    def utime(self, mtime):
+        os.utime( self.abspath(), ( mtime, mtime ) )
+        self.stat()
 
     def open_new( self ):
-        if Params.VERBOSE:
-            print 'Preparing new file in cache'
-       
-        tdir = os.path.dirname( self.path )
+        assert not self.file
+
+        get_log(Params.LOG_NOTE, 'cache')\
+                ('%s: Preparing new file in cache', self)
+    
+        new_file = self.abspath()
+        
+        tdir = os.path.dirname( new_file )
         if not os.path.exists( tdir ):
             os.makedirs( tdir )
 
         try:
-            self.file = open( self.path + Params.PARTIAL, 'w+' )
+            self.file = open( new_file, 'w+' )
         except Exception, e:
-            print 'Failed to open file:', e
+            get_log(Params.LOG_NOTE, 'cache')\
+                    ('%s: Failed to open file: %s', self, e)
             self.file = os.tmpfile()
 
     def open_partial( self, offset=-1 ):
-        self.mtime = os.stat( self.path + Params.PARTIAL ).st_mtime
-        self.file = open( self.path + Params.PARTIAL, 'a+' )
+        assert not self.file
+        self.file = open( self.abspath(), 'a+' )
         if offset >= 0:
             assert offset <= self.tell(), 'range does not match file in cache'
             self.file.seek( offset )
             self.file.truncate()
-        if Params.VERBOSE:
-            print 'Resuming partial file in cache at byte', self.tell()
+        get_log(Params.LOG_INFO, 'cache')\
+                ('%s: Resuming partial file in cache at byte %s', self, self.tell())
 
     def open_full( self ):
-        self.mtime = os.stat( self.path ).st_mtime
-        self.file = open( self.path, 'r' )
-        self.size = self.tell()
+        assert not self.file
+        self.file = open( self.abspath(), 'r' )
+#        self.size = self.tell()
+
+    def open( self ):
+        if self.full:
+            self.open_full()
+        elif self.partial:
+            self.open_partial()
+        else:
+            self.open_new()
 
     def remove_full( self ):
-        os.remove( self.path )
-        Params.log('Removed complete file from cache')
+        os.remove( self.abspath() )
+        get_log(Params.LOG_NOTE, 'cache')\
+                ('%s: Removed complete file from cache', self)
 
     def remove_partial( self ):
-        Params.log('Removed partial file from cache')
-        os.remove( self.path + Params.PARTIAL )
+        get_log(Params.LOG_NOTE, 'cache')\
+                ('%s: Removed partial file from cache', self)
+        os.remove( self.abspath() + Runtime.PARTIAL )
 
     def read( self, pos, size ):
         self.file.seek( pos )
@@ -161,23 +197,19 @@ class File(object):
         return self.file.tell()
 
     def close( self ):
-        size = self.tell()
+        assert self.file
         self.file.close()
-        if self.mtime >= 0:
-            os.utime( self.path + Params.PARTIAL, ( self.mtime, self.mtime ) )
-        if self.size == size:
-            os.rename( self.path + Params.PARTIAL, self.path )
-            Params.log("Finalized %r" % self.path)
-        else:
-            Params.log("Closed partial %r" % self.path)
+        self.file = None
+        self.partial, self.full = None, None
 
-    def __nonzero__(self):
-      return self.partial() or self.full()
+#    def __nonzero__(self):
+#      return ( self.complete() or self.partial ) != None
 
     def __del__( self ):
-      try:
-          self.close()
-      except:
-          pass
-
+      if self.file:
+          try:
+              self.close()
+          except Exception, e:
+              get_log(Params.LOG_WARN)\
+                      ("%s: Error on closing cache file: %s", self, e)
 

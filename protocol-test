@@ -59,7 +59,8 @@ class ProtocolTest:
                 difflib.unified_diff(
                     expected_content.split('\n'), 
                     result_content.split('\n'))))
-            print diff
+            print diff[:255]
+            print len(diff[255:]), 'more characters'
         else:
             print " [PASSED] "
         print "-"*79
@@ -85,5 +86,8 @@ if __name__ == '__main__':
             'http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js',
 "http://www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt",
 "http://jigsaw.w3.org:80/HTTP/ChunkedScript",
-"ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
+"ftp://ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz",
+
+"http://www.micro4you.com/files/sensor/DHT11.pdf",
+
         ])

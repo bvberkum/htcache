@@ -3,37 +3,16 @@ import os
 import sys
 import anydbm
 
+import Runtime
 import Resource
-
-
-
-class Resource_Storage_Factory(unittest.TestCase):
-
-    def test_(self):
-        path = '/tmp/htcache-Resource_Storage_Factory-test.db'
-
-        storage = Resource.index_factory(None, path, 'w')
-        key = '123'
-        storage[key] = 'test'
-        storage.close()
-
-        storage = Resource.index_factory(None, path, 'r')
-        def _set(k, v): 
-            storage[k] = v
-        self.assertRaises(anydbm.error, _set, key, 'newvalue')
-        storage.close()
-
-        self.assertTrue(os.path.isfile(path))
-        os.unlink(path)
+from Command import CLIParams
 
 
 class Resource_Storage(unittest.TestCase):
 
-    def test_1_factories(self):
-        for name in ('ResourceStorage', 'DescriptorStorage', \
-                'ResourceMap', 'CacheMap'):
-            factory = getattr(Resource.Storage, "%sFactory" % name)
-            self.assertTrue(callable(factory))
+    """
+    Test Storage interface.
+    """
        
 
 class Resource_Descriptor(unittest.TestCase):
@@ -44,8 +23,23 @@ class Resource_Descriptor(unittest.TestCase):
 
 class Resource_backend(unittest.TestCase):
 
-    def test_(self):
-        self.assertTrue(Resource.backend == None)
-        Resource.open_backend(True)
-        self.assertTrue(isinstance(Resource.backend, Resource.Storage))
+    """
+    Test wether get/open/close backend works. 
+    """
+
+    def test_1_init(self):
+        Runtime.DATA_DIR = '/tmp/htcache-unittest-data'
+        if not os.path.exists(Runtime.DATA_DIR):
+            os.mkdir(Runtime.DATA_DIR)
+        CLIParams.parse(['--data-dir', Runtime.DATA_DIR])
+        be = Resource.get_backend()
+        print Resource
+        #Resource.close_backend()
+
+    def test_2_ro(self):
+        Runtime.DATA_DIR = '/tmp/htcache-unittest-data'
+        CLIParams.parse(['--data-dir', Runtime.DATA_DIR])
+        print Resource.get_backend(read_only=True)
+        print Resource
+        #Resource.close_backend()
 
