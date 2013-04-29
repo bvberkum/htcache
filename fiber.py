@@ -268,7 +268,7 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
                 get_log(Params.LOG_NOTE, 'fiber')\
                         ('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
                 if len(fibers) == 0:
-                    assert len(Runtime.DOWNLOADS) == 0
+                    assert len(Runtime.DOWNLOADS) == 0, Runtime.DOWNLOADS
                 sys.stdout.flush()
                 canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
                 get_log(Params.LOG_NOTE, 'fiber')\

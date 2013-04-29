@@ -2,7 +2,6 @@
 [run]
 branch = True
 parallel_mode = True
-#omit = /usr/*
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -23,11 +22,11 @@ exclude_lines =
     if __name__ == .__main__.:
 
 ignore_errors = True
-omit = /usr/*
+omit = /usr/*,htcache
 
 [html]
 directory = coverage_html_report
-#omit = /usr/*
 
 [xml]
 file = coverage_xml_report.xml
+

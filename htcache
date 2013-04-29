@@ -1,4 +1,12 @@
 #! /usr/bin/env python
+"""
+This file is confusing to coverage?
+Root level is not covered, also not covered is everything aftetr the 
+weakref lookup 'protocol = DOWNLOADS[ request ]'
+"""
+
+
+
 import os
 import sys
 import time
