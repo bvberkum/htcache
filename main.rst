@@ -10,10 +10,12 @@ there starts the real specifications.
 
 Versions
 --------
-Tests
+Branches
     master
         - Trying to keep it steady.
         - Does currently not run stable continuously.
+        - Intend to get sqlstore back into master once that matures, then see
+          about other branches.  
 
     test
         - Must make this unstable branch.
@@ -56,7 +58,8 @@ Tests
             :unit-test:  
                 - (dandy) 36 passed checks, 7 errors  
 
-            Need to get simple relational storage.
+            Need to get simple relational storage.  This is suspended in favor
+            of dev_sqlstore
         dev_dhtmlui
             - this injects JS, carefil to merge while Params is not externalized/contained.
             - in sync with master, dev_proxyreq, dev_domaindb
@@ -65,8 +68,10 @@ Tests
                 - (dandy) 4 passed checks, 23 errors
             - add card index for URL's something like a step-up to a bookmark manager
             - in sync with master, dev_proxyreq
+        dev_sqlstore
+            - Working on SA backend.
+            - Need to get chunked transport working again and test from there.  
 
-branches
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  

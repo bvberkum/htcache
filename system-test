@@ -34,7 +34,7 @@ LOG_FACILITIES="--log-facility protocol --log-facility cache"
 #URL_FTP="ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz"
 PID="/tmp/htcache-systemtest.$PORT"
 ABORT=0.4
-WAIT=1.5
+WAIT=5
 
 ########## AUXILIARY FUNCTIONS ################################################
 
@@ -508,14 +508,22 @@ case $1 in
     clean
     startserver
     download http://$URL_CHUNKED out1
-    echo "Giving ChunkedScript server a rest for 10 seconds.."
-    sleep 10 
+    echo "Giving ChunkedScript server a rest for $WAIT seconds.."
+    sleep $WAIT
     http_proxy=$HOSTNAME:$PORT download http://$URL_CHUNKED out2
+    http_proxy=$HOSTNAME:$PORT download http://$URL_CHUNKED out3
+#    telnet $HOSTNAME $PORT < tmp
     sleep 0.5
+# TODO: fix these requests:
+    http_proxy=$HOSTNAME:$PORT download \
+          http://jethomson.wordpress.com/2011/08/18/project-ouroboros-reflashing-a-betemcu-usbasp-programmer/ out6
+    http_proxy=$HOSTNAME:$PORT download http://jeelabs.net/projects/hardware/wiki/AA_Power_Board out7
+#    http_proxy=$HOSTNAME:$PORT telnet $HOSTNAME $PORT < tmp
     stopserver
     backup_coverage $1
 
     check_equal "separate download and served file are equal" out1 out2
+    check_equal "separate download and served file are equal" out1 out3
     check_log "server sends chunked data" "Transfer-Encoding: chunked"
     check_log "processing chunked data" "Switching to ChunkedDataResponse"
     check_equal "cached and served file are equal" cache/$URL_CHUNKED out2
@@ -656,11 +664,6 @@ case $1 in
     # TODO: Gone
     #http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/test/old out7
     # TODO: TCN
-# TODO: fix these requests:
-    http_proxy=$HOSTNAME:$PORT download \
-          http://jethomson.wordpress.com/2011/08/18/project-ouroboros-reflashing-a-betemcu-usbasp-programmer/ out6
-    http_proxy=$HOSTNAME:$PORT download http://jeelabs.net/projects/hardware/wiki/AA_Power_Board out7
-#    http_proxy=$HOSTNAME:$PORT telnet $HOSTNAME $PORT < tmp
     stopserver
     backup_coverage $1
     check_log "DNS exception" "DNSLookupException"
@@ -702,7 +705,28 @@ case $1 in
 
   21)
     summary "SERVICE"
-    # XXX: htcache_command
+    clean
+    startserver
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
+    stopserver
+    backup_coverage $1.1
+    mkdir $PREFIX.htcache_command
+    htcache_command --info > $PREFIX.htcache_command/info
+    backup_coverage $1.2 
+    htcache_command --list-locations > $PREFIX.htcache_command/list-locations
+    backup_coverage $1.3
+    htcache_command --list-resources > $PREFIX.htcache_command/list-resources
+    backup_coverage $1.4
+    htcache_command --find-records 'w3' > $PREFIX.htcache_command/find-records
+    backup_coverage $1.5
+    htcache_command --print-location http://$URL_HTTP > $PREFIX.htcache_command/print-location
+    backup_coverage $1.6
+    htcache_command --print-records > $PREFIX.htcache_command/print-records
+    backup_coverage $1.7
+    htcache_command --print-record http://$URL_HTTP > $PREFIX.htcache_command/print-record
+    backup_coverage $1.8
+    htcache_command --check-join-rules > $PREFIX.htcache_command/check-join-rules
+    backup_coverage $1.9
     ;;
 
   22)

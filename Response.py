@@ -124,12 +124,12 @@ class DataResponse:
         if self.__sendbuf:
             return True
         elif self.__pos >= self.__protocol.tell():
-            #get_log(Params.LOG_DEBUG)\
-            #        ("[%s hasdata (%s >= %s) ]", self, self.__pos, self.__protocol.tell())
+            get_log(Params.LOG_DEBUG)\
+                    ("[%s hasdata (%s >= %s) ]", self, self.__pos, self.__protocol.tell())
             return False
         elif self.__pos < self.__end or self.__end == -1:
-            #get_log(Params.LOG_DEBUG)\
-            #        ("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
+            get_log(Params.LOG_DEBUG)\
+                    ("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
             return True
         else:
             return False
@@ -203,6 +203,8 @@ class DataResponse:
                 #        (pattern, substitute), count))
 
     def finalize(self, client):
+        get_log(Params.LOG_DEBUG)\
+                ('%s: finalizing' % self)
         self.__protocol.finish()
 
     def __str__(self):
@@ -237,7 +239,9 @@ class ChunkedDataResponse( DataResponse ):
             log('Received %i byte chunk' % chunksize, Params.LOG_DEBUG)
             self.__protocol.write( tail[ :chunksize ] )
             self.__recvbuf = tail[ chunksize+2: ]
-        protocol.data.close()
+        get_log(Params.LOG_DEBUG)\
+                ('Received %i byte in chunks', len(self.__recvbuf))
+        #protocol.data.close()
 
     def __str__(self):
         return "[ChunkedDataResponse %s]" % hex(id(self))

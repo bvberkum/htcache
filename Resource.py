@@ -283,7 +283,6 @@ class ProxyData(object):
         headerdict.update({
             'Content-Length': self.descriptor.size,
         })
-        print 'map_to_headers, descriptor.size:', self.descriptor.size
 #        if self.descriptor.resource:
 #            headerdict.update({
 #                'Content-Location': self.descriptor.resource.url
@@ -358,12 +357,14 @@ class ProxyData(object):
         # Fill in from datastore if we have a local file
         if self.descriptor.exists():
 
+            self.cache.stat()
+
             if ( self.cache.partial or self.cache.full ):
                 mdtime = self.get_last_modified()
 
             if self.cache.partial:
                 assert self.cache.size < self.descriptor.size, \
-                        ( self.cache.size, self.descriptor.size )
+                        ( "Cannot be partial", self.cache.size, self.descriptor.size )
                 get_log(Params.LOG_NOTE)\
                         ('Requesting resume of partial file in cache: '
                         '%i bytes, %s', self.cache.size, mdtime )
@@ -450,11 +451,11 @@ class ProxyData(object):
                 get_log(Params.LOG_NOTE, 'cache')\
                         ("%s: Finalized %r at %i", self, abspath, size )
                 self.descriptor.path = abspath
+                self.descriptor.commit()
         else:
             get_log(Params.LOG_NOTE, 'cache')\
                     ("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
             os.utime( self.descriptor.path, ( self.descriptor.mtime, self.descriptor.mtime ) )
-        #print self.cache.stat()
         #print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
         #                size, self.descriptor.size, self.cache.size,\
         #                self.descriptor.mtime, self.cache.mtime )
@@ -703,24 +704,20 @@ def print_record(url):
         print '\t', str(d).replace('\n', '\n\t')
 
 def list_locations():
-    global backend
-    get_backend()
-
+    backend = get_backend()
     for res in backend.query(Resource).all():
         for d in res.descriptors:
             print d.path
-    
     backend.close()
 
 def list_urls():
-    global backend
-    get_backend()
+    backend = get_backend()
     for url in backend.resources:
         res = backend.find(url)
         print res.url
 
 def print_location(url):
-    get_backend()
+    backend = get_backend()
     netpath = url[5:]
     res = Resource().fetch(Resource.url == netpath)
     for d in res.descriptors:
@@ -730,8 +727,7 @@ def print_location(url):
 # TODO: find_records by attribute query
 def find_records(q):
     import sys
-    global backend
-    get_backend()
+    backend = get_backend()
     print 'Searching for', q
 
     attrpath, valuepattern = q.split(':')
@@ -792,6 +788,7 @@ def print_info(*paths):
 
 def print_media_list(*media):
     "document, application, image, audio or video (or combination)"
+    backend = get_backend()
     for m in media:
         # TODO: documents
         if m == 'image':

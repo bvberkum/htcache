@@ -26,6 +26,8 @@ def suffix_ext(path, suffix):
     if x:
         p = x.start(1)
         path = path[:p-1] + suffix + path[p-1:]
+    else:
+        path += suffix
     return path      
 
 
@@ -90,9 +92,11 @@ class File(object):
         self.stat()
 
     def full_path(self):
+        assert Runtime.ROOT
         return os.path.join( Runtime.ROOT, self.path )
 
     def partial_path(self):
+        assert Runtime.PARTIAL
         return suffix_ext( self.full_path(), Runtime.PARTIAL )
 
     def stat( self ):
