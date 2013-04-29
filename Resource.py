@@ -1,12 +1,11 @@
-""" 
-
-Class for descriptor storage.
-
-TODO: filter out unsupported headers, always merge with server headers
- to client.
 """
-import anydbm, datetime, os, re, urlparse
+Resource storage and descriptor facade.
 
+"""
+import anydbm, os, urlparse
+import time
+import calendar
+from os.path import join
 
 try:
     # Py >= 2.4
@@ -14,452 +13,731 @@ try:
 except AssertionError:
     from sets import Set as set
 
+from sqlalchemy import Column, Integer, String, Boolean, Text, \
+    ForeignKey, Table, Index, DateTime, Float, \
+    create_engine
+from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, backref, sessionmaker
+
+import Cache
 import Params
+import HTTP
+import Rules
+import Runtime
+from util import *
 from error import *
-
-#import uriref
-import Params, Cache
+from pprint import pformat
 
 
 
-class DescriptorStorage(object):
+class ProxyData(object):
 
     """
-    Base class.
+    A facade for instances in datastore seen from a Descriptor instance.
+
+    Web Resources::
+
+        { <res-uri> : <Resource(
+
+           host, path, meta, cache
+
+        )> }
+    
+    Map of broken loations that could not be retrieved::
+
+        { <res-uri> : <status>, <keep-boolean> }
+    
+    Cache descriptors::
+
+        { <cache-location> : <Descriptor(
+
+            hash, mediatype, charset, language, size, quality
+
+        ) }
+
+    Map of uriref to cache locations (reverse for resources)::
+
+        { <cache-location> : <res-uri> }
+
+    Qualified relations 'rel' from 'res' to 'ref'::
+
+        relations_to = { <res-uri> => *( <rel-uri>, <ref-uri> ) }
+    
+    Reverse mapping, the qualification will be in relations_to::
+
+        relations_from = { <ref-uri> => *<res-uri> }
     """
 
-    shelve = None
-    "Shelved descriptor objects"
-    cachemap = None
-    "Map of uriref to cache locations (forward)"
-    resourcemap = None
-    "Map of cache location to uriref (reverse)"
+    def __init__( self, protocol ):
+        self.protocol = protocol
+        self.descriptor = None 
+        self.cache = None
+    
+        self.mtime = None
 
-    def __init__(self, path):
-        self.objdb = join(path, 'resources.db')
-        self.cachemapdb = join(path, 'cache_map.db')
-        self.resourcemapdb = join(path, 'resource_map.db')
+        get_log(Params.LOG_DEBUG)\
+            ("%s: empty instance", self)
+                   
+    def set_content_length(self, value):
+        if self.cache.file:
+            assert self.cache.size == int( value ),\
+                ( self.cache.size, int( value ) )
+        self.descriptor.size = int( value )
 
-        self.shelve = dbshelve.open(objdb)
+    def set_last_modified(self, value):
+        mtime = None
+        try:
+            mtime = calendar.timegm( time.strptime(
+                value, Params.TIMEFMT ) )
+        except:
+            get_log(Params.LOG_ERR)\
+                    ( 'Error: illegal time format in Last-Modified: %s.', value )
+            # XXX: Try again, should make a list of alternate (but invalid) date formats
+            try:
+                tmhdr = re.sub(
+                        '\ [GMT0\+-]+$', 
+                        '',
+                        value)
+                mtime = calendar.timegm( time.strptime(
+                    tmhdr, 
+                    Params.TIMEFMT[:-4] ) )
+            except:
+                try:
+                    mtime = calendar.timegm( time.strptime(
+                        value,
+                        Params.ALTTIMEFMT ) )
+                except:
+                    get_log(Params.LOG_ERR)\
+                            ( 'Fatal: unable to parse Last-Modified: %s.', value )
+        
+        if mtime:
+            self.descriptor.mtime = mtime
+# XXX:            if self.cache.stat():
+#                self.cache.utime( mtime )
 
-        self.cachemap = bsddb.hashopen(cachemapdb)
-        self.resourcemap = bsddb.hashopen(resourcemapdb)
-        #chksmdb = join(path, '.cllct/sha1sum.db')
-        #self.sha1sum = dbshelve.open(chksmdb)
+    def get_last_modified(self):
+        if self.descriptor.mtime >= 0:
+            mtime = self.descriptor.mtime
+        else:
+            mtime = self.cache.mtime
+        return time.strftime(
+                    Params.TIMEFMT, time.gmtime( mtime ) )
 
-    def put(self, uriref, metalink):
+    def get_content_location(self):
+        return self.descriptor.resource.url
+
+    def set_content_location(self, url):
+        self.descriptor.resource.url = url
+
+    def set_content_type(self, value):
+        data = {}
+        if ';' in value:
+            v = value.split(';')
+            data['mediatype'] = v.pop(0).strip()
+            while v:
+                hp = v.pop(0).strip().split('=')
+                param_name, param_value = hp[0].strip(), hp[1].strip()
+                attr_type, attr_name = self._attr_map[param_name]
+                data[attr_name] = attr_type(param_value)
+        else:
+            data['mediatype'] = value.strip()
+        while data:
+            k = data.keys()[0]
+            setattr( self.descriptor, k, data[k] )
+            del data[k]
+
+    def get_content_type(self):
+        mediatype = self.descriptor.mediatype
+        if self.descriptor.charset:
+            mediatype += '; charset=%s' % self.descriptor.charset
+        if self.descriptor.quality:
+            mediatype += '; qs=%i' % self.descriptor.quality
+        return mediatype
+
+    def init_data(self, url):
         """
-        Store or update the descriptor.
+        Fetch existing or pre-initialize new Descriptor instance
+        before we have any content data available.
+        XXX: The associated resource should be initalized later.
         """
-        self.shelve[uriref]
-        if uriref in self.cachemap:
-            self.cache[uriref]
+        assert not self.descriptor or not ( self.descriptor.mtime or self.descriptor.path or self.descriptor.size ), ( self.descriptor.mtime, self.descriptor.path, self.descriptor.size )
 
-        pass
+        self.descriptor = Descriptor.find_latest(url)
+        if not self.descriptor or not self.descriptor.id:
+            self.descriptor = Descriptor()
+            get_log(Params.LOG_DEBUG)\
+                    ('%s: Initialized new descriptor. ', self)
+        else:
+            get_log(Params.LOG_DEBUG)\
+                    ('%s: Found existing descriptor for %r ', self, self.descriptor.path)
 
-    def map_path(self, path, uriref):
-        pass
+    def exists( self ):
+        return self.descriptor != None and self.descriptor.id != None
 
-    def set(self, uriref, descriptor):
-        pass
+    def is_open( self ):
+        return self.cache and self.cache.file != None
 
-    def __setitem__(self, path, value):
-        self.shelve
+    def init_cache( self, netpath=None ):
+        """
+        The location will be subject to the specific heuristics of the backend
+        type, this path will be readable from cache.path.
+        """
+        get_log(Params.LOG_DEBUG)\
+                ( "%s: Init cache: %s", self, Runtime.CACHE )
+        self.cache = Cache.load_backend_type( Runtime.CACHE )()
+        if netpath:
+            assert netpath[:2] == '//', netpath
+            netpath = netpath[2:]
+            netpath = Rules.Join.rewrite(netpath)
+            self.cache.init( netpath )
+            get_log(Params.LOG_INFO)( '%s: Prepped cache, position: %s',
+                    self, self.cache.abspath() )
+
+    def open_cache( self ):
+        assert self.cache.path
+        self.cache.open()
+        self.cache.stat()
+
+    def move( self ):
+        get_log(Params.LOG_DEBUG)\
+                ("Error: TODO: ProxyData.move")
+
+    def set_broken( self ):
+        get_log(Params.LOG_DEBUG)\
+                ("Error: TODO: ProxyData.set_broken")
+
+    def close(self):
+        self.cache = None
+        self.descriptor = None
+        get_log(Params.LOG_DEBUG)\
+                ("%s: closed ", self)
+
+    def set_data(self, attribute, value):
+        assert not getattr( self.descriptor, attribute ), attribute
+        setattr( self.descriptor, attribute, value )
+
+    def update_data(self):
+# after server response headers
+        if not self.descriptor.resource:
+            self.descriptor.resource = Resource()
+        self.map_to_data( HTTP.filter_entity_headers( self.protocol.args() ) )
+        #get_log(Params.LOG_DEBUG)\
+        #        ( '%s: update_data %r ', self, self.descriptor )
+
+# before client response headers
+    def finish_data(self):
+        assert self.descriptor.resource.url, self.descriptor.resource
+        if self.descriptor.resource.url:
+            self.descriptor.resource.commit()
+        self.descriptor.commit()
+        assert self.descriptor.id
+# XXX
+#        if not self.descriptor.id:
+        get_log(Params.LOG_DEBUG)\
+            ('%s finish_data %r %r ', self, self.descriptor, self.descriptor.resource )
+
+    ###
+
+    header_data_map = {
+#        'allow': (str,'resource.allow'),
+        'content-length': (int, 'size'),
+        'content-language': (str, 'language'),
+#        'content-location': (str,'resource.location'),
+# XXX:'content-md5': (str,'content.md5'),
+        #'content-range': '',
+        #'vary': 'vary',
+#        'last-modified': (str, 'mtime'),
+#        'expires': (str,'resource.expires'),
+        'etag': (strstr,'etag'),
+    }
+
+    _attr_map = {
+        'qs': (float, 'quality'),
+        'charset': (str, 'charset'),
+    }
+
+    def map_to_data( self, headers=None ):
+        if not headers:
+            headers = self.protocol.args()
+
+        headerdict = HeaderDict(headers)
+        
+        for hn, hv in headerdict.items():
+            h = "set_%s" % hn.lower().replace('-','_')
+            if hasattr( self, h ):
+                getattr( self, h )(hv)
+            elif hn.lower() in self.header_data_map:
+                ht, hm = self.header_data_map[hn.lower()]
+                if hm.startswith('resource.'):
+                    hm = hm.replace('resource.', '')
+                    setattr( self.descriptor.resource, hm, ht(hv) )
+                else:
+                    setattr( self.descriptor, hm, ht(hv) )
+            else:
+                get_log(Params.LOG_WARN)\
+                    ("Unrecognized entity header %s", hn)
+
+    def map_to_headers(self):
+        headerdict = HeaderDict()
+        headerdict.update({
+            'Content-Length': self.descriptor.size,
+        })
+#        if self.descriptor.resource:
+#            headerdict.update({
+#                'Content-Location': self.descriptor.resource.url
+#            })
+        if self.descriptor.id: 
+            assert self.cache.mtime > -1, "XXX"
+        headerdict.update({
+            'Last-Modified': self.get_last_modified(),
+        })
+        if self.descriptor.mediatype:
+            headerdict.update({
+                'Content-Type': self.get_content_type(),
+            })
+        if self.descriptor.etag:
+            headerdict.update({
+                'ETag': '"%s"' % self.descriptor.etag,
+            })
+        return headerdict
 
 
-def strip_root(path):
-    if path.startswith(Params.ROOT):
-        path = path[len(Params.ROOT):]
-    if path.startswith(os.sep):
-        path = path[1:]
-    return path
+    ## Proxy lifecycle hooks
 
+    def prepare_request( self, request ):
+        """
+        Protocol is about to proxy the request, prepare the cache
+        and descriptor instances, and return the updated headers.
+        """
+
+        req_headers = request.headers
+
+        get_log(Params.LOG_DEBUG)\
+                ( "%s: Preparing for request to %s", self, self.protocol.url )
+
+        self.init_data( self.protocol.url )
+
+        if not self.descriptor.path:
+            self.init_cache( self.protocol.url )
+            abspath = self.cache.abspath()
+            self.set_data( 'path', abspath )
+            self.set_data( 'mtime', time.time() )
+            get_log(Params.LOG_DEBUG)\
+                    ( '%s: Prepared descriptor at %r', self, abspath )
+
+        else:
+            assert self.descriptor.exists()
+            assert self.descriptor.id
+            self.init_cache( )
+            self.cache.path = self.descriptor.path.replace( Runtime.PARTIAL, '' )
+            self.cache.stat()
+            get_log(Params.LOG_DEBUG)\
+                    ( 'Existing descriptor at %r', self.descriptor.path )
+
+        # Prepare proxied request headers
+        via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
+        if req_headers.setdefault('Via', via) != via:
+            req_headers['Via'] += ', '+ via
+        # XXX: should it do something with encoding?
+        req_headers.pop( 'Accept-Encoding', None )
+        # TODO: RFC 2616 14.35.2 Range requests and partial content response
+        htrange = req_headers.pop( 'Range', None )
+        # TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
+        cache_control = req_headers.pop( 'Cache-Control', None )
+        # TODO: Store relationship with 
+        relationtype = req_headers.pop('X-Relationship', None)
+        # XXX: anonymize, check with [RFC 2616 14.36]
+        referer = req_headers.get('Referer', None)
+        # FIXME: Client may have a cache too that needs to be
+        # validated by the proxy.
+        req_headers.pop( 'If-None-Match', None )
+        req_headers.pop( 'If-Modified-Since', None )
+
+        # Fill in from datastore if we have a local file
+        if self.descriptor.exists():
+
+            self.cache.stat()
+
+            if ( self.cache.partial or self.cache.full ):
+                mdtime = self.get_last_modified()
+
+            if self.cache.partial:
+                assert self.cache.size < self.descriptor.size, \
+                        ( "Cannot be partial", self.cache.size, self.descriptor.size )
+                get_log(Params.LOG_NOTE)\
+                        ('Requesting resume of partial file in cache: '
+                        '%i bytes, %s', self.cache.size, mdtime )
+                req_headers[ 'Range' ] = 'bytes=%i-' % ( self.cache.size,) # self.descriptor.size+1 )
+                req_headers[ 'If-Range' ] = mdtime
+
+            elif self.cache.full:
+                get_log(Params.LOG_INFO)\
+                        ( 'Checking complete file in cache: %s', mdtime )
+                req_headers[ 'If-Modified-Since' ] = mdtime
+                if self.descriptor.etag:
+                    req_headers[ 'If-None-Match' ] = '"%s"' % self.descriptor.etag
+        
+
+        return req_headers
+
+    def finish_request( self ):
+        """
+        Protocol has parsed then response headers and determined the appropiate 
+        Response type.
+        """
+
+        get_log(Params.LOG_INFO) ("%s: Completing request", self)
+
+        if not self.descriptor.id:
+
+            # XXX: allow for opaque moves of descriptors
+#            if self.cache.path != self.descriptor.path:
+#                assert not ( self.cache.partial or self.cache.full )
+#                path = self.descriptor.path
+#                p = len(Runtime.ROOT)
+#                assert path[:p] == Runtime.ROOT, "hmmm"
+#                self.cache.path = path[p:].replace( Runtime.PARTIAL, '' )
+            # /XXX
+
+            # set new data
+            self.update_data()
+            #assert self.descriptor.etag
+
+            res = Resource().find( Resource.url == self.protocol.url )
+            if not res:
+                if not self.descriptor.resource.url:
+                    self.descriptor.resource.url = self.protocol.url
+        else:
+            assert self.cache.abspath() == self.descriptor.path, (
+                    self.cache.abspath(), self.descriptor.path )
+
+        self.open_cache()
+        get_log(Params.LOG_INFO)\
+                ("%s: open_cache %s", self, self.cache.partial or
+                        self.cache.full)
+
+    def prepare_response( self ):
+        args = self.protocol.args()
+        args.update(self.map_to_headers())
+        get_log(Params.LOG_INFO)\
+                ("%s: prepare_response %s", self, args)
+        via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
+        if args.setdefault('Via', via) != via:
+            args['Via'] += ', '+ via
+        args[ 'Connection' ] = 'close'
+        return args
+
+    def finish_response( self ):
+        get_log(Params.LOG_INFO)\
+                ("%s: finish_response", self)
+        size = self.cache.tell()
+        #print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
+        #                size, self.descriptor.size, self.cache.size,\
+        #                self.descriptor.mtime, self.cache.mtime )
+        if size == self.descriptor.size:
+            self.cache.stat()
+            if self.cache.partial:
+# XXX: this should mve into Cache again:
+                abspath = os.path.join( Runtime.ROOT, self.cache.path )
+                assert os.path.exists(
+                        Cache.suffix_ext( abspath, Runtime.PARTIAL )
+                    )
+                os.rename( 
+                        Cache.suffix_ext( abspath, Runtime.PARTIAL ),
+                        abspath 
+                    )
+                os.utime( abspath, ( self.descriptor.mtime, self.descriptor.mtime ) )
+                get_log(Params.LOG_NOTE, 'cache')\
+                        ("%s: Finalized %r at %i", self, abspath, size )
+                self.descriptor.path = abspath
+                self.descriptor.commit()
+        else:
+            get_log(Params.LOG_NOTE, 'cache')\
+                    ("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
+            os.utime( self.descriptor.path, ( self.descriptor.mtime, self.descriptor.mtime ) )
+        #print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
+        #                size, self.descriptor.size, self.cache.size,\
+        #                self.descriptor.mtime, self.cache.mtime )
+        #self.cache.close()
+        #path = self.descriptor.path
+        #url = self.get_content_location()
+        self.finish_data()
+        #self.close()
+
+        get_log(Params.LOG_INFO)\
+                ("ProxyData.finish_response is done. ")
+        return
+# XXX
+        complete = '/tmp/htcache-systemtest3.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt'
+        while not os.path.exists( complete ):
+            log("NO STAT", Params.LOG_CRIT)
+            time.sleep(1)
+        get_log(Params.LOG_INFO)\
+                ("STAT %s", os.stat(complete))
+
+# XXX
+#        if url:
+#            print url, Resource().find( Resource.url == url )
+#        print path, Descriptor().find( Descriptor.path == path )
+    def prepare_static(self):
+        """
+        Set cache location and open any partial or complete file, 
+        then fetch descriptor if it exists. 
+
+        XXX: Even when the current download is still running, this needs to have the
+        descriptor already.
+        """
+        self.init_data( self.protocol.url )
+        self.init_cache( )
+        self.cache.path = self.descriptor.path.replace( Runtime.PARTIAL, '' )
+        self.cache.stat()
+        assert self.descriptor.id,\
+                "Nothing there to open: no descriptor. "
+        assert self.cache.full,\
+                "Nothing there to open: no content. "
+        self.open_cache()
+        #assert self.data.is_open() and self.cache.full(), \
+        #    "XXX: sanity check, cannot have partial served content, serve error instead"
+
+    def __str__(self):
+        return "[ProxyData %s]" % hex(id(self))
 
 ### Descriptor Storage types:
 
-class Descriptor(object):
+SqlBase = declarative_base()
 
-    mapping = [
-        'locations',
-        'mediatype',
-        'size',
-        'etag',
-        'last_modified',
-        'quality_indicator',
-        'encodings',
-        'language',
-        'features',
-        'extension_headers',
-    ]
+
+class SessionMixin(object):
+
     """
-    Item names for each tuple index.
     """
 
-    def __init__(self, data):#, be=None):
-        assert isinstance(data, tuple)
-        if len(data) > len(self.mapping):
-            raise ValueError()
-        self.__data = data
-        self.storage = None
-        #if be != None:
-        #    self.bind(be)
+    sessions = {}
 
-    def __getattr__(self, name):
-        if name in self.mapping:
-            idx = self.mapping.index(name)
-            return self[idx]
+    @staticmethod
+    def get_instance(name='default', dbref=None, init=False, read_only=False):
+        # XXX: read_only
+        if name not in SessionMixin.sessions:
+            assert dbref, "session does not exists: %s" % name
+            session = get_session(dbref, init)
+            #assert session.engine, "new session has no engine"
+            SessionMixin.sessions[name] = session
         else:
-            return super(Descriptor, self).__getattr__(self, name)
+            session = SessionMixin.sessions[name]
+            #assert session.engine, "existing session does not have engine"
+        return session
 
-    @property
-    def data(self):
-        return self.__data
+    @staticmethod
+    def close_instance(name='default', dbref=None, init=False, read_only=False):
+        if name in SessionMixin.sessions:
+            session = SessionMixin.sessions[name]
+        session.close()
 
-    def bind(self, location, storage):
-        self.cache_location = location
-        self.storage = storage
-        return self
+    # XXX: SessionMixin.key_names
+    key_names = []
 
-    def __getitem__(self, idx):
-        if idx >= len(self.data):
-            raise IndexError()
-        #if idx < len(self.data):
-        return self.__data[idx]
-
-    def __setitem__(self, idx, value):
-        self.__data[idx] = value
-
-    def __contains__(self, value):
-        return value in self.__data
-
-    def __iter__(self):
-        return iter(self.__data)
-
-    def update(self, values):# *values, **kwds):
-        if not isinstance(values, Descriptor):
-            assert isinstance(values, tuple), values
-        else:
-            values = values.data
-        _update = ()
-        len_values = len(values)
-        for idx, name in enumerate(self.mapping):
-            if len_values == idx:
-                break
-            if self[idx] != values[idx]:
-                self[idx] = values[idx]
-                _update += (idx,)
-        return _update
+#    def __nonzero__(self):
+#        return self.id != None
+#
+    def key(self):
+        key = {}
+        for a in self.key_names:
+            key[a] = getattr(self, a)
+        return key
 
     def commit(self):
-        ""
-        self.storage[self.cache_location] = self
+        session = SessionMixin.get_instance()
+        session.add(self)
+        session.commit()
 
-    def from_headers(class_, args):
-        for hn in Protocol.HTTP.Cache_Headers:
-            pass
-
-
-class DescriptorStorage(object):
-
-    """
-    Item is the local path to a cached resource.
-    """
-
-    def __init__(self, *params):
-        pass
-
-    def __getitem__(self, path):
-        path = strip_root(path)
-        if path in self:
-            return self.get(path)
-        else:
-            d = Descriptor((None,) * len(Descriptor.mapping))\
-                .bind(path, self)
-            return d
-
-    def __setitem__(self, path, values):
-        if not isinstance(values, Descriptor):
-            assert isinstance(values, tuple)
-        else:
-            values = values.data
-        if path in self:
-            self[path].update(values)
-        else:
-            new_values = self[path]
-            new_values.update(values)
-            self.set(path, new_values)
-
-    def __contains__(self, path):
-        raise AbstractClass()
-
-    def __len__(self):
-        raise AbstractClass()
-
-    def __iter__(self):
-        raise AbstractClass()
-
-    def get(self, path):
-        raise AbstractClass()
-
-    def set(self, path, name, value):
-        raise AbstractClass()
-
-    def commit(self):
-        raise AbstractClass()
-
-    def close(self):
-        raise AbstractClass()
-
-
-class FileStorage(object):
-    def __init__(self):
-        raise "Not implemented: FileStorage"
-    def close(self): pass
-    def update(self, hrds): pass
-
-
-# FIXME: old master
-# class AnyDBStorage(DescriptorStorage):
-class AnyDBStorage(object):
-
-    def __init__(self, path, mode='rw'):
-        if not os.path.exists(path):
-            assert 'w' in mode
-            try:
-                anydbm.open(path, 'n').close()
-            except Exception, e:
-                raise Exception("Unable to create new resource DB at <%s>: %s" %
-                        (path, e))
+    def find(self, *args):
         try:
-            Params.log("Opening %s mode=%s" %(path, mode))
-            self.__be = anydbm.open(path, mode)
-        except anydbm.error, e:
-            raise Exception("Unable to access resource DB at <%s>: %s" %
-                    (path, e))
+            return self.fetch(*args)
+        except NoResultFound, e:
+            get_log(Params.LOG_INFO)\
+                    ( "%s find: No results for %r", self, args )
 
-    def close(self):
-        self.__be.close()
+    def fetch(self, *args):
+        """
+        Keydict must be filter parameters that return exactly one record.
+        """
+        session = SessionMixin.get_instance()
+        return session.query(self.__class__).filter(*args).one()
 
-    def keys(self):
-        return self.__be.keys()
+    def exists(self):
+        return self.id != None
+        return self.fetch() != None 
 
-    def __contains__(self, path):
-        #path = strip_root(path)
-        return self.has(path)
-
-    def __iter__(self):
-        return iter(self.__be)
-
-    def __setitem__(self, path, value):
-        if path in self.__be:
-            self.update(path, *value)
-        else:
-            self.set(path, *value)
-
-    def __getitem__(self, path):
-        return self.get(path)
-
-    def __delitem__(self, path):
-        del self.__be[path]
-
-    def has(self, path):
-        return path in self.__be
-
-    def get(self, path):
-        data = self.__be[path]
-        value = tuple(Params.json_read(data))
-        return Descriptor(value)#, be=self)
-
-    def set(self, path, srcrefs, headers):
-        assert path and srcrefs and headers, \
-            (path, srcrefs, headers)
-        assert isinstance(path, basestring) and \
-            isinstance(srcrefs, list) and \
-            isinstance(headers, dict)
-        mt = headers.get('Content-Type', None)
-        cs = None
-        if mt:
-            p = mt.find(';')
-            if p > -1:
-              match = re.search("charset=([^;]+)", mt[p:].lower())
-              mt = mt[:p].strip()
-              if match:
-                  cs = match.group(1).strip()
-        ln = headers.get('Content-Language',[])
-        if ln: ln = ln.split(',')
-        srcref = headers.get('Content-Location', None)
-        #if srcref and srcref not in srcrefs:
-        #      srcrefs += [srcref]
-        features = {}
-        metadata = {}
-        for hd in ('Content-Type', 'Content-Language', 'Content-MD5',
-              'Content-Location', 'Content-Length', 'Content-Encoding',
-              'ETag', 'Last-Modified', 'Date', 'Vary', 'TCN',
-              'Cache', 'Expires'):
-            if hd in headers:
-                metadata[hd] = headers[hd]
-        self.__be[path] = Params.json_write((srcrefs, mt, cs, ln, metadata, features))
-        self.__be.sync()
-
-    def update(self, path, srcrefs, headers):
-        descr = self.get(path)
-        srcrefs = list(set(srcrefs).union(descr[0]))
-        headers.update(descr[4])
-        self.set(path, srcrefs, headers)
-
-#    def update_descriptor(self, srcref, mediatype=None, charset=None,
-#            languages=[], features={}):
-#        assert not srcrefs or (isinstance(srcrefs, list) \
-#                and isinstance(srcrefs[0], str)), srcrefs
-#        assert not languages or (isinstance(languages, list) \
-#                and isinstance(languages[0], str)), languages
-#        _descr = self.get_descriptor()
-#        if srcrefs:
-#              _descr[0] += srcrefs
-#        if features:
-#              _descr[4].update(features)
-#        self.set_descriptor(*_descr)
-
-#    def set_descriptor(self, srcrefs, mediatype, charset, languages,
-#            features={}):
-#        assert self.cache.path, (self,srcrefs,)
-#        if srcrefs and not (isinstance(srcrefs, tuple) \
-#                or isinstance(srcrefs, list)):
-#            assert isinstance(srcrefs, str)
-#            srcrefs = (srcrefs,)
-#        assert not srcrefs or (
-#                (isinstance(srcrefs, tuple) or isinstance(srcrefs, list)) \
-#                and isinstance(srcrefs[0], str)), srcrefs
+    def __repr__(self):
+        return self.__str__()
 
 
-if os.path.isdir(Params.RESOURCES):
-    Params.descriptor_storage_type = FileStorage
-
-elif Params.RESOURCES.endswith('.db'):
-    Params.descriptor_storage_type = AnyDBStorage
-
-backend = None
-
-def get_backend(main=True):
-    global backend
-    if main:
-        if not backend:
-            backend = Params.descriptor_storage_type(Params.RESOURCES)
-        return backend
-    return Params.descriptor_storage_type(Params.RESOURCES, 'r') 
-
-
-class RelationalStorage(DescriptorStorage):
-
-    def __init__(self, dbref):
-        engine = create_engine(dbref)
-        self._session = sessionmaker(bind=engine)()
-
-    def get(self, url):
-        self._session.query(
-                taxus.data.Resource, taxus.data.Locator).join('lctr').filter_by(ref=url).all()
-
-
-def _is_db(be):
-    # file -s resource.db | grep -i berkeley
-    return os.path.isdir(os.path.dirname(be)) and be.endswith('.db')
-
-def _is_sql(be):
-    # file -s resource.db | grep -i sqlite
-    return \
-        be.startswith('sqlite:///') or \
-        be.startswith('mysql://') or \
-        be.endswith('.sqlite')
-
-#Params.BACKENDS.update(dict(
-#        # TODO: filestorage not implemented
-#        file= (lambda p: os.path.isdir(p), FileStorage),
-#        anydb= (_is_db, AnyDBStorage),
-#        sql= (_is_sql, RelationalStorage)
-#    ))
-#
-# FIXME : old master
-#def init_backend(request, be=Params.BACKEND):
-#
-#    for name in Params.BACKENDS:
-#        if Params.BACKENDS[name][Params.BD_IDX_TEST](be):
-#            return Params.BACKENDS[name][Params.BD_IDX_TYPE](be)
-#
-#    raise Exception("Unable to find backend type of %r" % be)
-
-def get_cache(hostinfo, req_path):
+class Resource(SqlBase, SessionMixin):
     """
-    req_path is a URL path ref including query-part,
-    the backend will determine real cache location
     """
-    # Prepare default cache location
-    cache_location = '%s:%i/%s' % (hostinfo + (req_path,))
-    cache_location = cache_location.replace(':80', '')
-    cache = Cache.load_backend_type(Params.CACHE)(cache_location)
-    Params.log("Init cache: %s %s" % (Params.CACHE, cache), 3)
-    Params.log('Prepped cache, position: %s' % cache.path, 2)
-# XXX: use unrewritten path as descriptor key, need unique descriptor per resource
-    cache.descriptor_key = cache_location
-    return cache
+    __tablename__ = 'resources'
+    id = Column(Integer, primary_key=True)
+    url = Column(String(255), nullable=False)
+#    host = Column(String(255), nullable=False)
+#    path = Column(String(255), nullable=False)
+#    key_names = [id]
+    
+    def __str__(self):
+        return "Resource(%s)" % pformat(dict(
+            id=self.id,
+            url=self.url,
+        ))
 
 
-# psuedo-Main: special command line options allow resource DB queries:
+class Descriptor(SqlBase, SessionMixin):
+    """
+    """
+    __tablename__ = 'descriptors'
 
-def print_info(*paths):
-    import sys
-    recordcnt = 0
-    descriptors = get_backend()
-    for path in paths:
-        if not path.startswith(os.sep):
-            path = Params.ROOT + path
-#        path = path.replace(Params.ROOT, '')
-        if path not in backend:
-            print >>sys.stderr, "Unknown cache location: %s" % path
-        else:
-            print path, backend[path]
-            recordcnt += 1
-    if recordcnt > 1:
-        print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
-    elif recordcnt == 1:
-        print >>sys.stderr, "Found one record"
+    id = Column(Integer, primary_key=True)
+    resource_id = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    resource = relationship( Resource, 
+#            primaryjoin=resource_id==Resource.id, 
+            backref='descriptors')
+    path = Column(String(255), nullable=True)
+    mediatype = Column(String(255), nullable=False)
+    charset = Column(String(255), nullable=True)
+    language = Column(String(255), nullable=True)
+    size = Column(Integer, nullable=True)
+    mtime = Column(Integer, nullable=False)
+    quality = Column(Float, nullable=True)
+    etag = Column(String(255), nullable=True)
+#    key_names = [id]
+   
+    def __str__(self):
+        return "Descriptor(%s)" % pformat(dict(
+            id=self.id,
+            resource_id=self.resource_id,
+            path=self.path,
+            etag=self.etag,
+            size=self.size,
+            charset=self.charset,
+            language=self.language,
+            quality=self.quality,
+            mtime=self.mtime,
+            mediatype=self.mediatype
+        ))
+
+    @staticmethod
+    def find_latest( url ):
+        descriptor = get_backend().query(Descriptor)\
+            .join("resource").filter(
+                Resource.url == url
+            ).order_by(
+                Descriptor.mtime 
+            ).first()
+        return descriptor
+
+
+class Relation(SqlBase, SessionMixin):
+    """
+    """
+    __tablename__ = 'relations'
+    id = Column(Integer, primary_key=True)
+    relate = Column(String(16), nullable=False)
+    revuri = Column(Integer, ForeignKey(Resource.id), nullable=False)
+    reluri = Column(Integer, ForeignKey(Resource.id), nullable=False)
+#    key_names = [id]
+
+    def __str__(self):
+        return "Relation(%s)" % pformat(dict(
+            id=self.id,
+            relate=self.relate,
+            revuri=self.revuri,
+            reluri=self.reluri
+        ))
+
+
+
+#/FIXME
+
+_backends = {}
+
+def get_backend(name='default', read_only=False):
+    if name in _backends:
+        backend = _backends[name]
     else:
-        print >>sys.stderr, "No record found"
+        backend = SessionMixin.get_instance(
+                name='default', 
+                dbref=Runtime.DATA, 
+                init=True,
+                read_only=read_only)
+        _backends[name] = backend
+    return backend
+
+def get_session(dbref, initialize=False):
+    engine = create_engine(dbref)#, encoding='utf8')
+    #engine.raw_connection().connection.text_factory = unicode
+    if initialize:
+        get_log(Params.LOG_DEBUG)\
+                ("Applying SQL DDL to DB %s ", dbref)
+        SqlBase.metadata.create_all(engine)  # issue DDL create 
+        get_log(Params.LOG_INFO)\
+            ("Updated data schema")
+    session = sessionmaker(bind=engine)()
+    return session
+
+
+###
+
+
+# Query commands 
+
+def print_records():
+    rs = get_backend().query(Resource).all()
+    for res in rs:
+        print res
+        for d in res.descriptors:
+            print '\t', str(d).replace('\n', '\n\t')
+
+def print_record(url):
+    get_backend()
+    res = Resource().fetch(Resource.url == url)
+    print res
+    for d in res.descriptors:
+        print '\t', str(d).replace('\n', '\n\t')
+
+def list_locations():
+    backend = get_backend()
+    for res in backend.query(Resource).all():
+        for d in res.descriptors:
+            print d.path
     backend.close()
-    print "End of printinfo"; sys.exit(0)
 
-def print_media_list(*media):
-    "document, application, image, audio or video (or combination)"
-    for m in media:
-        # TODO: documents
-        if m == 'image':
-            for path in backend:
-                res = backend[path]
-                if 'image' in res[1]:
-                    print path
-        if m == 'audio':
-            for path in backend:
-                res = backend[path]
-                if 'audio' in res[1]:
-                    print path
-        if m == 'videos':
-            for path in backend:
-                res = backend[path]
-                if 'video' in res[1]:
-                    print path
-    import sys
-    print "end of media-list"; sys.exit()
+def list_urls():
+    backend = get_backend()
+    for url in backend.resources:
+        res = backend.find(url)
+        print res.url
 
-def find_info(q):
+def print_location(url):
+    backend = get_backend()
+    netpath = url[5:]
+    res = Resource().fetch(Resource.url == netpath)
+    for d in res.descriptors:
+        print d.path
+
+
+# TODO: find_records by attribute query
+def find_records(q):
     import sys
-    global backend
+    backend = get_backend()
     print 'Searching for', q
+
+    attrpath, valuepattern = q.split(':')
+
     for path in backend:
         res = backend[path]
         urls, mime, qs, n, meta, feats = res
         for u in urls:
             if q in u:
                 print path, mime, urls
-# XXX:
 #        for k in props:
 #            if k in ('0','srcref'):
 #                if props[k] in res[0]:
@@ -480,12 +758,58 @@ def find_info(q):
 #                    if res[4][k2] == props[k][k2]:
 #                        print path
     backend.close()
-    print "End of findinfo"; sys.exit(1)
+    get_log(Params.LOG_DEBUG)\
+            ("End of findinfo", Params.LOG_DEBUG)
 
-## Maintenance functions
-def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
+
+# TODO: integrate with other print_info
+def print_info(*paths):
+    backend = get_backend()
+    import sys
+    recordcnt = 0
+    for path in paths:
+        if not path.startswith(os.sep):
+            path = Params.ROOT + path
+#        path = path.replace(Params.ROOT, '')
+        if path not in backend:
+            get_log(Params.LOG_DEBUG)\
+                    ("Unknown cache location: %s", path)
+        else:
+            print path, backend.find(path)
+            recordcnt += 1
+    if recordcnt > 1:
+        print >>sys.stderr, "Found %i records for %i paths" % (recordcnt,len(paths))
+    elif recordcnt == 1:
+        print >>sys.stderr, "Found one record"
+    else:
+        print >>sys.stderr, "No record found"
+    backend.close()
+
+
+def print_media_list(*media):
+    "document, application, image, audio or video (or combination)"
+    backend = get_backend()
+    for m in media:
+        # TODO: documents
+        if m == 'image':
+            for path in backend:
+                res = backend[path]
+                if 'image' in res[1]:
+                    print path
+        if m == 'audio':
+            for path in backend:
+                res = backend[path]
+                if 'audio' in res[1]:
+                    print path
+        if m == 'videos':
+            for path in backend:
+                res = backend[path]
+                if 'video' in res[1]:
+                    print path
+
+def check_data(cache, uripathnames, mediatype, d1, d2, meta, features):
     """
-    References in descriptor cache must exist as file. 
+    References in descriptor cache must exist as file.
     This checks existence and the size property,  if complete.
 
     All rules should be applied.
@@ -493,17 +817,17 @@ def check_descriptor(cache, uripathnames, mediatype, d1, d2, meta, features):
     if not Params.VERBOSE:
         Params.VERBOSE = 1
     pathname = cache.path
-    if cache.partial():
+    if cache.partial:
         pathname += '.incomplete'
-    if not (cache.partial() or cache.full()):
-        Params.log("Missing %s" % pathname)
+    if not (cache.partial or cache.full):
+        log("Missing %s" % pathname)
         return
     if 'Content-Length' not in meta:
-        Params.log("Missing content length of %s" % pathname)
+        log("Missing content length of %s" % pathname)
         return
     length = int(meta['Content-Length'])
     if cache.full() and os.path.getsize(pathname) != length:
-        Params.log("Corrupt file: %s, size should be %s" % (pathname, length))
+        log("Corrupt file: %s, size should be %s" % (pathname, length))
         return
     return True
 
@@ -517,59 +841,61 @@ def validate_cache(pathname, uripathnames, mediatype, d1, d2, meta, features):
 def check_tree(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
-def check_joinlist(pathname, uripathnames, mediatype, d1, d2, meta, features):
+def get_cache(hostinfo, path):
     """
-    Run joinlist rules over cache references.
-
-    Useful during development since 
+    XXX: rewrite path to cache location, ie. instantiate Cache object and
+    return. All location rewriting should be handled here? or use database instead..
     """
-    return True
+    assert False, "write get_cache method"
 
 def check_files():
-    if Params.PRUNE:
-        descriptors = get_backend()
-    else:
-        descriptors = get_backend(main=False)
+    backend = SessionMixin.get_instance(True)
+# XXX old
+    #if Params.PRUNE:
+    #    descriptors = SessionMixin.get_instance()
+    #else:
+    #    descriptors = SessionMixin.get_instance(main=False)
     pcount, rcount = 0, 0
-    Params.log("Iterating paths in cache root location. ")
+    log("Iterating paths in cache root location. ")
+
     for root, dirs, files in os.walk(Params.ROOT):
 
         # Ignore files in root
         if not root[len(Params.ROOT):]:
             continue
 
-#    	rdir = os.path.join(Params.ROOT, root)
+#        rdir = os.path.join(Params.ROOT, root)
         for f in dirs + files:
             f = os.path.join(root, f)
             #if path_ignore(f):
             #    continue
             pcount += 1
-            if f not in descriptors:
+            if f not in backend.descriptors:
                 if os.path.isfile(f):
-                    Params.log("Missing descriptor for %s" % f)
-                    if Params.PRUNE:
+                    log("Missing descriptor for %s" % f)
+                    if Runtime.PRUNE:
                         size = os.path.getsize(f)
-                        if size < Params.MAX_SIZE_PRUNE:
+                        if size < Runtime.MAX_SIZE_PRUNE:
                             os.unlink(f)
-                            Params.log("Removed unknown file %s" % f)
+                            log("Removed unknown file %s" % f)
                         else:
-                            Params.log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
+                            log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
                 elif not (os.path.isdir(f) or os.path.islink(f)):
-                    Params.log("Unrecognized path %s" % f)
-            elif f in descriptors:
+                    log("Unrecognized path %s" % f)
+            elif f in backend.descriptors:
                 rcount += 1
-                descr = descriptors[f]
-                assert isinstance(descr, Descriptor)
+                descr = backend.descriptors[f]
+                assert isinstance(descr, Record)
                 uriref = descr[0][0]
-                Params.log("Found resource %s" % uriref, threshold=1)
+                log("Found resource %s" % uriref, threshold=1)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
                 port = 80
                 if len(descr[0]) != 1:
-                    Params.log("Multiple references %s" % f)
+                    log("Multiple references %s" % f)
                     continue
                 urlparts = urlparse.urlparse(uriref)
                 hostname = urlparts.netloc
-                pathname = urlparts.path[1:] 
+                pathname = urlparts.path[1:]
 # XXX: cannot reconstruct--, or should always normalize?
                 if urlparts.query:
                     #print urlparts
@@ -578,38 +904,38 @@ def check_files():
                 cache = get_cache(hostinfo, pathname)
                 #print 'got cache', cache.getsize(), cache.path
 # end
-    Params.log("Finished checking %s cache locations, found %s resources" % (
+    log("Finished checking %s cache locations, found %s resources" % (
         pcount, rcount))
-    descriptors.close()
-    sys.exit(0)
+    backend.close()
 
 def check_cache():
     #term = Resource.TerminalController()
     #print term.render('${YELLOW}Warning:${NORMAL}'), 'paper is crinkled'
     #pb = Resource.ProgressBar(term, 'Iterating descriptors')
-    if Params.PRUNE:
-        descriptors = get_backend()
-    else:
-        descriptors = get_backend(main=False)
-    refs = descriptors.keys()
+#    if Params.PRUNE:
+#        descriptors = SessionMixin.get_instance()
+#    else:
+#        descriptors = SessionMixin.get_instance(main=False)
+    backend = SessionMixin.get_instance(True)
+
+    refs = backend.descriptors.keys()
     count = len(refs)
-    Params.log("Iterating %s descriptors" % count)
+    log("Iterating %s descriptors" % count)
     for i, ref in enumerate(refs):
-        if Params.VERBOSE > 2:
-            print i, ref
-        descr = descriptors[ref]
-        Params.log("Descriptor data: [%s] %r" %(ref, descr.data,), 2)
+        log("%i, %s" % (i, ref), Params.LOG_DEBUG)
+        descr = backend.descriptors[ref]
+        log("Record data: [%s] %r" %(ref, descr.data,), 2)
         urirefs, mediatype, d1, d2, meta, features = descr
         #progress = float(i)/count
         #pb.update(progress, ref)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
         port = 80
         if len(urirefs) != 1:
-            Params.log("Multiple references %s" % ref)
+            log("Multiple references %s" % ref)
             continue
         urlparts = urlparse.urlparse(urirefs[0])
         hostname = urlparts.netloc
-        pathname = urlparts.path[1:] 
+        pathname = urlparts.path[1:]
 # XXX: cannot reconstruct--, or should always normalize?
         if urlparts.query:
             #print urlparts
@@ -618,7 +944,7 @@ def check_cache():
         cache = get_cache(hostinfo, pathname)
 # end
         act = None
-        if not check_descriptor(cache, *descr):
+        if not check_data(cache, *descr):
             if not Params.PRUNE:
                 continue
             act = True
@@ -629,213 +955,18 @@ def check_cache():
                 if os.path.getsize(path) > Params.MAX_SIZE_PRUNE:
                     if Params.INTERACTIVE:
                         pass
-                    Params.log("Keeping %s" % path)
+                    log("Keeping %s" % path)
                     continue
                 if os.path.isfile(path):
                     print 'size=', cache.getsize() / 1024**2
                     os.unlink(path)
-                    Params.log("Deleted %s" % path)
+                    log("Deleted %s" % path)
                 else:
-                    Params.log("Unable to remove dir %s" % path)
-            del descriptors[ref]
-            Params.log("Removed %s" % cache.path)
-    Params.log("Finished checking %s cache descriptors" % count)
-    descriptors.close()
+                    log("Unable to remove dir %s" % path)
+            del backend.descriptors[ref]
+            log("Removed %s" % cache.path)
+    log("Finished checking %s cache descriptors" % count)
+    backend.close()
     #pb.clear()
-    sys.exit(0)
-
-
-
-
-import sys, re
-
-class TerminalController:
-    """
-    A class that can be used to portably generate formatted output to
-    a terminal.  
-    
-    `TerminalController` defines a set of instance variables whose
-    values are initialized to the control sequence necessary to
-    perform a given action.  These can be simply included in normal
-    output to the terminal:
-
-        >>> term = TerminalController()
-        >>> print 'This is '+term.GREEN+'green'+term.NORMAL
-
-    Alternatively, the `render()` method can used, which replaces
-    '${action}' with the string required to perform 'action':
-
-        >>> term = TerminalController()
-        >>> print term.render('This is ${GREEN}green${NORMAL}')
-
-    If the terminal doesn't support a given action, then the value of
-    the corresponding instance variable will be set to ''.  As a
-    result, the above code will still work on terminals that do not
-    support color, except that their output will not be colored.
-    Also, this means that you can test whether the terminal supports a
-    given action by simply testing the truth value of the
-    corresponding instance variable:
-
-        >>> term = TerminalController()
-        >>> if term.CLEAR_SCREEN:
-        ...     print 'This terminal supports clearning the screen.'
-
-    Finally, if the width and height of the terminal are known, then
-    they will be stored in the `COLS` and `LINES` attributes.
-    """
-    # Cursor movement:
-    BOL = ''             #: Move the cursor to the beginning of the line
-    UP = ''              #: Move the cursor up one line
-    DOWN = ''            #: Move the cursor down one line
-    LEFT = ''            #: Move the cursor left one char
-    RIGHT = ''           #: Move the cursor right one char
-
-    # Deletion:
-    CLEAR_SCREEN = ''    #: Clear the screen and move to home position
-    CLEAR_EOL = ''       #: Clear to the end of the line.
-    CLEAR_BOL = ''       #: Clear to the beginning of the line.
-    CLEAR_EOS = ''       #: Clear to the end of the screen
-
-    # Output modes:
-    BOLD = ''            #: Turn on bold mode
-    BLINK = ''           #: Turn on blink mode
-    DIM = ''             #: Turn on half-bright mode
-    REVERSE = ''         #: Turn on reverse-video mode
-    NORMAL = ''          #: Turn off all modes
-
-    # Cursor display:
-    HIDE_CURSOR = ''     #: Make the cursor invisible
-    SHOW_CURSOR = ''     #: Make the cursor visible
-
-    # Terminal size:
-    COLS = None          #: Width of the terminal (None for unknown)
-    LINES = None         #: Height of the terminal (None for unknown)
-
-    # Foreground colors:
-    BLACK = BLUE = GREEN = CYAN = RED = MAGENTA = YELLOW = WHITE = ''
-    
-    # Background colors:
-    BG_BLACK = BG_BLUE = BG_GREEN = BG_CYAN = ''
-    BG_RED = BG_MAGENTA = BG_YELLOW = BG_WHITE = ''
-    
-    _STRING_CAPABILITIES = """
-    BOL=cr UP=cuu1 DOWN=cud1 LEFT=cub1 RIGHT=cuf1
-    CLEAR_SCREEN=clear CLEAR_EOL=el CLEAR_BOL=el1 CLEAR_EOS=ed BOLD=bold
-    BLINK=blink DIM=dim REVERSE=rev UNDERLINE=smul NORMAL=sgr0
-    HIDE_CURSOR=cinvis SHOW_CURSOR=cnorm""".split()
-    _COLORS = """BLACK BLUE GREEN CYAN RED MAGENTA YELLOW WHITE""".split()
-    _ANSICOLORS = "BLACK RED GREEN YELLOW BLUE MAGENTA CYAN WHITE".split()
-
-    def __init__(self, term_stream=sys.stdout):
-        """
-        Create a `TerminalController` and initialize its attributes
-        with appropriate values for the current terminal.
-        `term_stream` is the stream that will be used for terminal
-        output; if this stream is not a tty, then the terminal is
-        assumed to be a dumb terminal (i.e., have no capabilities).
-        """
-        # Curses isn't available on all platforms
-        try: import curses
-        except: return
-
-        # If the stream isn't a tty, then assume it has no capabilities.
-        if not term_stream.isatty(): return
-
-        # Check the terminal type.  If we fail, then assume that the
-        # terminal has no capabilities.
-        try: curses.setupterm()
-        except: return
-
-        # Look up numeric capabilities.
-        self.COLS = curses.tigetnum('cols')
-        self.LINES = curses.tigetnum('lines')
-        
-        # Look up string capabilities.
-        for capability in self._STRING_CAPABILITIES:
-            (attrib, cap_name) = capability.split('=')
-            setattr(self, attrib, self._tigetstr(cap_name) or '')
-
-        # Colors
-        set_fg = self._tigetstr('setf')
-        if set_fg:
-            for i,color in zip(range(len(self._COLORS)), self._COLORS):
-                setattr(self, color, curses.tparm(set_fg, i) or '')
-        set_fg_ansi = self._tigetstr('setaf')
-        if set_fg_ansi:
-            for i,color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
-                setattr(self, color, curses.tparm(set_fg_ansi, i) or '')
-        set_bg = self._tigetstr('setb')
-        if set_bg:
-            for i,color in zip(range(len(self._COLORS)), self._COLORS):
-                setattr(self, 'BG_'+color, curses.tparm(set_bg, i) or '')
-        set_bg_ansi = self._tigetstr('setab')
-        if set_bg_ansi:
-            for i,color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
-                setattr(self, 'BG_'+color, curses.tparm(set_bg_ansi, i) or '')
-
-    def _tigetstr(self, cap_name):
-        # String capabilities can include "delays" of the form "$<2>".
-        # For any modern terminal, we should be able to just ignore
-        # these, so strip them out.
-        import curses
-        cap = curses.tigetstr(cap_name) or ''
-        return re.sub(r'\$<\d+>[/*]?', '', cap)
-
-    def render(self, template):
-        """
-        Replace each $-substitutions in the given template string with
-        the corresponding terminal control string (if it's defined) or
-        '' (if it's not).
-        """
-        return re.sub(r'\$\$|\${\w+}', self._render_sub, template)
-
-    def _render_sub(self, match):
-        s = match.group()
-        if s == '$$': return s
-        else: return getattr(self, s[2:-1])
-
-class ProgressBar:
-    """
-    A 3-line progress bar, which looks like::
-    
-                                Header
-        20% [===========----------------------------------]
-                           progress message
-
-    The progress bar is colored, if the terminal supports color
-    output; and adjusts to the width of the terminal.
-    """
-    BAR = '%3d%% ${GREEN}[${BOLD}%s%s${NORMAL}${GREEN}]${NORMAL}\n'
-    BAR = '%3d%% ${BOLD}[${BLUE}%s${NORMAL}%s${NORMAL}]${NORMAL}\n'
-    HEADER = '${BOLD}${CYAN}%s${NORMAL}\n\n'
-        
-    def __init__(self, term, header):
-        self.term = term
-        if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
-            raise ValueError("Terminal isn't capable enough -- you "
-                             "should use a simpler progress dispaly.")
-        self.width = self.term.COLS or 75
-        self.bar = term.render(self.BAR)
-        self.header = self.term.render(self.HEADER % header.center(self.width))
-        self.cleared = 1 #: true if we haven't drawn the bar yet.
-        self.update(0, '')
-
-    def update(self, percent, message):
-        if self.cleared:
-            sys.stdout.write(self.header)
-            self.cleared = 0
-        n = int((self.width-10)*percent)
-        sys.stdout.write(
-            self.term.BOL + self.term.UP + self.term.CLEAR_EOL +
-            self.term.BOL + self.term.UP + self.term.CLEAR_EOL +
-            (self.bar % (100*percent, '='*n, '-'*(self.width-10-n))) +
-            self.term.CLEAR_EOL + message.center(self.width))
-
-    def clear(self):
-        if not self.cleared:
-            sys.stdout.write(self.term.BOL + self.term.CLEAR_EOL +
-                             self.term.UP + self.term.CLEAR_EOL +
-                             self.term.UP + self.term.CLEAR_EOL)
-            self.cleared = 1
 
 

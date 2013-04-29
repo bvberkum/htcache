@@ -6,7 +6,8 @@ See README for description.
 """
 import time, os
 from hashlib import md5
-import Cache, Params
+import Cache, Params, Runtime
+from util import *
 
 
 
@@ -20,8 +21,10 @@ class FileTreeQ(Cache.File):
     """
 
     def init(self, path):  
-        Params.log("FileTreeQ.init %r" % path, 5)
-        psep = Params.ENCODE_PATHSEP
+        assert Params.PARTIAL not in path
+        get_log(Params.LOG_DEBUG, 'cache')\
+                ("%s: init %r", self, path)
+        psep = Runtime.ENCODE_PATHSEP
         # encode query and/or fragment parts
         sep = Cache.min_pos(path.find('#'), path.find( '?' )) 
         # sort query vals and turn into dirs
@@ -35,7 +38,7 @@ class FileTreeQ(Cache.File):
                 parts = path[sep+1:].split(';')
             else:
                 parts = [path[sep+1:]]
-            if Params.FileTreeQ_SORT:    
+            if Runtime.FileTreeQ_SORT:    
                 parts.sort()   
                 while '' in parts:
                     parts.remove('')
@@ -44,7 +47,7 @@ class FileTreeQ(Cache.File):
                 path = path + '/' + '/'.join(parts)
         # optional removal of directories in path
         if psep:
-          if sep == -1 or Params.FileTreeQ_ENCODE:
+          if sep == -1 or Runtime.FileTreeQ_ENCODE:
               # entire path
               path = path.replace( '/', psep)
           else:
@@ -52,9 +55,14 @@ class FileTreeQ(Cache.File):
               path = path[:sep].replace( '/', psep) + path[sep:] 
 
         # make archive path    
-        if Params.ARCHIVE:
-            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
-        self.path = os.path.join(Params.ROOT, path)
+        if Runtime.ARCHIVE:
+            path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
+        
+        # add default part
+        if path[-1] == os.sep:
+            path += Params.DEFAULT
+
+        self.path = path
         self.file = None
 
 
@@ -66,7 +74,9 @@ class FileTreeQH(Cache.File):
   """
 
   def init(self, path):
-      Params.log("FileTreeQH.init %r" % path, 5)
+      assert Params.PARTIAL not in path
+      get_log(Params.LOG_DEBUG, 'cache')\
+              ("%s: init %r", self, path)
       # encode query if present
       sep = path.find( '?' )
       # other encoding in query/fragment part        
@@ -83,35 +93,48 @@ class FileTreeQH(Cache.File):
           parts.sort()   
           path = path[ :sep ] + os.sep + '#' + md5(qsep.join(parts)).hexdigest()
       # optional removal of directories in entire path
-      psep = Params.ENCODE_PATHSEP
+      psep = Runtime.ENCODE_PATHSEP
       if psep:
           path = path.replace( '/', psep)
       # make archive path    
-      if Params.ARCHIVE:
-          path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
-      self.path = os.path.join(Params.ROOT, path)
+      if Runtime.ARCHIVE:
+          path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
+        
+          # add default part
+          if path[-1] == os.sep:
+              path += Params.DEFAULT
+
+      self.path = path
       self.file = None
 
 
 class PartialMD5Tree(Cache.File):
     def init(self, path):
-        Params.log("PartialMD5Tree.init %r" % path, 5)
-        if Params.ARCHIVE:
-            path = time.strftime( Params.ARCHIVE, time.gmtime() ) + path 
-        path = os.path.join(Params.ROOT, path)
+        assert Params.PARTIAL not in path
+        get_log(Params.LOG_DEBUG, 'cache')\
+                ("%s: init %r", self, path)
+        if Runtime.ARCHIVE:
+            path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
 
-        s = Params.MAX_PATH_LENGTH - 34
-        if len(path) > Params.MAX_PATH_LENGTH:
+        s = Params.MAX_PATH_LENGTH - 34 - len(Runtime.ROOT)
+        if len(path) + len(Runtime.ROOT) > Params.MAX_PATH_LENGTH:
             path = path[:s] + os.sep + '#' + md5(path[s:]).hexdigest()
+        
+        # add default part
+        if path[-1] == os.sep:
+            path += Params.DEFAULT
+
         self.path = path            
 
 class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
     def init(self, path):
-        Params.log("FileTree.init %r" % path, 5)
+        assert Params.PARTIAL not in path
+        get_log(Params.LOG_DEBUG, 'cache')\
+                ("%s: init %r", self, path)
         path2 = path
-        if Params.ARCHIVE:
-            path2 = time.strftime( Params.ARCHIVE, time.gmtime() ) + path2
-        path2 = os.path.join(Params.ROOT, path2)
+        if Runtime.ARCHIVE:
+            path2 = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path2
+        path2 = os.path.join(Runtime.ROOT, path2)
         if len(path2) >= Params.MAX_PATH_LENGTH:
             sep = Cache.min_pos(path2.find('#'), path2.find( '?' )) 
             if sep != -1:
@@ -122,58 +145,55 @@ class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
         else:                    
             FileTreeQ.init(self, path)
 
+    def __str__(self):
+        return "[FileTree %s]" % hex(id(self))
+
 
 class RefHash(Cache.File):
 
     def __init__(self, path):
-        Params.log("RefHash.__init__ %r" % path, 5)
+        get_log(Params.LOG_DEBUG, 'cache')\
+                ("RefHash.__init__ %r", path)
         super(RefHash, self).__init__(path)
         self.refhash = md5(path).hexdigest()
-        self.path = Params.ROOT + self.refhash
+        self.path = self.refhash
         self.file = None
-        if not os.path.exists(Params.ROOT + Params.PARTIAL):
-            os.mkdir(Params.ROOT + Params.PARTIAL)
+        if not os.path.exists(Runtime.ROOT + Runtime.PARTIAL):
+            os.mkdir(Runtime.ROOT + Runtime.PARTIAL)
 
     def open_new(self):
-        self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
-        Params.log('Preparing new file in cache: %s' % self.path, 2)
-        self.file = open( self.path, 'w+' )
+        self.path = Runtime.PARTIAL + os.sep + self.refhash
+        get_log(Params.LOG_DEBUG, 'cache')\
+                ('%s: Preparing new file in cache: %s', self, self.path)
+        self.file = open( self.abspath(), 'w+' )
 
     def open_full(self):
-        self.path = Params.ROOT + self.refhash
+        self.path = self.refhash
         super(RefHash, self).open_full()
 
     def open_partial(self, offset=-1):
-        self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
-        self.mtime = os.stat( self.path ).st_mtime
-        self.file = open( self.path, 'a+' )
+        self.path = Runtime.PARTIAL + os.sep + self.refhash
+        self.mtime = os.stat( self.abspath() ).st_mtime
+        self.file = open( self.abspath() , 'a+' )
         if offset >= 0:
             assert offset <= self.tell(), 'range does not match file in cache'
             self.file.seek( offset )
             self.file.truncate()
-        Params.log('Resuming partial file in cache at byte %i' % self.tell(), 2)
+        get_log(Params.LOG_INFO, 'cache')\
+                ('Resuming partial file in cache at byte %i', self.tell())
 
     def remove_partial(self):
-        self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
-        os.remove( self.path )
-        Params.log("Dropped partial file.", 2)
+        self.path = Runtime.PARTIAL + os.sep + self.refhash
+        os.remove( self.abspath() )
+        get_log(Params.LOG_NOTE, 'cache')\
+                ("Dropped partial file.")
 
     def partial( self ):
-        self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
-        return os.path.isfile( self.path ) and os.stat( self.path )
+        self.path = Runtime.PARTIAL + os.sep + self.refhash
+        return os.path.isfile( self.abspath() ) and os.stat( self.abspath() )
 
     def full( self ):
-        self.path = Params.ROOT + self.refhash
-        return os.path.isfile( self.path ) and os.stat( self.path )
-
-    def close( self ):
-        self.path = Params.ROOT + Params.PARTIAL + os.sep + self.refhash
-        size = self.tell()
-        self.file.close()
-        if self.mtime >= 0:
-            os.utime( self.path, ( self.mtime, self.mtime ) )
-        if self.size == size:
-            os.rename( self.path, Params.ROOT + self.refhash )
-            Params.log('Finalized %s' % self.path, 2)
+        self.path = self.refhash
+        return os.path.isfile( self.abspath() ) and os.stat( self.abspath() )
 
 

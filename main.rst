@@ -4,16 +4,25 @@
 **htcache** aims to be a versatile caching and rewriting HTTP and FTP proxy
 in Python. It is a fork of http-replicator 4.0 alpha 2. See CHANGELOG.
 
-It is developed for single user use but with certain acknowledgements works fine 
-for real networked use. Notably there is no proxy authentication planned so all 
-functions are user available.
+This serves as a technical (design) documentation.
+Various road signs are given up until section _`Design`, 
+there starts the real specifications.
 
-Tests
+Versions
+--------
+Branches
     master
         - Trying to keep it steady.
         - Does currently not run stable continuously.
+        - Intend to get sqlstore back into master once that matures, then see
+          about other branches.  
+
+    test
+        - Must make this unstable branch.
 
     dev*
+        - Main dev is integration of other development.
+
         dev_cachemaint (current)
             Cache maintenance routines.
 
@@ -45,7 +54,12 @@ Tests
             - Revision certain resources, always keeping a once retrieved and
               served version.
         dev_relstore
-            Need to get simple relational storage.
+            - (dandy) 35 passed checks, 8 errors
+            :unit-test:  
+                - (dandy) 36 passed checks, 7 errors  
+
+            Need to get simple relational storage.  This is suspended in favor
+            of dev_sqlstore
         dev_dhtmlui
             - this injects JS, carefil to merge while Params is not externalized/contained.
             - in sync with master, dev_proxyreq, dev_domaindb
@@ -54,8 +68,10 @@ Tests
                 - (dandy) 4 passed checks, 23 errors
             - add card index for URL's something like a step-up to a bookmark manager
             - in sync with master, dev_proxyreq
+        dev_sqlstore
+            - Working on SA backend.
+            - Need to get chunked transport working again and test from there.  
 
-branches
     dev
         - New reintegration of previous branches
         - Now also running on iris (old debian) but with more errors.  
@@ -69,6 +85,8 @@ History
 -------
 v0.3
     42 tests, 1 failure.
+
+See changelog for details.
 
 Status
 ------
@@ -142,8 +160,79 @@ Also create files in /etc/htcache:
 * rules.nocache
 * rules.sort
 
-Overview
---------
+Configuration
+~~~~~~~~~~~~~
+There is no separate configuration file, see Params.py and init.sh for
+option arguments to the program, and for their default settings. Other settings
+are given in the rewrite and rules files described before.
+
+The programs options are divided in three parts, the first group affects
+the proxy server, which is the default action.
+
+User/system settings are provided using GNU/POSIX Command Line options.
+These are roughly divided in three parts; the first group affects
+the proxy server, which is the default action. The other two query or process
+cached data, and are usefull for maintenance. Note that maintenance may need
+exclusive write access to the cache and descriptor backends, meaning don't run
+with active proxy.
+
+See ``htcache [-h|--help]``.
+
+Backends
+_____________
+htcache uses a file-based Cache which may produce a file-tree similar to
+that of ``wget -r``.
+This can create problems with long filenames and the characters that appear
+in the various URL parts. 
+
+Additional backends can deal with this issue (``--cache TYPE``).
+The default backend was Cache.File which is compatible with ``wget -r`` but
+is inadequate for general use as web proxy. The new default caches.FileTreeQ
+combines some aspects desirable to deal with a wider range of resources.
+
+- XXX: caches.FileTreeQ - encodes each query argument into a separate directory,
+  the first argument being prefixed with '?'. 
+
+- caches.FileTreeQH - Converts query into a hashsum. This one makes a bit more
+  sense because queries are not hierarchical. The hashsum is encoded to a
+  directory, the name prefixed with '#'.
+
+- caches.PartialMD5 - only encodes the excess part of the filename, the limit
+  being hardcoded to 256 characters.
+
+- caches.FileTree - combines above three methods.
+
+- caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
+  filename. Simple but effective.
+
+Cache options
+________________
+The storage location is futher affected by ``--archive`` and ``--nodir``.
+
+Regular archival of a resources is possible by prefixing a formatted date to
+the path. Ie. '%Y/%M/%d' would store a copy and maintain updates of a
+resource for every day. Prefixing a timestamp would probably store a new copy
+for each request.
+
+This option (``--archive FMT``) results in lots of redundant data. It also
+makes static, off-line proxy operation on the resulting filesystem tree
+impossible.
+
+The nodir parameter accepts a replacement for the directory separator Nnd
+stores the path in a single filename. This may affect FileTreeQ.
+
+
+Documentation
+-------------
+No further manual guidance is given.
+
+Code should document implementation, and should refer to specs given below
+for specific requirements.
+
+
+Design
+------
+XXX:
 htcache client/server flow with emphasis on different types
 of request and response sequences::
 
@@ -202,111 +291,80 @@ and response messages. Not all are implemented.
 
 See the section `Rule Syntax`_ for the exact syntax.
 
-Fiber
-~~~~~
-HTCache is a fork of http-replicator and the main script follows the same
-implementation using fibers. It has a bit more elaborated message handling::
+
+1. Asynchronous core: Fiber
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+HTCache is a fork of http-replicator and the main script follows roughly the same handler
+and no insignificant changes to ``fiber.py``.
+
+It has a bit more elaborated message handling in the protocol part and renamed
+some of it::
 
    HtRequest ----> CachingProtocol --------get--> DirectResponse (3)
                       |            `----nocache-> Blocked(Image)ContentResponse (1)
                       |            `--------ok--> DataResponse
-                      |            `--------ok--> RewrittenDataResponse (6)
+                      |            `--------ok--> XXX:RewrittenDataResponse (6)
                       `- HttpProtocol ------ok--> (Chunked)DataResponse
                       |               `--error--> BlindResponse
                       `- FtpProtocol -----------> DataResponse
                                      `----------> NotFoundResponse
 
-HtRequest reads incoming request message and determines the protocol for the
-rest of the session. Protocol will wrap the incoming data, the parsed request
-header of that data and if needed send the actual message. Upon receiving a
-response it parses the message header and determines the appropiate response.
+The HtRequest class reads incoming request message and determines the protocol 
+for the rest of the session. Protocol will wrap the incoming data, the parsed 
+request header of that data and if needed send the actual message. Upon receiving
+a response it parses the message header and determines the appropiate response.
 
-TODO: Rewriting and content filtering is not implemented.
+XXX: states
 
-Internal server
-~~~~~~~~~~~~~~~
-Beside serving in static mode (cached content directly from local storage, w/o
-server header), static responses may also include content generated by the proxy
-itself.
 
-/echo
-    Echo the request message.
-/reload
-    Reload the server, usefull while writing code.
-/htcache.js
-    The HTCache DHTML client may expose proxy functionality for retrieved
-    content. It is included by setting Params.DHTML_CLIENT.
+2. Cache backend
+~~~~~~~~~~~~~~~~
+There are several types from which may be instantiated. 
+The type is fixed by configuration and so it may change.
 
-Configuration
-~~~~~~~~~~~~~
-There is no separate configuration file, see Params.py and init.sh for
-option arguments to the program, and for their default settings. Other settings
-are given in the rewrite and rules files described before.
+The single parameter to the type is the relative path for 
+which a storage is requested. 
 
-The programs options are divided in three parts, the first group affects
-the proxy server, which is the default action.
+The backend once instantiated prepares the location and then 
+does a stat on any cached content present.
 
-User/system settings are provided using GNU/POSIX Command Line options.
-These are roughly divided in three parts; the first group affects
-the proxy server, which is the default action. The other two query or process
-cached data, and are usefull for maintenance. Note that maintenance may need
-exclusive write access to the cache and descriptor backends, meaning don't run
-with active proxy.
+Its size will correspond to that of the remote resource, or
+the end of the partial download.
+A tag within the path indicates where the content is complete.
 
-See ``htcache [-h|--help]``.
+The content file has its mtime adjusted to the server reported Last-Modified
+time. 
 
-Cache backends
-______________________
-htcache uses a file-based Cache which may produce a file-tree similar to
-that of ``wget -r`` (except if ``--nodir`` or ``--archive`` is in effect).
-This can create problems with long filenames and the characters that appear
-in the various URL parts.
+The file size, mtime and presence of the partial-tag is used in constructing
+subsequent requests for the same resource, and should implement proper
+cache validation.
 
-Additional backends can deal with this issue (``--cache TYPE``).
-The default backend was Cache.File which is compatible with ``wget -r`` but
-is inadequate for general use as web proxy. The new default caches.FileTreeQ
-combines some aspects desirable to deal with a wider range of resources.
 
-- caches.FileTreeQ - encodes each query argument into a separate directory,
-  the first argument being prefixed with '?'. FIXME: does not solve anything?
-- caches.FileTreeQH - Converts query into a hashsum. This one makes a bit more
-  sense because queries are not hierarchical. The hashsum is encoded to a
-  directory, the name prefixed with '#'.
-- caches.PartialMD5 - only encodes the excess part of the filename, the limit
-  being hardcoded to 256 characters.
-- caches.FileTree - combines above three methods.
-- caches.RefHash - simply encodes full URI into MD5 hex-digest and use as
-  filename. Simple and effective.
+3. Descriptor backend
+~~~~~~~~~~~~~~~~~~~~~
+Not everything about a cachable resource can be recorded on the filesystem, 
+unless we use an AsIs storage and store the message entirely but obscuring its 
+contents for other applications.
 
-Cache options
-_______________
-The storage location is futher affected by ``--archive`` and ``--nodir``.
+The storage should contain the normalized data. The exact model to be defined
+along the way.
 
-Regular archival of a resources is possible by prefixing a formatted date to
-the path. Ie. '%Y/%M/%d' would store a copy and maintain updates of a
-resource for every day. Prefixing a timestamp would probably store a new copy
-for each request.
+The data is created once the server reports status OK and is ready to
+start transferring content.
 
-This option (``--archive FMT``) results in lots of redundant data. It also
-makes static, off-line proxy operation on the resulting filesystem tree
-impossible.
+The data supplements the file metadata primarily by the etag for cache
+validation.
+Perhaps the etag when better understood can be used in the Cache backend.
 
-The nodir parameter accepts a replacement for the directory separator and
-stores the path in a single filename. This may affect FileTreeQ.
+The data should be usable to reconstruct at least the full entity headers
+without contacting the origin server. This is called static mode.
 
-Descriptor backends
-____________________
+Concurrent requests for the same resource are put on hold until the 
+first request commits the descriptor. Once a static initialization is possible,
+subsequent requests can skip the protocol and join in on the running 
+download by initializing a new response object. 
 
-cache-path <=> uris
-cache-path => headers
-
-The descriptor backend (which contains URI, mediatype, charset, language and
-other resource-header data) is by default a flat index DB storage.
-No additional backends available at this time.
-
-TODO: a file-based header storage or perhaps even an Apache mod_asis
-compatible storage are under consideration. Depending on query/maintenance
-requirements.
+TODO: expiration
 
 
 Rule Syntax
@@ -349,4 +407,49 @@ filter.{req,res,resp}.filter::
 
 This feature is under development.
 Rewriting content based on above message matching is planned.
+
+2. Internal server
+~~~~~~~~~~~~~~~~~~
+Beside serving in static mode (cached content directly from local storage, w/o
+server header), static responses may also include content generated by the proxy
+itself. In this double behaviour, it provides the following paths:
+
+/echo
+    Echo the request message.
+/reload
+    Reload the server, usefull while writing code.
+/htcache.js
+    The HTCache DHTML client may expose proxy functionality for retrieved
+    content. It is included by setting Params.DHTML_CLIENT.
+
+
+----
+
+Two to three separate filesystem trees are kept beneath the cache root.
+
+- SHA1 hashing during new resource fetch
+
+::  
+
+    /var/
+      cache/
+        sha1/
+          <sha1sum>        Resource Contents
+        urimd5/      
+          <md5sum>/*       Timestamped symlink to contents
+          <md5sum>.uriref  (optional) Normalized URI
+          <md5sum>.headers (optional) As-is header storage
+        archive/
+          
+        www/*              wget -r tree symlinking to urimd5
+
+The first two are always applied. Storing uriref and headers could be optional.
+For queries it may be nice to create indices in flat db's.
+The wget tree is applied for all compatible URIs, ie. those < 256 chars.
+  
+XXX: could a deeper tree be created by symlinking? think so..
+
+----
+
+See also notes on `Cache Control <control.rst>`_
 

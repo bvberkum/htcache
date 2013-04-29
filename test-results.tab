@@ -1,18 +1,69 @@
 # Date, Host, Branch, Revision, Testsuite, Passed, Errors
-2012-11-10 15:39:18+01:00, dandy, master, 7954b6376e9da77bd0baafef7efedc43a81d09ee, system, 6, 4
-2012-11-10 15:42:44+01:00, dandy, master, 134e068085340e2d985086a0a537b66eddf71aea, unit, 37, 6
-2012-11-10 15:47:02+01:00, dandy, dev_proxyreq, 4e7e2e0aa2cd775c224490cb4caac0709e042f77, unit, 35, 8
-2012-11-10 15:48:02+01:00, dandy, dev_proxyreq, 4e7e2e0aa2cd775c224490cb4caac0709e042f77, system, 6, 5
-2012-11-10 15:54:08+01:00, dandy, dev_cachemaint, 2f72db3d8967546141c58a584af9f0217f108ac4, system, 11, 6, 5
-2012-11-10 15:56:16+01:00, dandy, dev_cachemaint, 2f72db3d8967546141c58a584af9f0217f108ac4, unit, 43, 36, 7
-2012-11-10 15:57:47+01:00, dandy, dev_domaindb, bbe26784bfbd13f066ad25ee4d86c0a77b2c56ec, unit, 35, 8
-2012-11-10 16:00:30+01:00, dandy, dev_domaindb, bbe26784bfbd13f066ad25ee4d86c0a77b2c56ec, system, 6, 5
-2012-11-10 16:05:11+01:00, dandy, master, 4cf0ac4a17f51ca923a63b334e6b49751415b74f, unit, 38, 5
-2012-11-10 16:08:28+01:00, dandy, dev_proxyreq, 2a97d7a8ad2f27aa922cb7999f3dfb1d7fbb8bb5, unit, 37, 6
-2012-11-10 16:33:42+01:00, dandy, master, 83e8244a011440acbc9295ada77e9b7b3ff5cdc6, system, 6, 5
-2012-11-10 16:35:09+01:00, dandy, master, 83e8244a011440acbc9295ada77e9b7b3ff5cdc6, unit, 31, 12
-2012-11-10 16:39:02+01:00, dandy, dev_proxyreq, 76d91f20643c9b39b8a1ce71fa48f98df8c85b46, unit, 26, 17
-2012-11-10 16:39:21+01:00, dandy, dev_proxyreq, 76d91f20643c9b39b8a1ce71fa48f98df8c85b46, system, 6, 5
-2012-11-10 16:40:42+01:00, dandy, dev_domaindb, 0cbaa154d231dcf98cfd4fe7df5151e34c742632, system, 6, 5
-2012-11-10 16:41:32+01:00, dandy, dev_domaindb, 0cbaa154d231dcf98cfd4fe7df5151e34c742632, unit, 23, 20
+2012-11-10 15:39:18+01:00, dandy, master, 7954b6376e9da77bd0baafef7efedc43a81d09ee, protocol, 6, 4
+2012-11-10 15:42:44+01:00, dandy, master, 134e068085340e2d985086a0a537b66eddf71aea, system, 37, 6
+2012-11-10 15:47:02+01:00, dandy, dev_proxyreq, 4e7e2e0aa2cd775c224490cb4caac0709e042f77, system, 35, 8
+2012-11-10 15:48:02+01:00, dandy, dev_proxyreq, 4e7e2e0aa2cd775c224490cb4caac0709e042f77, protocol, 6, 5
+2012-11-10 15:54:08+01:00, dandy, dev_cachemaint, 2f72db3d8967546141c58a584af9f0217f108ac4, protocol, 6, 5
+2012-11-10 15:56:16+01:00, dandy, dev_cachemaint, 2f72db3d8967546141c58a584af9f0217f108ac4, system, 36, 7
+2012-11-10 15:57:47+01:00, dandy, dev_domaindb, bbe26784bfbd13f066ad25ee4d86c0a77b2c56ec, system, 35, 8
+2012-11-10 16:00:30+01:00, dandy, dev_domaindb, bbe26784bfbd13f066ad25ee4d86c0a77b2c56ec, protocol, 6, 5
+2012-11-10 16:05:11+01:00, dandy, master, 4cf0ac4a17f51ca923a63b334e6b49751415b74f, system, 38, 5
+2012-11-10 16:08:28+01:00, dandy, dev_proxyreq, 2a97d7a8ad2f27aa922cb7999f3dfb1d7fbb8bb5, system, 37, 6
+2012-11-10 16:35:09+01:00, dandy, master, 83e8244a011440acbc9295ada77e9b7b3ff5cdc6, system, 31, 12
+2012-11-10 16:39:02+01:00, dandy, dev_proxyreq, 76d91f20643c9b39b8a1ce71fa48f98df8c85b46, system, 26, 17
+2012-11-10 16:39:21+01:00, dandy, dev_proxyreq, 76d91f20643c9b39b8a1ce71fa48f98df8c85b46, protocol, 6, 5
+2012-11-10 16:40:42+01:00, dandy, dev_domaindb, 0cbaa154d231dcf98cfd4fe7df5151e34c742632, protocol, 6, 5
+2012-11-10 16:41:32+01:00, dandy, dev_domaindb, 0cbaa154d231dcf98cfd4fe7df5151e34c742632, system, 23, 20
 2012-11-10 16:42:33+01:00, dandy, dev_dhtmlui, d7a655b6189cbb73b49b6be9285e98a9849a2613, unit, 24, 19
+2012-12-27 00:34:22+01:00, dandy, dev, 4550a2c5443306e25f68be04398011b6dec00d08, protocol, 1, 70
+2012-12-27 00:38:21+01:00, dandy, dev, 4550a2c5443306e25f68be04398011b6dec00d08, system, 0, 6
+2012-12-27 00:50:40+01:00, dandy, dev, 1b9c8fca9b75a8a6120c0a38beb997e4d984ef91, protocol, 1, 70
+2012-12-27 01:02:34+01:00, dandy, dev, 1b9c8fca9b75a8a6120c0a38beb997e4d984ef91, system, 32, 17
+2012-12-27 01:22:41+01:00, dandy, dev_cachemaint, 833673c6e4bbb4943b12dcb576c445be55d1ded6, system, 31, 18
+2012-12-27 01:22:45+01:00, dandy, dev_cachemaint, 833673c6e4bbb4943b12dcb576c445be55d1ded6, protocol, 1, 70
+2012-12-30 21:43:06+01:00, dandy, dev_optparse, 56aa729598a752ff47fe53e6892e8db110fb000d, system, 14, 3
+2012-12-30 21:43:13+01:00, dandy, dev_optparse, 56aa729598a752ff47fe53e6892e8db110fb000d, protocol, 1, 70
+2012-12-31 01:23:37+01:00, dandy, dev_relstore, fb8da916fd62c8b3f59ed074f09a1b3da7e5f886, unit, 0, 0
+2013-01-03 06:50:03+01:00, dandy, dev_sqlstore, 79a29fd44d6a172c31c32fd0d4e1e603cdd0d45c, system, 28, 24
+2013-01-03 06:50:07+01:00, dandy, dev_sqlstore, 79a29fd44d6a172c31c32fd0d4e1e603cdd0d45c, protocol, 1, 70
+2013-01-03 21:43:27+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, unit, 0, 3
+2013-01-03 21:44:17+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, protocol, 1, 70
+2013-01-03 22:22:59+01:00, dandy, dev_sqlstore, b78fd9ded9b27afba34c53abc5b81659d2c5b155, system, 30, 25
+2013-01-04 02:33:58+01:00, dandy, dev_sqlstore, 613cb1771aa3944c820d4cdc140307d2efbe83af, unit, 0, 0
+2013-01-04 07:29:28+01:00, dandy, master, f868945453ebbf1e9d3ee85a6a509620f8d60395, unit, 38, 5
+2013-01-04 07:29:37+01:00, dandy, master, f868945453ebbf1e9d3ee85a6a509620f8d60395, system, 5, 24
+2013-01-04 04:31:03+01:00, dandy, dev_sqlstore, 613cb1771aa3944c820d4cdc140307d2efbe83af, protocol, 1, 70
+2013-01-04 05:25:22+01:00, dandy, dev_sqlstore, 613cb1771aa3944c820d4cdc140307d2efbe83af, system, 48, 13
+2013-01-04 05:31:22+01:00, dandy, test_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, unit, 0, 0
+2013-01-04 05:31:23+01:00, dandy, test_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, system, 0, 0
+2013-01-04 05:31:34+01:00, dandy, test_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, protocol, 1, 78
+2013-01-04 05:32:08+01:00, dandy, test_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, system, 0, 0
+2013-01-04 05:32:58+01:00, dandy, test_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, system, 48, 13
+2013-01-04 05:36:00+01:00, dandy, test_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, system, 48, 14
+2013-01-04 06:37:47+01:00, dandy, dev_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, system, 45, 24
+2013-01-04 06:37:53+01:00, dandy, dev_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, protocol, 1, 70
+2013-01-04 06:40:06+01:00, dandy, dev_sqlstore, 0adb495e1af7ac9c58eb99b843505c524e157b93, unit, 0, 0
+2013-01-04 23:21:51+01:00, dandy, dev_sqlstore, 6774aec43d1d28d3eb812d0f815dfdad90eb4e71, system, 43, 28
+2013-01-12 13:24:46+01:00, dandy, dev_sqlstore, 25992e806b2bd763f2456f3fbb770d3ffc5f5eff, unit, 0, 0
+2013-01-12 13:25:44+01:00, dandy, dev_sqlstore, 25992e806b2bd763f2456f3fbb770d3ffc5f5eff, system, 40, 31
+2013-01-12 13:26:04+01:00, dandy, dev_sqlstore, 25992e806b2bd763f2456f3fbb770d3ffc5f5eff, protocol, 1, 70
+2013-01-12 14:05:14+01:00, dandy, dev_sqlstore, 32d8829fed0aea83a3835cf12c82dce6edcde108, unit, 5, 0, 2
+2013-01-12 14:06:05+01:00, dandy, dev_sqlstore, 32d8829fed0aea83a3835cf12c82dce6edcde108, system, 43, 28
+2013-01-12 14:06:11+01:00, dandy, dev_sqlstore, 32d8829fed0aea83a3835cf12c82dce6edcde108, protocol, 1, 70
+2013-04-27 14:14:24+02:00, dandy, dev_optparse, 2742b66d32651fa5a1f15d97c7f687f141b916ed, system, 0, 6
+2013-04-27 14:14:33+02:00, dandy, dev_optparse, 2742b66d32651fa5a1f15d97c7f687f141b916ed, protocol, 1, 71
+2013-04-28 22:26:33+02:00, dandy, dev_sqlstore, 04708a4cb78cbe3c335e5c6f44fdea8674c4d805, unit, 7, 0, 0
+2013-04-28 22:27:34+02:00, dandy, dev_sqlstore, 04708a4cb78cbe3c335e5c6f44fdea8674c4d805, system, 54, 19
+2013-04-28 22:27:40+02:00, dandy, dev_sqlstore, 04708a4cb78cbe3c335e5c6f44fdea8674c4d805, protocol, 1, 78
+2013-04-29 16:26:47+02:00, dandy, dev_sqlstore, c9c16de5f6506c68c72aa1f8a16aad0be6716ed0, unit, 7, 0, 0
+2013-04-29 16:27:52+02:00, dandy, dev_sqlstore, c9c16de5f6506c68c72aa1f8a16aad0be6716ed0, system, 53, 28
+2013-04-29 16:28:03+02:00, dandy, dev_sqlstore, c9c16de5f6506c68c72aa1f8a16aad0be6716ed0, protocol, 1, 79
+2013-04-29 16:30:45+02:00, dandy, test_sqlstore, 32d0aee94d3c29770ce0586af1deb338939d0331, unit, 7, 0, 0
+2013-04-29 16:31:58+02:00, dandy, test_sqlstore, 32d0aee94d3c29770ce0586af1deb338939d0331, system, 53, 28
+2013-04-29 16:32:04+02:00, dandy, test_sqlstore, 32d0aee94d3c29770ce0586af1deb338939d0331, protocol, 1, 78
+2013-04-29 17:05:19+02:00, dandy, test_sqlstore, 87d091b6e7b85255ca11147d76cdc8665cd1497c, unit, 7, 0, 0
+2013-04-29 18:15:22+02:00, dandy, test_sqlstore, 87d091b6e7b85255ca11147d76cdc8665cd1497c, system, 53, 29
+2013-04-29 17:06:37+02:00, dandy, test_sqlstore, 87d091b6e7b85255ca11147d76cdc8665cd1497c, protocol, 1, 78
+2013-04-29 18:22:55+02:00, dandy, dev, 1213e37909038e969640698731e806927c61e2cd, unit, 7, 0, 0
+2013-04-29 18:24:04+02:00, dandy, dev, 1213e37909038e969640698731e806927c61e2cd, system, 53, 29
+2013-04-29 18:24:09+02:00, dandy, dev, 1213e37909038e969640698731e806927c61e2cd, protocol, 1, 79

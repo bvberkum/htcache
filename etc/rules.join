@@ -1,0 +1,11 @@
+# 
+# Regex rewriting of cache location
+#
+# Comments with two leading pound-signs are input-URLs for testing local rules
+#
+##tools.ietf.org/html/rfc2616
+(tools\.ietf\.org)/(.*) media/site/\1/\2
+
+##www.ietf.org/rfc/rfc2616.txt
+(www\.ietf\.org)/(rfc/rfc.*\.txt) media/site/\1/\2
+

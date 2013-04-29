@@ -6,20 +6,27 @@ TODO: determine cachability.
 """
 import os, socket, time
 
-import Params, Protocol, Resource
+import Params, Protocol, Runtime
 from HTTP import HTTP
+from util import *
 
 
 
 class HtRequest:
 
     """
-    The single type for requests supported by htcache.
-    This should cover HTTP and FTP.
+    The single type for requests acceptect by htcache. This should cover HTTP
+    and FTP.
 
-    HtRequest.recv() wil finish once the entire request has been read,
-    and choose the appropiate Protocol from HttpProtocol, FtpProtocol, or
-    BlindProtocol.
+    This gets fed data by fiber from the incoming socket, which is parsed as
+    a regular MIME message. The parser expects an HTTP-esque request line and
+    request headers.
+
+    Once the entire request including message body has been read and buffered, 
+    HtRequest.recv() wil finish and choose the appropiate Protocol for fiber to 
+    continue with.
+
+    XXX: HtRequest may want to skip buffering large uploads into memory.
     """
 
     Protocol = None
@@ -28,6 +35,7 @@ class HtRequest:
         self.__parse = self.__parse_head
         self.__recvbuflen = 0
         self.__recvbuf = ''
+        self.__scheme = self.__host = self.__port = self.__reqpath = None
 
     def __parse_head( self, chunk ):
 
@@ -37,16 +45,18 @@ class HtRequest:
         """
 
         eol = chunk.find( '\n' ) + 1
-        if eol == 0:
-          return 0
+        assert eol > 0
 
         line = chunk[ :eol ]
 
-        Params.log('Client sends %r'%Params.print_str(line, 96), threshold=1)
+        get_log(Params.LOG_NOTE, 'request')\
+                ('Client sends %r', print_str(line, 96))
+
         fields = line.split()
-        assert len( fields ) == 3, 'invalid header line: %r' % line
-        self.__verb, self.__reqpath, self.__prototag = fields
-        assert self.__reqpath, fields
+        assert len( fields ) == 3, 'Invalid header line: %r' % line
+
+        self.__verb, self.__requri, self.__prototag = fields
+        assert self.__requri, fields
         self.__headers = {}
         self.__parse = self.__parse_args
 
@@ -60,17 +70,19 @@ class HtRequest:
         """
 
         eol = chunk.find( '\n' ) + 1
-        if eol == 0:
-            return 0
+        assert eol > 0
 
         line = chunk[ :eol ]
         if ':' in line:
-            Params.log('> '+ line.rstrip(), 2)
+            get_log(Params.LOG_DEBUG, 'request')\
+                    ('> '+ line.rstrip())
             key, value = line.split( ':', 1 )
             if key.lower() in HTTP.Header_Map:
                 key = HTTP.Header_Map[key.lower()]
             else:
-                Params.log("Warning: %r not a known HTTP (request) header (%r)"%(key, value.strip()), 1)
+                get_log(Params.LOG_WARN, 'request')\
+                        ("Warning: %r not a known HTTP (request) header (%r)", 
+                        key, value.strip())
                 key = key.title() 
             assert key not in self.__headers, 'duplicate req. header: %s' % key
             self.__headers[ key ] = value.strip()
@@ -79,14 +91,16 @@ class HtRequest:
             if self.__size:
                 assert self.__verb == 'POST', \
                         '%s request conflicts with message body' % self.__verb
-                Params.log('Opening temporary file for POST upload', 1)
+                get_log(Params.LOG_INFO, 'request')\
+                        ('Opening temporary file for POST upload')
                 self.__body = os.tmpfile()
                 self.__parse = self.__parse_body
             else:
                 self.__body = None
                 self.__parse = None
         else:
-            Params.log('Warning: Ignored header line: %r' % line)
+            get_log(Params.LOG_INFO, 'request')\
+                    ('Error: Ignored header line: %r', line)
 
         return eol
 
@@ -118,22 +132,24 @@ class HtRequest:
         assert chunk, \
                 'client closed connection before sending a '\
                 'complete message header at %s, ' \
-                'parser: %r, data: %r' % (self.__recvbuflen, self.__parse, self.__recvbuf)
+                'parser: %r, data: %r' % (
+                        self.__recvbuflen, self.__parse, self.__recvbuf)
         self.__recvbuf += chunk
         self.__recvbuflen += len(chunk)
         while self.__parse:
             bytecnt = self.__parse( self.__recvbuf )
             if not bytecnt:
                 return
+#            assert bytecnt
             self.__recvbuf = self.__recvbuf[ bytecnt: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
         # Headers are parsed, determine target server and resource
-        verb, proxied_url, proto = self.envelope
+        verb, proxied_url, proto = self.__verb, self.__requri, self.__prototag
 
         scheme = ''
         host = ''
-        port = Params.PORT
+        port = Runtime.PORT
         path = ''
 
         # Accept http and ftp proxy requests
@@ -154,19 +170,24 @@ class HtRequest:
             host = proxied_url[ 6: ]
             port = 21
 
+        # The easiest way for direct response
+# XXX: we dont cover where the client sends a full URI yet..
         elif proxied_url.startswith( '/' ):
             path = proxied_url
             host = socket.gethostname()
             self.Protocol = Protocol.ProxyProtocol
 
         else:
-            self.Protocol = Protocol.BlindProtocol
+            # XXX self.Protocol = Protocol.BlindProtocol
+            self.Protocol = Protocol.HttpProtocol
+            scheme = ''
+            host = '' 
+            port = Runtime.PORT
 
         # Get the path
         if '/' in host:
             host, path = host.split( '/', 1 )
-#        else:
-#            path = ''
+        path = '/' + path
 
         # Parse hostinfo
         if ':' in host:
@@ -176,33 +197,27 @@ class HtRequest:
         else:
             hostinfo = "%s:%s" % (host, port)
 
-        Params.log('scheme=%s, host=%s, port=%s, path=%s' % 
-                (scheme, host, port, path), 3)
+        if port == Runtime.PORT:
+            log("Direct request: %s" % path, Params.LOG_INFO)
+            localhosts = ( 'localhost', Runtime.HOSTNAME, '127.0.0.1', '127.0.1.1' )
+            assert host in localhosts, "Cannot service for %s, use from %s" % (host, localhosts)
+            #self.Response = Response.DirectResponse
+            self.Protocol = Protocol.ProxyProtocol
+
+        get_log(Params.LOG_DEBUG, 'request')\
+                ('scheme=%s, host=%s, port=%s, path=%s' % (scheme, host, port, path))
 
         self.__scheme = scheme
         self.__host = host
         self.__port = port
+        assert path[0] == '/', path
         self.__reqpath = path
 
-# FIXME: new dev comment
-        # TODO: keep entity headers, strip other message headers from args
-        #Params.log('href %s'% proxied_url)
-        #self.Resource = Resource.Resource(proxied_url, self.args())
-
-# FIXME: old master
-#        req_url = "%s://%s/%s" % (scheme, hostinfo, path)
-#        self.resource = Resource.forRequest(req_url)
-#
-#        if not self.resource:
-#            self.resource = Resource.new(req_url)
-#        
-#        if Params.VERBOSE > 1:
-#            print 'Matched to resource', req_url
-#        
+# XXX: need a test for this
 #        if self.resource and 'Host' not in self.__headers:
 #            # Become HTTP/1.1 compliant
 #            self.__headers['Host'] = self.resource.ref.host
-#
+
         self.__headers[ 'Host' ] = host
         self.__headers[ 'Connection' ] = 'close'
 
@@ -210,19 +225,22 @@ class HtRequest:
         self.__headers.pop( 'Proxy-Connection', None )
         self.__headers.pop( 'Proxy-Authorization', None )
 
-        # Add Date (as per HTTP/1.1 [RFC 2616] 14.18)
+        # Add Date (HTTP/1.1 [RFC 2616] 14.18)
         if 'Date' not in self.__headers:
             self.__headers[ 'Date' ] = time.strftime(
                 Params.TIMEFMT, time.gmtime() )
 
-        # Add proxy Via header (per HTTP/1.1 [RFC 2616] 14.45)
-        via = "1.1 %s:%i (htcache/%s)" % (socket.gethostname(), Params.PORT,
+        # Add proxy Via header (HTTP/1.1 [RFC 2616] 14.45)
+        via = "1.1 %s:%i (htcache/%s)" % (
+                Runtime.HOSTNAME, 
+                Runtime.PORT,
                 Params.VERSION)
         if self.__headers.setdefault('Via', via) != via:
             self.__headers['Via'] += ', '+ via
 
     def recvbuf( self ):
         assert self.Protocol, "No protocol yet"
+        assert self.__reqpath[0] == '/', self.__reqpath
         lines = [ '%s %s HTTP/1.1' % ( self.__verb, self.__reqpath ) ]
         lines.extend( map( ': '.join, self.__headers.items() ) )
         lines.append( '' )
@@ -233,28 +251,52 @@ class HtRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
+# XXX:
+#    def is_conditional(self):
+#        return ( 'If-Modified-Since' in self.__headers
+#                or 'If-None-Match' in self.__headers )
+#        # XXX: If-Range
+
     @property
     def envelope(self):
         """
-        Used before protocol is determined. After recv finishes parsing
-        Request.url and Request.hostinfo is used instead.
+        Used before protocol is determined but while requet is received. After recv finishes parsing
+        the server response, Request.requrl and Request.hostinfo are available instead.
         """
+        assert self.__reqpath[0] == '/' , self.__reqpath
         return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
     @property
     def hostinfo(self):
         return self.__host, self.__port
 
+# XXX:
+#    @property
+#    def requri(self):
+#        assert self.Protocol, "Use request.envelope property. "
+#        assert not ( self.__reqpath or self.__reqpath[0] == '/' )
+#        return self.__scheme, self.__host, self.__port, self.__reqpath
+
     @property
-    def url(self):
-        assert self.Protocol, "Use request.envelope property. "
-        return self.__scheme, self.__host, self.__port, self.__reqpath
+    def url( self ):
+        host, port = self.hostinfo
+
+        # Prepare requri to identify request
+        if port != 80:
+            hostinfo = "%s:%s" % self.hostinfo
+        else:
+            hostinfo = host
+
+        assert self.__reqpath[0] == '/'
+        
+        return "//%s/%s" % ( hostinfo, self.__reqpath[1:] )
 
     @property
     def headers(self):
         # XXX: used before protocol is determined,  assert self.Protocol
         if not self.Protocol and self.__parse == self.__parse_args:
-            Params.log("Warning: parsing headers is not finished. ")
+            get_log(Params.LOG_WARN, 'request')\
+                    ("Warning: parsing headers is not finished. ")
         return self.__headers.copy()
 
     def range(self):
@@ -276,14 +318,21 @@ class HtRequest:
 
     def __hash__( self ):
         assert self.Protocol, "no protocol"
+        assert self.__reqpath[0] == '/', self.__reqpath
         return hash(( self.__host, self.__port, self.__reqpath ))
 
-    def __eq__( self, other ):
-        assert self.Protocol, "no protocol"
-        request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
-        request2 = other.__verb, other.__host, other.__port, other.__reqpath
-        return request1 == request2
+# XXX:
+#    def __eq__( self, other ):
+#        assert self.Protocol, "no protocol"
+#        request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
+#        request2 = other.__verb, other.__host, other.__port, other.__reqpath
+#        return request1 == request2
 
     def __str__(self):
-        return "<%s %s, %s>" % (Params.cn(self), self.hostinfo, self.envelope)
+        if self.__host:
+            return "[%s %s: %s]" % (cn(self), hex(id(self)), self.url)
+        elif self.__reqpath:
+            return "[%s %s: %s]" % (cn(self), hex(id(self)), self.envelope)
+        else:
+            return "[%s %s]" % (cn(self), hex(id(self)))
 
