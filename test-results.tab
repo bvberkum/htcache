@@ -55,3 +55,6 @@
 2013-04-29 16:26:47+02:00, dandy, dev_sqlstore, c9c16de5f6506c68c72aa1f8a16aad0be6716ed0, unit, 7, 0, 0
 2013-04-29 16:27:52+02:00, dandy, dev_sqlstore, c9c16de5f6506c68c72aa1f8a16aad0be6716ed0, system, 53, 28
 2013-04-29 16:28:03+02:00, dandy, dev_sqlstore, c9c16de5f6506c68c72aa1f8a16aad0be6716ed0, protocol, 1, 79
+2013-04-29 16:30:45+02:00, dandy, test_sqlstore, 32d0aee94d3c29770ce0586af1deb338939d0331, unit, 7, 0, 0
+2013-04-29 16:31:58+02:00, dandy, test_sqlstore, 32d0aee94d3c29770ce0586af1deb338939d0331, system, 53, 28
+2013-04-29 16:32:04+02:00, dandy, test_sqlstore, 32d0aee94d3c29770ce0586af1deb338939d0331, protocol, 1, 78
