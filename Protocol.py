@@ -20,7 +20,6 @@ class DNSLookupException(Exception):
         return "DNS lookup error for %s: %s" % ( self.addr, self.exc )
 
 
-LOCALHOSTS = ( 'localhost', Runtime.HOSTNAME, '127.0.0.1', '127.0.1.1' )
 DNSCache = {}
 
 def connect( addr ):
@@ -49,6 +48,7 @@ class BlindProtocol:
     """
 
     Response = None
+    data = None
 
     def __init__( self, request ):
         self.__socket = connect( request.hostinfo )
@@ -85,6 +85,7 @@ class CachingProtocol(object):
     "the htcache response class"
     capture = None
     "XXX: old indicator to track hashsum of response entity."
+    data = None
 
     @property
     def url( self ):
@@ -114,10 +115,12 @@ class CachingProtocol(object):
         host, port = request.hostinfo
         verb, path, proto = request.envelope
 
+        # XXX: move this to request phase
         print self, 'prepare_direct_response'
         if port == Runtime.PORT:
             log("Direct request: %s" % path, Params.LOG_INFO)
-            assert host in LOCALHOSTS, "Cannot service for %s" % host
+            localhosts = ( 'localhost', Runtime.HOSTNAME, '127.0.0.1', '127.0.1.1' )
+            assert host in localhosts, "Cannot service for %s, use from %s" % (host, localhosts)
             self.Response = Response.DirectResponse
 
         # XXX: Respond by writing message as plain text, e.g echo/debug it:
@@ -246,8 +249,7 @@ class HttpProtocol(CachingProtocol):
 
     def __parse_head( self, chunk ):
         eol = chunk.find( '\n' ) + 1
-        if eol == 0:
-            return 0
+        assert eol
         line = chunk[ :eol ]
         get_log(Params.LOG_NOTE)("%s: Server responds %r", self, line.strip())
         fields = line.split()
@@ -263,8 +265,7 @@ class HttpProtocol(CachingProtocol):
 
     def __parse_args( self, chunk ):
         eol = chunk.find( '\n' ) + 1
-        if eol == 0:
-            return 0
+        assert eol
         line = chunk[ :eol ]
         if ':' in line:
             log('> '+ line.rstrip(), Params.LOG_DEBUG)
@@ -303,9 +304,9 @@ class HttpProtocol(CachingProtocol):
         self.__recvbuf += chunk
         while self.__parse:
             bytecnt = self.__parse( self, self.__recvbuf )
-            if not bytecnt:
-                sock.recv( len( chunk ) )
-                return
+            assert bytecnt
+            #    sock.recv( len( chunk ) )
+            #    return
             self.__recvbuf = self.__recvbuf[ bytecnt: ]
         sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
@@ -463,134 +464,134 @@ class HttpProtocol(CachingProtocol):
         return "[HttpProtocol %s]" % hex(id(self))
 
 
-class FtpProtocol( CachingProtocol ):
-
-    Response = None
-
-    def __init__( self, request ):
-        super(FtpProtocol, self).__init__( request )
-
-        if Runtime.STATIC and self.cache.full:
-          self.__socket = None
-          log("Static FTP cache : %s" % self.url)
-          self.cache.open_full()
-          self.Response = Response.DataResponse
-          return
-
-        self.__socket = connect(request.hostinfo)
-        self.__path = request.envelope[1]
-        self.__sendbuf = ''
-        self.__recvbuf = ''
-        self.__handle = FtpProtocol.__handle_serviceready
-
-    def socket( self ):
-        return self.__socket
-
-    def hasdata( self ):
-        return self.__sendbuf != ''
-
-    def send( self, sock ):
-        assert self.hasdata()
-
-        bytecnt = sock.send( self.__sendbuf )
-        self.__sendbuf = self.__sendbuf[ bytecnt: ]
-
-    def recv( self, sock ):
-        assert not self.hasdata()
-
-        chunk = sock.recv( Params.MAXCHUNK )
-        assert chunk, 'server closed connection prematurely'
-        self.__recvbuf += chunk
-        while '\n' in self.__recvbuf:
-            reply, self.__recvbuf = self.__recvbuf.split( '\n', 1 )
-            log('S: %s' % reply.rstrip(), 2)
-            if reply[ :3 ].isdigit() and reply[ 3 ] != '-':
-                self.__handle( self, int( reply[ :3 ] ), reply[ 4: ] )
-                log('C: %s' % self.__sendbuf.rstrip(), 2)
-
-    def __handle_serviceready( self, code, line ):
-        assert code == 220, \
-            'server sends %i; expected 220 (service ready)' % code
-        self.__sendbuf = 'USER anonymous\r\n'
-        self.__handle = FtpProtocol.__handle_password
-
-    def __handle_password( self, code, line ):
-        assert code == 331, \
-            'server sends %i; expected 331 (need password)' % code
-        self.__sendbuf = 'PASS anonymous@\r\n'
-        self.__handle = FtpProtocol.__handle_loggedin
-
-    def __handle_loggedin( self, code, line ):
-        assert code == 230, \
-            'server sends %i; expected 230 (user logged in)' % code
-        self.__sendbuf = 'TYPE I\r\n'
-        self.__handle = FtpProtocol.__handle_binarymode
-
-    def __handle_binarymode( self, code, line ):
-        assert code == 200,\
-            'server sends %i; expected 200 (binary mode ok)' % code
-        self.__sendbuf = 'PASV\r\n'
-        self.__handle = FtpProtocol.__handle_passivemode
-
-    def __handle_passivemode( self, code, line ):
-        assert code == 227, \
-            'server sends %i; expected 227 (passive mode)' % code
-        channel = eval( line.strip('.').split()[ -1 ] )
-        addr = '%i.%i.%i.%i' % channel[ :4 ], channel[ 4 ] * 256 + channel[ 5 ]
-        self.__socket = connect( addr )
-        self.__sendbuf = 'SIZE %s\r\n' % self.__path
-        self.__handle = FtpProtocol.__handle_size
-
-    def __handle_size( self, code, line ):
-        if code == 550:
-            self.Response = Response.NotFoundResponse
-            return
-        assert code == 213,\
-            'server sends %i; expected 213 (file status)' % code
-        self.size = int( line )
-        log('File size: %s' % self.size)
-        self.__sendbuf = 'MDTM %s\r\n' % self.__path
-        self.__handle = FtpProtocol.__handle_mtime
-
-    def __handle_mtime( self, code, line ):
-        if code == 550:
-            self.Response = Response.NotFoundResponse
-            return
-        assert code == 213, \
-            'server sends %i; expected 213 (file status)' % code
-        self.mtime = calendar.timegm( time.strptime(
-            line.rstrip(), '%Y%m%d%H%M%S' ) )
-        log('Modification time: %s' % time.strftime(
-            Params.TIMEFMT, time.gmtime( self.mtime ) ))
-        stat = self.cache.partial
-        if stat and stat.st_mtime == self.mtime:
-            self.__sendbuf = 'REST %i\r\n' % stat.st_size
-            self.__handle = FtpProtocol.__handle_resume
-        else:
-            stat = self.cache.full
-            if stat and stat.st_mtime == self.mtime:
-                log("Unmodified FTP cache : %s" % self.url)
-                self.cache.open_full()
-                self.Response = Response.DataResponse
-            else:
-                self.cache.open_new()
-                self.__sendbuf = 'RETR %s\r\n' % self.__path
-                self.__handle = FtpProtocol.__handle_data
-
-    def __handle_resume( self, code, line ):
-        assert code == 350, 'server sends %i; ' \
-            'expected 350 (pending further information)' % code
-        self.cache.open_partial()
-        self.__sendbuf = 'RETR %s\r\n' % self.__path
-        self.__handle = FtpProtocol.__handle_data
-
-    def __handle_data( self, code, line ):
-        if code == 550:
-            self.Response = Response.NotFoundResponse
-            return
-        assert code == 150, \
-            'server sends %i; expected 150 (file ok)' % code
-        self.Response = Response.DataResponse
+#class FtpProtocol( CachingProtocol ):
+#
+#    Response = None
+#
+#    def __init__( self, request ):
+#        super(FtpProtocol, self).__init__( request )
+#
+#        if Runtime.STATIC and self.cache.full:
+#          self.__socket = None
+#          log("Static FTP cache : %s" % self.url)
+#          self.cache.open_full()
+#          self.Response = Response.DataResponse
+#          return
+#
+#        self.__socket = connect(request.hostinfo)
+#        self.__path = request.envelope[1]
+#        self.__sendbuf = ''
+#        self.__recvbuf = ''
+#        self.__handle = FtpProtocol.__handle_serviceready
+#
+#    def socket( self ):
+#        return self.__socket
+#
+#    def hasdata( self ):
+#        return self.__sendbuf != ''
+#
+#    def send( self, sock ):
+#        assert self.hasdata()
+#
+#        bytecnt = sock.send( self.__sendbuf )
+#        self.__sendbuf = self.__sendbuf[ bytecnt: ]
+#
+#    def recv( self, sock ):
+#        assert not self.hasdata()
+#
+#        chunk = sock.recv( Params.MAXCHUNK )
+#        assert chunk, 'server closed connection prematurely'
+#        self.__recvbuf += chunk
+#        while '\n' in self.__recvbuf:
+#            reply, self.__recvbuf = self.__recvbuf.split( '\n', 1 )
+#            log('S: %s' % reply.rstrip(), 2)
+#            if reply[ :3 ].isdigit() and reply[ 3 ] != '-':
+#                self.__handle( self, int( reply[ :3 ] ), reply[ 4: ] )
+#                log('C: %s' % self.__sendbuf.rstrip(), 2)
+#
+#    def __handle_serviceready( self, code, line ):
+#        assert code == 220, \
+#            'server sends %i; expected 220 (service ready)' % code
+#        self.__sendbuf = 'USER anonymous\r\n'
+#        self.__handle = FtpProtocol.__handle_password
+#
+#    def __handle_password( self, code, line ):
+#        assert code == 331, \
+#            'server sends %i; expected 331 (need password)' % code
+#        self.__sendbuf = 'PASS anonymous@\r\n'
+#        self.__handle = FtpProtocol.__handle_loggedin
+#
+#    def __handle_loggedin( self, code, line ):
+#        assert code == 230, \
+#            'server sends %i; expected 230 (user logged in)' % code
+#        self.__sendbuf = 'TYPE I\r\n'
+#        self.__handle = FtpProtocol.__handle_binarymode
+#
+#    def __handle_binarymode( self, code, line ):
+#        assert code == 200,\
+#            'server sends %i; expected 200 (binary mode ok)' % code
+#        self.__sendbuf = 'PASV\r\n'
+#        self.__handle = FtpProtocol.__handle_passivemode
+#
+#    def __handle_passivemode( self, code, line ):
+#        assert code == 227, \
+#            'server sends %i; expected 227 (passive mode)' % code
+#        channel = eval( line.strip('.').split()[ -1 ] )
+#        addr = '%i.%i.%i.%i' % channel[ :4 ], channel[ 4 ] * 256 + channel[ 5 ]
+#        self.__socket = connect( addr )
+#        self.__sendbuf = 'SIZE %s\r\n' % self.__path
+#        self.__handle = FtpProtocol.__handle_size
+#
+#    def __handle_size( self, code, line ):
+#        if code == 550:
+#            self.Response = Response.NotFoundResponse
+#            return
+#        assert code == 213,\
+#            'server sends %i; expected 213 (file status)' % code
+#        self.size = int( line )
+#        log('File size: %s' % self.size)
+#        self.__sendbuf = 'MDTM %s\r\n' % self.__path
+#        self.__handle = FtpProtocol.__handle_mtime
+#
+#    def __handle_mtime( self, code, line ):
+#        if code == 550:
+#            self.Response = Response.NotFoundResponse
+#            return
+#        assert code == 213, \
+#            'server sends %i; expected 213 (file status)' % code
+#        self.mtime = calendar.timegm( time.strptime(
+#            line.rstrip(), '%Y%m%d%H%M%S' ) )
+#        log('Modification time: %s' % time.strftime(
+#            Params.TIMEFMT, time.gmtime( self.mtime ) ))
+#        stat = self.cache.partial
+#        if stat and stat.st_mtime == self.mtime:
+#            self.__sendbuf = 'REST %i\r\n' % stat.st_size
+#            self.__handle = FtpProtocol.__handle_resume
+#        else:
+#            stat = self.cache.full
+#            if stat and stat.st_mtime == self.mtime:
+#                log("Unmodified FTP cache : %s" % self.url)
+#                self.cache.open_full()
+#                self.Response = Response.DataResponse
+#            else:
+#                self.cache.open_new()
+#                self.__sendbuf = 'RETR %s\r\n' % self.__path
+#                self.__handle = FtpProtocol.__handle_data
+#
+#    def __handle_resume( self, code, line ):
+#        assert code == 350, 'server sends %i; ' \
+#            'expected 350 (pending further information)' % code
+#        self.cache.open_partial()
+#        self.__sendbuf = 'RETR %s\r\n' % self.__path
+#        self.__handle = FtpProtocol.__handle_data
+#
+#    def __handle_data( self, code, line ):
+#        if code == 550:
+#            self.Response = Response.NotFoundResponse
+#            return
+#        assert code == 150, \
+#            'server sends %i; expected 150 (file ok)' % code
+#        self.Response = Response.DataResponse
 
 
 class ProxyProtocol:
@@ -599,6 +600,7 @@ class ProxyProtocol:
     """
 
     Response = Response.DirectResponse
+    data = None
 
     def __init__( self, request ):
         method, reqname, proto = request.envelope

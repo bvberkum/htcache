@@ -45,8 +45,7 @@ class HtRequest:
         """
 
         eol = chunk.find( '\n' ) + 1
-        if eol == 0:
-            return 0
+        assert eol > 0
 
         line = chunk[ :eol ]
 
@@ -71,8 +70,7 @@ class HtRequest:
         """
 
         eol = chunk.find( '\n' ) + 1
-        if eol == 0:
-            return 0
+        assert eol > 0
 
         line = chunk[ :eol ]
         if ':' in line:
@@ -142,6 +140,7 @@ class HtRequest:
             bytecnt = self.__parse( self.__recvbuf )
             if not bytecnt:
                 return
+#            assert bytecnt
             self.__recvbuf = self.__recvbuf[ bytecnt: ]
         assert not self.__recvbuf, 'client sends junk data after message header'
 
@@ -171,6 +170,8 @@ class HtRequest:
             host = proxied_url[ 6: ]
             port = 21
 
+        # The easiest way for direct response
+# XXX: we dont cover where the client sends a full URI yet..
         elif proxied_url.startswith( '/' ):
             path = proxied_url
             host = socket.gethostname()
@@ -195,6 +196,13 @@ class HtRequest:
             port = int( port )
         else:
             hostinfo = "%s:%s" % (host, port)
+
+        if port == Runtime.PORT:
+            log("Direct request: %s" % path, Params.LOG_INFO)
+            localhosts = ( 'localhost', Runtime.HOSTNAME, '127.0.0.1', '127.0.1.1' )
+            assert host in localhosts, "Cannot service for %s, use from %s" % (host, localhosts)
+            #self.Response = Response.DirectResponse
+            self.Protocol = Protocol.ProxyProtocol
 
         get_log(Params.LOG_DEBUG, 'request')\
                 ('scheme=%s, host=%s, port=%s, path=%s' % (scheme, host, port, path))
@@ -243,10 +251,11 @@ class HtRequest:
             lines.append( '' )
         return '\r\n'.join( lines )
 
-    def is_conditional(self):
-        return ( 'If-Modified-Since' in self.__headers
-                or 'If-None-Match' in self.__headers )
-        # XXX: If-Range
+# XXX:
+#    def is_conditional(self):
+#        return ( 'If-Modified-Since' in self.__headers
+#                or 'If-None-Match' in self.__headers )
+#        # XXX: If-Range
 
     @property
     def envelope(self):
@@ -261,11 +270,12 @@ class HtRequest:
     def hostinfo(self):
         return self.__host, self.__port
 
-    @property
-    def requri(self):
-        assert self.Protocol, "Use request.envelope property. "
-        assert not ( self.__reqpath or self.__reqpath[0] == '/' )
-        return self.__scheme, self.__host, self.__port, self.__reqpath
+# XXX:
+#    @property
+#    def requri(self):
+#        assert self.Protocol, "Use request.envelope property. "
+#        assert not ( self.__reqpath or self.__reqpath[0] == '/' )
+#        return self.__scheme, self.__host, self.__port, self.__reqpath
 
     @property
     def url( self ):
@@ -311,11 +321,12 @@ class HtRequest:
         assert self.__reqpath[0] == '/', self.__reqpath
         return hash(( self.__host, self.__port, self.__reqpath ))
 
-    def __eq__( self, other ):
-        assert self.Protocol, "no protocol"
-        request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
-        request2 = other.__verb, other.__host, other.__port, other.__reqpath
-        return request1 == request2
+# XXX:
+#    def __eq__( self, other ):
+#        assert self.Protocol, "no protocol"
+#        request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
+#        request2 = other.__verb, other.__host, other.__port, other.__reqpath
+#        return request1 == request2
 
     def __str__(self):
         if self.__host:

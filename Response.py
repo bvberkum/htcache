@@ -444,13 +444,14 @@ class DirectResponse:
     def serve_descriptor(self, status, protocol, request):
         q = urlparse.urlparse( request.url[3] )[4]
         url = urlparse.urlparse(urllib.unquote(q[4:]))
-
+        # Translate URL to cache location
         if ':' in url[1]:
             hostinfo = url[1].split(':')
             hostinfo[1] = int(hostinfo[1])
         else:
             hostinfo = url[1], 80
         cache = Resource.get_cache(hostinfo, url[2][1:])
+        # Find and print descriptor
         descriptors = Resource.get_backend()
         if cache.path in descriptors:
             descr = descriptors[cache.path]

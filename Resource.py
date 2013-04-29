@@ -844,6 +844,13 @@ def validate_cache(pathname, uripathnames, mediatype, d1, d2, meta, features):
 def check_tree(pathname, uripathnames, mediatype, d1, d2, meta, features):
     return True
 
+def get_cache(hostinfo, path):
+    """
+    XXX: rewrite path to cache location, ie. instantiate Cache object and
+    return. All location rewriting should be handled here? or use database instead..
+    """
+    assert False, "write get_cache method"
+
 def check_files():
     backend = SessionMixin.get_instance(True)
 # XXX old

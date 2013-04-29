@@ -1,4 +1,4 @@
-.coverage
+#.coverage
 dist
 *.sw[op]
 #*.pyc

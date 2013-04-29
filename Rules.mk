@@ -85,6 +85,9 @@ test-system:: $/
 		echo $$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS;\
 		echo "$$DATE, $$HOST, $$BRANCH, $$REV, system, $$PASSED, $$ERRORS" >> test-results.tab;\
 		echo $$PASSED passed checks, $$ERRORS errors
+#	should happen autom with COVERAGE_PROCESS_START @\
+#        coverage report --omit '/usr/*';\
+#        coverage html --omit '/usr/*'
 
 test-protocol::
 	@./protocol-test 2>&1 | tee protocoltest.log

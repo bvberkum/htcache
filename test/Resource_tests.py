@@ -28,7 +28,7 @@ class Resource_backend(unittest.TestCase):
     """
 
     def test_1_init(self):
-        Runtime.DATA_DIR = '/tmp/htache-unittest-data'
+        Runtime.DATA_DIR = '/tmp/htcache-unittest-data'
         if not os.path.exists(Runtime.DATA_DIR):
             os.mkdir(Runtime.DATA_DIR)
         CLIParams.parse(['--data-dir', Runtime.DATA_DIR])
@@ -37,7 +37,7 @@ class Resource_backend(unittest.TestCase):
         #Resource.close_backend()
 
     def test_2_ro(self):
-        Runtime.DATA_DIR = '/tmp/htache-unittest-data'
+        Runtime.DATA_DIR = '/tmp/htcache-unittest-data'
         CLIParams.parse(['--data-dir', Runtime.DATA_DIR])
         print Resource.get_backend(read_only=True)
         print Resource

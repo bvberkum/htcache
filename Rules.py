@@ -181,9 +181,7 @@ class Drop(AbstractRuleset):
 
     @classmethod
     def match(klass, path):
-        print path
         for pattern, compiled in klass.rules:
-            print pattern, path
             if compiled.match(path):
                 return pattern
 

@@ -50,7 +50,7 @@ def HTCache_fiber_handler( client, address ):
 
     while not request.Protocol:
         get_log(Params.LOG_DEBUG)\
-                ('%s: Reading request', hex(id(request)))
+                ('%s: Reading request', request)
         yield fiber.RECV( client, Params.TIMEOUT )
         request.recv( client )
 
@@ -137,10 +137,10 @@ def HTCache_fiber_handler( client, address ):
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
-    get_log(Params.LOG_NOTE)('Transaction completed for %r with data %s', 
-            hex(id(request)), hex(id(protocol.data)))
-
     assert protocol
+    assert hasattr(protocol, 'data')
+    get_log(Params.LOG_NOTE)('Transaction completed for %r with data %s', 
+            request, protocol.data)
 
     response.finalize(client)
 
