@@ -1,7 +1,7 @@
 #! /bin/bash
 # 
 # System tests originally for http-replicator. Adapted to test
-# proxy functionality of htcache. Public domain.
+# proxy functionality of htcache in live web situations. Public domain.
 # 
 
 if test -z "$1"; then
@@ -189,7 +189,7 @@ if which curl > /dev/null; then
       CURLARGS="-C - "
     fi
     curl $CURLARGS -s -S -o $PREFIX.$2 --dump-header $PREFIX.$2.headers $1 \
-        -H "X-HTCache-Unittest: $1 $2" $3 1>&2
+        -H "X-HTCache-SystemTest: $1 $2" $3 1>&2
     echo "Finished file download at $(stat -c "%s" $PREFIX.$2) bytes"
     splitheaders $2
   }
@@ -208,10 +208,17 @@ function touchfile
 
 function summary
 {
+<<<<<<< Updated upstream
   echo
   echo "============================================================================="
   echo " SYSTEM-TEST $NUM: $1"
   echo " ---------------------------------------------------------------------------"
+=======
+  sleep .5
+  #echo "============================================================================="
+  echo " SYSTEM-TEST $NUM: $1"
+  #echo " ---------------------------------------------------------------------------"
+>>>>>>> Stashed changes
 }
 
 function check
@@ -321,7 +328,7 @@ function coveragereport
   coverage report
 }
 
-########## UNIT TESTS #########################################################
+########## SYSTEM TESTS #########################################################
 
 set -m
 case $1 in
