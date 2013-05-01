@@ -35,47 +35,47 @@ options:
 
 for _arg in _args:
 
-  if _arg in ( '-h', '--help' ):
-    sys.exit( USAGE )
-  elif _arg in ( '-p', '--port' ):
-    try:
-      PORT = int( _args.next() )
-      assert PORT > 0
-    except:
-      sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
-  elif _arg in ( '-r', '--root' ):
-    try:
-      ROOT = os.path.realpath( _args.next() ) + os.sep
-      assert os.path.isdir( ROOT )
-    except StopIteration:
-      sys.exit( 'Error: %s requires a directory argument' % _arg )
-    except:
-      sys.exit( 'Error: invalid cache directory %s' % ROOT )
-  elif _arg in ( '-v', '--verbose' ):
-    VERBOSE += 1
-  elif _arg in ( '-t', '--timeout' ):
-    try:
-      TIMEOUT = int( _args.next() )
-      assert TIMEOUT > 0
-    except:
-      sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
-  elif _arg in ( '-6', '--ipv6' ):
-    FAMILY = socket.AF_UNSPEC
-  elif _arg == '--flat':
-    FLAT = True
-  elif _arg == '--static':
-    STATIC = True
-  elif _arg == '--offline':
-    ONLINE = False
-    STATIC = True
-  elif _arg == '--limit':
-    try:
-      LIMIT = float( _args.next() ) * 1024
-    except:
-      sys.exit( 'Error: %s requires a numerical argument' % _arg )
-  elif _arg == '--daemon':
-    LOG = _args.next()
-  elif _arg == '--debug':
-    DEBUG = True
-  else:
-    sys.exit( 'Error: invalid option %r' % _arg )
+	if _arg in ( '-h', '--help' ):
+		sys.exit( USAGE )
+	elif _arg in ( '-p', '--port' ):
+		try:
+			PORT = int( _args.next() )
+			assert PORT > 0
+		except:
+			sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
+	elif _arg in ( '-r', '--root' ):
+		try:
+			ROOT = os.path.realpath( _args.next() ) + os.sep
+			assert os.path.isdir( ROOT )
+		except StopIteration:
+			sys.exit( 'Error: %s requires a directory argument' % _arg )
+		except:
+			sys.exit( 'Error: invalid cache directory %s' % ROOT )
+	elif _arg in ( '-v', '--verbose' ):
+		VERBOSE += 1
+	elif _arg in ( '-t', '--timeout' ):
+		try:
+			TIMEOUT = int( _args.next() )
+			assert TIMEOUT > 0
+		except:
+			sys.exit( 'Error: %s requires a positive numerical argument' % _arg )
+	elif _arg in ( '-6', '--ipv6' ):
+		FAMILY = socket.AF_UNSPEC
+	elif _arg == '--flat':
+		FLAT = True
+	elif _arg == '--static':
+		STATIC = True
+	elif _arg == '--offline':
+		ONLINE = False
+		STATIC = True
+	elif _arg == '--limit':
+		try:
+			LIMIT = float( _args.next() ) * 1024
+		except:
+			sys.exit( 'Error: %s requires a numerical argument' % _arg )
+	elif _arg == '--daemon':
+		LOG = _args.next()
+	elif _arg == '--debug':
+		DEBUG = True
+	else:
+		sys.exit( 'Error: invalid option %r' % _arg )
