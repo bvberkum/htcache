@@ -6,16 +6,6 @@ import os, re, socket, sys
 
 VERSION = 0.4
 
-LOG_EMERG, \
-LOG_ALERT, \
-LOG_CRIT, \
-LOG_ERR, \
-LOG_WARN, \
-LOG_NOTE, \
-LOG_INFO, \
-LOG_DEBUG = range(0, 8)
-
-
 # defaults
 QUIET = False
 VERBOSE = 7 # error
@@ -23,9 +13,12 @@ ERROR_LEVEL = VERBOSE
 DEBUG = []
 DEBUG_BE = False
 DEBUG_FIBER = False
-LOG_FACILITIES = []
+#LOG_FACILITIES = []
+#MAIN_LOG = os.getenv('MAIN_LOG') or 'main.log'
+#MAIN_LOG
+#LOG_MODULE_ARGS = 7, 'main.log'
 
-LOG = False
+LOG = None
 ONLINE = True
 LIMIT = False
 TIMEOUT = 15
@@ -37,7 +30,7 @@ HOSTNAME = socket.gethostname()
 ROOT = os.getcwd() + os.sep
 DATA_DIR = '/var/lib/htcache/'
 DATA = 'sqlite:///'+DATA_DIR+'resources.sql'
-
+LOG_DIR = '/var/log/htcache/'
 PID_FILE = '/var/run/htcache.pid'
 CACHE = 'caches.FileTree'
 ARCHIVE = ''
@@ -53,7 +46,7 @@ PROXY_INJECT = False
 PARTIAL = '.incomplete'
 DEFAULT = 'default'
 
-# non user-configurable
+# XXX non user-configurable
 MAX_PATH_LENGTH = 256
 MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'

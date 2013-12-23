@@ -28,9 +28,10 @@ import Cache
 import Protocol, Request, Response
 import Resource
 import Rules
-from util import get_log
+import log
 
 
+mainlog = log.get_log('main')
 
 
 DOWNLOADS = Runtime.DOWNLOADS = weakref.WeakValueDictionary()
@@ -47,18 +48,15 @@ to locally stored data.
 
 def HTCache_fiber_handler( client, address ):
 
-    get_log(Params.LOG_DEBUG)\
-            ("Log level is at %s", Runtime.VERBOSE)
+    mainlog.debug("Log level is at %s", Runtime.VERBOSE)
 
     protocol = None
     request = Request.HtRequest()
-    get_log(Params.LOG_DEBUG)\
-            ('%s: New Request from %r, downloads: %s; +1', 
-                    request, address, len(DOWNLOADS))
+#    mainlog.debug ('%s: New Request from %r, downloads: %s; +1', 
+#                    request, address, len(DOWNLOADS))
 
     while not request.Protocol:
-        get_log(Params.LOG_DEBUG)\
-                ('%s: Reading request', request)
+        mainlog.debug('%s: Reading request', request)
         yield fiber.RECV( client, Params.TIMEOUT )
         request.recv( client )
 
@@ -68,11 +66,9 @@ def HTCache_fiber_handler( client, address ):
             protocol = DOWNLOADS[ request ]
             if protocol.Response:
                 if issubclass( protocol.Response, Response.DataResponse ):
-                    get_log(Params.LOG_INFO)\
-                            ('Checking with %r for data for %r ' % (protocol.data, request))
+                    mainlog.info('Checking with %r for data for %r ' % (protocol.data, request))
                     while not protocol.data.exists():
-                        #get_log(Params.LOG_INFO)\
-                        #        ('Waiting to join downloads for %r' % request)
+                        mainlog.info('Waiting to join downloads for %r' % request)
                         yield fiber.WAIT()
                         # XXX: wait till data has finished and closed, then
                         # re-use it for this download???
@@ -83,23 +79,19 @@ def HTCache_fiber_handler( client, address ):
                         #if not protocol.data.descriptor:
                         #    protocol.data.prepare_static()
                     else:
-                        get_log(Params.LOG_INFO)\
-                                ('Joining running download, re-using protocol: %s, %s' % (protocol, protocol.tell()))
+                        mainlog.info('Joining running download, re-using protocol: %s, %s' % (protocol, protocol.tell()))
                         break
                 else:
-                        get_log(Params.LOG_WARN)\
-                                ('Error? not a DataResponse')
+                        mainlog.warn('Error? not a DataResponse')
                 # Cancel for non-data response
                 del DOWNLOADS[ request ]
             else:
                 yield fiber.WAIT()
         else:
-            # Upong 
-            get_log(Params.LOG_INFO)\
-                    ('Switching to %s', request.Protocol.__name__)
+            # 
+            mainlog.info('Switching to %s', request.Protocol.__name__)
             protocol = DOWNLOADS[ request ] = request.Protocol( request )
-            get_log(Params.LOG_DEBUG)\
-                    ('%s: New %s for %s', protocol,
+            mainlog.debug('%s: New %s for %s', protocol,
                             request.Protocol.__name__, request)
 
             if not protocol.Response:
@@ -107,47 +99,42 @@ def HTCache_fiber_handler( client, address ):
 
             while not protocol.Response:
                 if protocol.hasdata():
-                    #get_log(Params.LOG_DEBUG)\
+                    #mainlog.debug
                     #        ('%s: Sending for %s', protocol, request)
                     yield fiber.SEND( server, Params.TIMEOUT )
                     protocol.send( server )
                 else:
-                    #get_log(Params.LOG_DEBUG)\
+                    #mainlog.debug
                     #        ('%s: Receiving for %s', protocol, request)
                     yield fiber.RECV( server, Params.TIMEOUT )
                     protocol.recv( server )
 
-        get_log(Params.LOG_NOTE)\
-                ('Switching to %s', protocol.Response.__name__)
+        mainlog.note('Switching to %s', protocol.Response.__name__)
         response = protocol.Response( protocol, request )
-        get_log(Params.LOG_DEBUG)\
-                ('%s: New %s for %s', response,
+        mainlog.debug('%s: New %s for %s', response,
                         protocol.Response.__name__, request)
         server = protocol.socket()
 
     except Exception, e:
-        get_log(Params.LOG_CRIT)\
-                ('Warning: Switching to ExceptionResponse, reason: %s', e)
+        mainlog.crit('Warning: Switching to ExceptionResponse, reason: %s', e)
         response = Response.ExceptionResponse( protocol, request )
 
     # XXX: blocks while client has not read data
     while not response.Done:
         if response.hasdata():
-            #get_log(Params.LOG_DEBUG)\
-            #        ('%s: Writing for %s', response, request)
+            mainlog.debug('%s: Writing for %s', response, request)
             yield fiber.SEND( client, Params.TIMEOUT )
             response.send( client )
         elif response.needwait():
             yield fiber.WAIT( response.needwait() )
         else:
-            #get_log(Params.LOG_DEBUG)\
-            #        ('%s: Reveiving for %s', response, request)
+            mainlog.debug('%s: Reveiving for %s', response, request)
             yield fiber.RECV( server, Params.TIMEOUT )
             response.recv( server )
 
     assert protocol
     assert hasattr(protocol, 'data')
-    get_log(Params.LOG_NOTE)('Transaction completed for %r with data %s', 
+    mainlog.note('Transaction completed for %r with data %s', 
             request, protocol.data)
 
     response.finalize(client)
@@ -157,7 +144,12 @@ def HTCache_fiber_handler( client, address ):
 
 
 def run():
+    """
+    1. Parse argv, initialize runtime environment
+    2. Fork passing environment and print PID, or continue normally
+    """
 
+    # Parse argv, init settings
     try:
 
         Command.CLIParams().parse()
@@ -167,7 +159,7 @@ def run():
         print >>sys.stderr, "Failure during initalization"
 
 
-    ### Cache Maintenance static entry
+    ### Cache Maintenance static entry - exits upon completion
 
     try:
 
@@ -187,6 +179,17 @@ def run():
         traceback.print_exc()
         print >>sys.stderr, "Error running commands"
 
+    print 1, repr(mainlog.output), mainlog.threshold
+    print 2, repr(mainlog)
+    print 3, Runtime.loggers['main']
+    assert mainlog == Runtime.loggers['main']
+    assert log.get_log('main') == Runtime.loggers['main']
+    print 4, repr(mainlog.output), mainlog.threshold
+    Runtime.loggers['main'].config(Runtime.VERBOSE, 'stdout')
+    print 5, repr(mainlog.output), mainlog.threshold
+    print >>mainlog.output, "6", mainlog.output.fileno()
+    #		print self, 'prepare_direct_response'
+#		print Params.LOG, Runtime.LOG
 
     ### Normal proxy subroutine
 

@@ -5,8 +5,10 @@ import re
 
 import Params
 import Runtime
-from util import log
+import log
 
+
+mainlog = log.get_log('main')
 
 
 class AbstractRuleset:
@@ -60,18 +62,18 @@ class AbstractRuleset:
 			try:
 				lines = klass.parse_lines(fpath)
 			except Exception, e:
-				log("Error parsing %s lines" % klass.__name__, Params.LOG_ERR)
+				mainlog.err("Error parsing %s lines", klass.__name__)
 				raise
 
 			for line in lines:
 				try:
 					klass.rules.append( klass.parse_rule(line) )
 				except Exception, e:
-					log("Error parsing %s line: %r" % (klass.__name__, line), Params.LOG_ERR)
+					mainlog.err("Error parsing %s line: %r", klass.__name__, line)
 					raise
 			
 		else:
-			log("No such file: %s" % fpath, Params.LOG_ALERT)
+			mainlog.err("No such file: %s", fpath)
 
 
 class NoCache(AbstractRuleset):
@@ -109,8 +111,7 @@ class Join(AbstractRuleset):
 				m = regex.match(pathref)
 				if m:
 					pathref = regex.sub(repl, pathref)
-					log("Joined URL matching rule %r" % pattern,
-							threshold=Params.LOG_INFO)
+					mainlog.info("Joined URL matching rule %r", pattern)
 		return pathref
 
 	@classmethod
@@ -120,7 +121,7 @@ class Join(AbstractRuleset):
 		to current loaded rules.
 		"""
 		if not klass.rules:
-			log("No Rules to run", Params.LOG_WARN)
+			mainlog.warn("No Rules to run")
 			return
 		ok = True
 		lines = []
@@ -131,7 +132,7 @@ class Join(AbstractRuleset):
 					open(fpath).readlines() if len(path.strip()) > 1 and
 					path.strip()[1]=='#'])
 			except Exception, e:
-				log("Parsing exception: %s" % e, Params.LOG_ERR)
+				mainlog.err("Parsing exception: %s", e)
 				return
 		for path in lines:
 			match = False
@@ -164,8 +165,8 @@ class Join(AbstractRuleset):
 				fpath3 = klass.rewrite(fpath2)
 				assert fpath3, fpath3
 				if fpath2 != fpath3:
-					log('FIXME: Renaming: %s --> %s' % (fpath2, fpath), threshold=Params.LOG_NOTE)
-					continue
+					mainlog.note('FIXME: Renaming: %s --> %s', fpath2, fpath)
+					continue # XXX
 					print fpath2, fpath3
 					dirname = os.path.dirname(fpath3)
 					if dirname and not os.path.isdir(dirname):
@@ -193,14 +194,14 @@ class Rewrite(AbstractRuleset):
 	@classmethod
 	def run(klass, chunk):
 		delta = 0
-		log("Trying to rewrite chunk. ", 3)
+		mainlog.info("Trying to rewrite chunk. ")
 		for pattern, regex, repl in klass.rules:
 			if regex.search(chunk):
 				new_chunk, count = regex.subn(repl, chunk)
 				delta += len(new_chunk)-len(chunk)
 				chunk = new_chunk
 			else:
-				log("No match on chunk", 4)
+				mainlog.note("No match on chunk")
 		return delta, chunk
 
 	@classmethod

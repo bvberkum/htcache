@@ -3,8 +3,11 @@ import sys, os, select, time, socket, traceback
 import Params
 import Resource
 import Rules
-from util import *
+import Runtime
+import log
 
+
+mainlog = log.get_log('main')
 
 class Restart(Exception): pass
 
@@ -118,8 +121,7 @@ class DebugFiber( Fiber ):
 		try:
 			sys.stdout = sys.stderr = self
 			Fiber.step( self, throw )
-			get_log(Params.LOG_DEBUG, 'fiber')\
-					('Waiting at %s', self)
+			mainlog.debug('Waiting at %s', self)
 		finally:
 			sys.stdout = stdout
 			sys.stderr = stderr
@@ -133,10 +135,18 @@ class DebugFiber( Fiber ):
 
 
 def fork( output, pid_file ):
+	"""
+	Fork process, and make subprocess a session leader (break away from current terminal)
+	so it does not receive any signals from here.
 
-	get_log(Params.LOG_NOTE)\
-			( '[ FORK ] %s %s ', output, pid_file )
+	Then fork away from the session leader to prevent any control terminal from
+	attaching again. We don't want a controlling terminal for the proxy process. 
+	For monitoring and control, we'll use HTTP or a separate process that
+	reads from FIFO or file logs.
+	"""
+	mainlog.note( '[ FORK ] to %s, %s ', output, pid_file )
 
+	# Make temporary sub process
 	try:
 		log = open( output, 'w' )
 		nul = open( '/dev/null', 'r' )
@@ -148,28 +158,32 @@ def fork( output, pid_file ):
 		print 'error: failed to fork process:', e.strerror
 		sys.exit( 1 )
 	except Exception, e:
-		print 'error:', e
+		print 'fork error:', e
 		sys.exit( 1 )
 
 	if pid:
-		cpid, status = os.wait()
-		print "PID, Status: ", cpid, status
+		# Wait for second fork to complete, then exit current process
+		temp_pid, status = os.wait()
+		#print 'fork2 is done, exited from', pid
+		#print 'closing invocation process'
 		sys.exit( status >> 8 )
 
 	try: 
 		os.chdir( os.sep )
-		os.setsid() 
 		os.umask( 0 )
-		pid = os.fork()
+		# set our first fork as session leader
+		os.setsid() 
+		# now fork to process that will run htcache
+		pid2 = os.fork()
 	except Exception, e: 
-		print 'error:', e
+		print 'fork2 error:', e
 		sys.exit( 1 )
 
-	if pid != 0: # where not on the child process
-		open(pid_file, 'wb').write(str(pid))
-		print 'Forked process, htcache now at PID', pid
+	if pid2:
+		open(pid_file, 'wb').write(str(pid2))
 		sys.exit( 0 )
 
+	# xxx; if we do this from the session leader, when/how does this become a controlling terminal?
 	os.dup2( log.fileno(), sys.stdout.fileno() )
 	os.dup2( log.fileno(), sys.stderr.fileno() )
 	os.dup2( nul.fileno(), sys.stdin.fileno() )
@@ -191,7 +205,6 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 		Filename.
 	"""
 
-	import Runtime
 
 	# set up listening socket
 	listener = socket.socket( 
@@ -203,23 +216,22 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 			listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
 	try:
 		listener.bind( ( hostname, port ) )
-		get_log(Params.LOG_DEBUG)("[ BIND ] serving at %s:%i", hostname, port)
+		mainlog.debug("[ BIND ] serving at %s:%i", hostname, port)
 	except:
-		get_log(Params.LOG_ERR)("[ ERR ] unable to bind to %s:%i", hostname, port)
+		mainlog.err("[ ERR ] unable to bind to %s:%i", hostname, port)
 		raise
 	listener.listen( 5 )
 
 	if daemon_log:
-		fork( daemon_log, pid_file ) # exits parent process
+		# continue as new process in its own session
+		fork( daemon_log, pid_file ) 
 
-	# stay attached to console
 	if debug:
 		myFiber = DebugFiber
 	else:
 		myFiber = GatherFiber
 
-	get_log(Params.LOG_NOTE, 'fiber')\
-			('[ INIT ] %s started at %s:%i', generator.__name__, hostname, port )
+	mainlog.note('[ INIT ] %s started at %s:%i', generator.__name__, hostname, port )
 
 	Resource.get_backend()
 	Rules.load()
@@ -236,9 +248,9 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 			now = time.time()
 
 			i = len( fibers )
-			if Params.DEBUG:
-				get_log(Params.LOG_DEBUG)\
-						('[ STEP ] at %s, %s fibers', time.ctime(), len(fibers))
+			
+			mainlog.debug('[ STEP ] at %s, %s fibers', time.ctime(), len(fibers))
+
 			while i:
 				i -= 1
 				state = fibers[ i ].state
@@ -265,14 +277,14 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 					expire = state.expire
 
 			if expire is None:
-				get_log(Params.LOG_NOTE, 'fiber')\
-						('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+				mainlog.note('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+				# XXX
 				if len(fibers) == 0:
+					import Runtime
 					assert len(Runtime.DOWNLOADS) == 0, Runtime.DOWNLOADS
 				sys.stdout.flush()
 				canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-				get_log(Params.LOG_NOTE, 'fiber')\
-						('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
+				mainlog.note('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
 				sys.stdout.flush()
 			else:
 				canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -290,14 +302,12 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 				trysend[ fileno ].step()
 
 	except KeyboardInterrupt, e:
-		get_log(Params.LOG_NOTE)\
-			('[ DONE ] %s closing normally', generator.__name__)
+		mainlog.note('[ DONE ] %s closing normally', generator.__name__)
 		Resource.get_backend().close()
 		sys.exit( 0 )
 
 	except Restart:
-		get_log(Params.LOG_NOTE)\
-			('[ RESTART ] %s will now respawn', generator.__name__)
+		mainlog.note('[ RESTART ] %s will now respawn', generator.__name__)
 		i = len( fibers )
 		while i:
 			i -= 1
@@ -308,12 +318,10 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 		raise
 
 	except Exception, e:
-		get_log(Params.LOG_CRIT)\
-				('[ CRIT ] %s crashed: %s', generator.__name__, e)
+		mainlog.crit('[ CRIT ] %s crashed: %s', generator.__name__, e)
 		traceback.print_exc( file=sys.stdout )
 		Resource.get_backend().close()
 		sys.exit( 1 )
 
-	get_log(Params.LOG_CRIT)\
-			('[ END ] %s ', generator)
+	mainlog.crit('[ END ] %s ', generator)
 

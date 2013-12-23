@@ -99,66 +99,6 @@ def print_str(s, l = 79):
 	return print_line
 
 
-class Log:
-
-	instances = {}
-
-	def __init__(self, level, facility):
-		self.level = level
-		self.facility = facility
-
-	def __nonzero__(self):
-		return \
-				not Runtime.QUIET \
-			and \
-				Runtime.ERROR_LEVEL >= self.level \
-			or ( 
-					( self.facility in Runtime.LOG_FACILITIES ) \
-				and \
-					( Runtime.VERBOSE >= self.level )
-			)
-
-	def __call__(self, msg, *args):
-		if self:
-			if args:
-				print msg % args
-			else:
-				print msg
-
-
-def get_log(threshold=Params.LOG_NOTE, facility=None):
-	"""
-	Return a "no-op" logger (that evaluates to None but does have the pertinent
-	methods). This allows to contain code that should only be run in debug
-	modes in conditional scopes. k
-	"""
-	trace = [ 
-			( os.path.basename(q), x, y, z )
-			for q,x,y,z 
-			in traceback.extract_stack() 
-		]
-	trace.pop()
-	if trace:
-		if trace[-1][0] == 'util.py':
-			trace.pop()
-		facility = trace[-1][0].replace('.py', '').lower()
-	else:
-		facility = 'htcache'
-	key = "%s.%i" % (facility, threshold)
-	if key not in Log.instances:
-		Log.instances[key] = Log(threshold, facility)
-	return Log.instances[key]
-
-
-def log(msg, threshold=Params.LOG_NOTE, facility='default'):
-	"""
-	Not much of a log..
-	Output if VERBOSE >= threshold
-	Use (r)syslog integer levels.
-	"""
-	return get_log(threshold, facility)(msg)
-
-
 def strstr(s):
 	return s.strip('"')
 

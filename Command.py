@@ -11,7 +11,11 @@ import Params
 import Runtime
 import Resource
 import Rules
-from util import json_write, get_log
+from util import json_write
+import log
+
+
+log = log.get_log('main')
 
 
 ## optparse callbacks
@@ -64,10 +68,18 @@ def opt_datadir(option, opt_str, value, parser):
 	setattr(parser.values, "data", dbref)
 #	parser.defaults['data'] = dbref
 
+def opt_log_args(option, opt_str, value, parser):
+	args = value.split(',')
+	setattr(parser.values, option.dest, args)
+	print dir(option)
+	print repr(opt_str)
+	print repr(args)
+	print dir(parser)
+	print parser.values
 
 ## optparse option attributes
 
-def _attr(d, **ext):
+def dict_update(d, **ext):
 	d = dict(d)
 	d.update(ext)
 	return d
@@ -84,6 +96,11 @@ _dirpath = dict(
 		metavar="DIR",
 		action="callback",
 		callback=opt_dirpath
+	)
+
+logger_args = dict(
+		type=str, default=None,
+		action="callback", callback=opt_log_args
 	)
 
 def _rulefile(name):
@@ -162,9 +179,21 @@ class CLIParams:
 		( "Cache", "Parameters that define non-user visible backend behaviour. ", (
 			(('--daemon',),
 				"daemonize process and print PID, route output to LOG", dict(
+					type=str,
+					default=Params.LOG,
 					metavar="LOG",
 					dest="log"
 			)),
+#			(('--debug-tag',),
+#				"filter out logs and print to separate stream, ", dict(
+#					metavar="TAG",
+#					dest="log"
+#			)),
+#			(('--debug-log',),
+#				"set the location of a debug log", dict(
+#					metavar="TAG;LOG",
+#					dest="log"
+#			)),
 			(('--pid-file',),
 				"set the run file where to write the PID, default is '%default'", dict(
 					metavar="FILE",
@@ -172,7 +201,7 @@ class CLIParams:
 			)),
 			(("-r", "--root"),
 				"set cache root directory, defaults to execution directory: %default. ", 
-				_attr(_dirpath, default=Params.ROOT)
+				dict_update(_dirpath, default=Params.ROOT)
 			),
 			(("--data",), "Change SQL Alchemy database reference. Defaults "
 				"to a location in DATA_DIR: %default. ",
@@ -194,7 +223,7 @@ class CLIParams:
 			),
 			(("--static-dir",), "XXX: Change location of static datafiles. "
 				"Default: %default. ", 
-				_attr(_dirpath, default=Params.DATA_DIR)
+				dict_update(_dirpath, default=Params.DATA_DIR)
 			),
 			(("-c", "--cache"),
 				"Module for cache backend, default %default.", dict(
@@ -244,11 +273,11 @@ class CLIParams:
 			),
 			(("--check-join-rules",),
 				"XXX: validate and run tests", 
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 			(("--run-join-rules",),
 				"XXX: re-run", 
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 		)),
 		( "Misc.", "These affect both the proxy and commands. ", (
@@ -256,23 +285,43 @@ class CLIParams:
 				"increase output, XXX: use twice to show http headers", dict(
 					action="count"
 			)),
-			(("--error-level",),
-				"set output level to override log-level", dict(
-					metavar="[0-7]",
-					type=int,
-					default=Params.ERROR_LEVEL,
-					action="callback",
-					callback=opt_loglevel
-			)),
-			(("--log-level",),
-				"set output level for selected facilities", dict(
-					metavar="[0-7]",
-					type=int,
-					dest="verbose",
-					default=Params.VERBOSE,
-					action="callback",
-					callback=opt_loglevel
-			)),
+#			(("--log-level",),
+#				"set main log output level", dict(
+#					metavar="[0-7]",
+#					type=int,
+#					# dest: error_level
+#					default=Params.ERROR_LEVEL,
+#					action="callback",
+#					callback=opt_loglevel
+#			)),
+#			(("--error-level",),
+#				"set output level to override log-level", dict(
+#					metavar="[0-7]",
+#					type=int,
+#					# dest: error_level
+#					default=Params.ERROR_LEVEL,
+#					action="callback",
+#					callback=opt_loglevel
+#			)),
+#			(("--log-level",),
+#				"set output level for selected facilities", dict(
+#					metavar="[0-7]",
+#					type=int,
+#					# fixme: rename verbose to log_level some convenient time
+#					dest="verbose",
+#					default=Params.VERBOSE,
+#					action="callback",
+#					callback=opt_loglevel
+#			)),
+#			(("--log-main-args",), "", dict_update(logger_args, 
+#				metavar="[level,location]",
+#				default='0,stdout')),
+#			(("--log-error-args",), "", dict_update(logger_args, 
+#				metavar="[level,location]",
+#				default='0,stderr')),
+#			(("--log-module-args",), "", dict_update(logger_args, 
+#				metavar="[level,location]",
+#				default=Params.LOG_MODULE_ARGS)),
 			(("-q", "--quiet"),
 				"XXX: turn of output printing?", dict(
 					action="store_true",
@@ -283,47 +332,40 @@ class CLIParams:
 					action="store_true",
 					default=Params.DEBUG
 			)),
-			(('--log-facility',),
-				".", dict(
-					type=str,
-					action="append",
-					default=[],#Params.LOG_FACILITIES,
-					dest='log_facilities'
-			))
 		)),
 		( "Query", 
 				"", (
 			(("--info",),
 				"TODO: ", 
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 			(("--list-locations",),
 				"Print paths of descriptor locations. ", 
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 			(("--list-resources",),
 				"Print URLs of cached resources. ", 
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 			(("--print-resources",),
 				"Print all fields for each record; tab separated, one per line.", 
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 			(("--find-records", ),
 				"XXX: Query for one or more records by regular expression.", 
-				_attr(_cmd, metavar="KEY[.KEY]:PATTERN", type=str)
+				dict_update(_cmd, metavar="KEY[.KEY]:PATTERN", type=str)
 			),
 			(("--print-records", ),
 				"",
-				_attr(_cmd)
+				dict_update(_cmd)
 			),
 			(("--print-record", ),
 				"",
-				_attr(_cmd, metavar="URL", type=str)
+				dict_update(_cmd, metavar="URL", type=str)
 			),
 			(("--print-location", ),
 				"",
-				_attr(_cmd, metavar="URL", type=str)
+				dict_update(_cmd, metavar="URL", type=str)
 			),
 		)),
 		( "Maintenance", 
@@ -331,25 +373,25 @@ class CLIParams:
 options in this group performan maintenance tasks, and the last following group
 gives access to the stored data. """, (
 			(("--check-cache",),
-				"", _attr(_cmd)
+				"", dict_update(_cmd)
 			),
 			(("--check-files",),
-				"", _attr(_cmd)
+				"", dict_update(_cmd)
 			),
 # XXX:
 #			(("--check-refs",),
-#				"TODO: iterate cache references", _attr(_cmd)
+#				"TODO: iterate cache references", dict_update(_cmd)
 #			),
 			(("--prune-gone",),
-				"TODO: Remove resources no longer online.", _attr(_cmd)
+				"TODO: Remove resources no longer online.", dict_update(_cmd)
 			),
 			(("--prune-stale",),
 				"Delete outdated cached resources, ie. those that are "
-				"expired. Also drops records for missing files. ", _attr(_cmd)
+				"expired. Also drops records for missing files. ", dict_update(_cmd)
 			),
 			(("--link-dupes",),
 				"TODO: Symlink duplicate content, check by size and hash."
-				" Requires up to date hash index.", _attr(_cmd)
+				" Requires up to date hash index.", dict_update(_cmd)
 			),
 #	 TODO --print-mode line|tree
 #	 TODO --print-url
@@ -539,7 +581,7 @@ def run(cmds={}):
 				cmdfunc[cmdid]()
 
 		except Exception, e:
-			get_log(Params.LOG_ERR, 'command')("Error: %s", e)
+			log.err("Error: %s", e)
 			etype, value, tb = sys.exc_info()
 			exceptions.append((etype, value, tb))
 

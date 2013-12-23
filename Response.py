@@ -2,8 +2,10 @@ import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
 import Params, Resource, Rules, HTTP, Runtime
-from util import log, json_write, json_read, get_log
+from util import json_write, json_read
+import log
 
+mainlog =  log.get_log('main')
 
 class BlindResponse:
 
@@ -60,7 +62,10 @@ class DataResponse:
 
 	def __init__( self, protocol, request ):
 
-		log("New DataResponse for "+str(request.url), Params.LOG_DEBUG)
+		self.__protocol = protocol
+		self.__pos, self.__end = request.range()
+
+		mainlog.debug("New %s for %s", self, request)
 
 		#assert protocol._HttpProtocol__status in (200, 206),\
 		#	protocol._HttpProtocol__status
@@ -69,8 +74,6 @@ class DataResponse:
 		assert protocol.data.cache
 		assert protocol.data.descriptor.mediatype
 
-		self.__protocol = protocol
-		self.__pos, self.__end = request.range()
 		if self.__end == -1:
 			self.__end = protocol.data.descriptor.size
 
@@ -103,15 +106,14 @@ class DataResponse:
 			args[ 'Content-Range' ] = 'bytes */*'
 			args[ 'Content-Length' ] = '0'
 
-		log('HTCache responds %r' % head.strip(), Params.LOG_NOTE)
+		mainlog.note('HTCache responds %r', head.strip())
 
-		if Runtime.VERBOSE == Params.LOG_DEBUG:
+		if Runtime.VERBOSE == log.DEBUG:
 			for key in args:
 				if not args[key]:
-					log("Error: no value %s" % key, Params.LOG_ERR)
+					mainlog.err("Error: no value %s" % key)
 					continue
-				log('> %s: %s' % ( key, args[ key ] ), #.replace( '\r\n', ' > ' ) ),
-					Params.LOG_DEBUG)
+				mainlog.debug('> %s: %s' % ( key, args[ key ] )) #.replace( '\r\n', ' > ' ) ),
 
 		# Prepare response for client
 		self.__sendbuf = '\r\n'.join( [ head ] +
@@ -124,12 +126,11 @@ class DataResponse:
 		if self.__sendbuf:
 			return True
 		elif self.__pos >= self.__protocol.tell():
-			get_log(Params.LOG_DEBUG)\
-					("[%s hasdata (%s >= %s) ]", self, self.__pos, self.__protocol.tell())
+#			mainlog.debug("[%s hasdata (%s >= %s) ]", self, self.__pos, self.__protocol.tell())
 			return False
 		elif self.__pos < self.__end or self.__end == -1:
-			get_log(Params.LOG_DEBUG)\
-					("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
+#			mainlog.debug
+#					("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
 			return True
 		else:
 			return False
@@ -152,7 +153,7 @@ class DataResponse:
 			try:
 				self.__pos += sock.send( chunk )
 			except Exception, e:
-				log("Client aborted: %s" % e, Params.LOG_ERR)
+				mainlog.err("Client aborted: %s", e)
 				self.Done = True
 				#XXX:if not self.__protocol.cache.full():
 				#	self.__protocol.cache.remove_partial()
@@ -185,12 +186,11 @@ class DataResponse:
 		else:
 			if self.__protocol.size >= 0:
 				if self.__protocol.size != self.__protocol.tell():
-					log('connection closed prematurely', Params.LOG_ERR)
+					mainlog.err('connection closed prematurely')
 					
 			else:
 				self.__protocol.size = self.__protocol.tell()
-				log('Connection closed at byte %i' % self.__protocol.size,
-						Params.LOG_DEBUG)
+				mainlog.debug('Connection closed at byte %i', self.__protocol.size)
 			self.Done = not self.hasdata()
 
 		#if self.Done:
@@ -203,12 +203,20 @@ class DataResponse:
 				#		(pattern, substitute), count))
 
 	def finalize(self, client):
-		get_log(Params.LOG_DEBUG)\
-				('%s: finalizing' % self)
+		mainlog.debug('%s: finalizing' % self)
 		self.__protocol.finish()
 
 	def __str__(self):
-		return "[DataResponse %s]" % hex(id(self))
+		if self.__end:
+			return "[DataResponse %s %s/%s, %s/%s]" % (
+					hex(id(self)),
+					self.__protocol.tell(), self.__protocol.size,
+					self.__pos, self.__end)
+		else:
+			return "[DataResponse %s %s/%s]" % (
+					hex(id(self)),
+					self.__protocol.tell(),
+					self.__protocol.size)
 
 
 class ChunkedDataResponse( DataResponse ):
@@ -228,19 +236,17 @@ class ChunkedDataResponse( DataResponse ):
 			chunksize = int( head.split( ';' )[ 0 ], 16 )
 			if chunksize == 0:
 				self.__protocol.size = self.__protocol.tell()
-				log('Connection closed at byte %i' % self.__protocol.size, 
-						Params.LOG_DEBUG)
+				mainlog.debug('Connection closed at byte %i', self.__protocol.size)
 				self.Done = not self.hasdata()
 				return
 			if len( tail ) < chunksize + 2:
 				return
 			assert tail[ chunksize:chunksize+2 ] == '\r\n', \
 					'chunked data error: chunk does not match announced size'
-			log('Received %i byte chunk' % chunksize, Params.LOG_DEBUG)
+			mainlog.debug('Received %i byte chunk', chunksize)
 			self.__protocol.write( tail[ :chunksize ] )
 			self.__recvbuf = tail[ chunksize+2: ]
-		get_log(Params.LOG_DEBUG)\
-				('Received %i byte in chunks', len(self.__recvbuf))
+		mainlog.debug('Received %i byte in chunks', len(self.__recvbuf))
 		#protocol.data.close()
 
 	def __str__(self):

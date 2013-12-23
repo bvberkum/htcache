@@ -221,6 +221,54 @@ impossible.
 The nodir parameter accepts a replacement for the directory separator Nnd
 stores the path in a single filename. This may affect FileTreeQ.
 
+Logging
+______________
+- All std output goes through log() calls to a stream of formatted lines.
+- Setting to run as daemon effectively sets the output to a std log.
+- For each log() call there is a level and facility.
+- The normal mode when not quiet is to emit based on error-level threshold.
+
+- Then there is a facility filter. Needs work.
+  Should 'bind facilities' on init, ie. enable them by tying them to an output.
+
+- The facility by default is set to the origin component.
+  Each component has at least one logger for itself, but can log for more
+  'facilities'.
+
+In addition to the module names, I like some more specialized facilities.
+These all have their own recursive tree formatters to print specialized
+information the the program structure through phases in the server handler.
+
+
+
+These are better suited for dynamic monitoring than log events. 
+Perhaps work them out as log events and use monitoring component to view them
+or print tree slices when updates are sent.
+
+request-tree::
+	Request  <- Protocol     <- Response
+	 \- Cache    \- Resource
+
+client-tree::
+	client  - Request  - Cache
+	client  - Request +- Cache
+	                  \- Protocol
+	client  - Request +- Cache
+	                  \- Protocol  - server
+	client  - Request +- Cache
+	                  \- Protocol +- server
+	                              +- Resource
+	                              \- Response
+resource-tree::
+	Cache  -  Request -  client
+	Resource <-  Protocol <-+ Request  <- client
+	   file <-  Cache <-/ 
+		
+	Resource <-+ Protocol <-+ Request  <- client
+	Response <-/            |
+	       file <-  Cache <-/ 
+
+
 
 Documentation
 -------------

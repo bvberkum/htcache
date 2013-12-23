@@ -11,7 +11,10 @@ import Params
 import Runtime
 import Rules
 from util import *
+import log
 
+
+mainlog = log.get_log('main')
 
 def load_backend_type(tp):
 	assert '.' in tp, "Specify backend as <module>.<backend-type>"
@@ -83,7 +86,7 @@ class File(object):
 
 		self.path = path
 
-		get_log(Params.LOG_DEBUG)('%s: init %s', self, path)
+		mainlog.debug('%s: init %s', self, path)
 		self.file = None
 
 		assert len(self.abspath()) < 255, \
@@ -139,8 +142,7 @@ class File(object):
 	def open_new( self ):
 		assert not self.file
 
-		get_log(Params.LOG_NOTE, 'cache')\
-				('%s: Preparing new file in cache', self)
+		mainlog.note('%s: Preparing new file in cache', self)
 	
 		new_file = self.abspath()
 		
@@ -151,8 +153,7 @@ class File(object):
 		try:
 			self.file = open( new_file, 'w+' )
 		except Exception, e:
-			get_log(Params.LOG_NOTE, 'cache')\
-					('%s: Failed to open file: %s', self, e)
+			mainlog.note('%s: Failed to open file: %s', self, e)
 			self.file = os.tmpfile()
 
 	def open_partial( self, offset=-1 ):
@@ -162,8 +163,7 @@ class File(object):
 			assert offset <= self.tell(), 'range does not match file in cache'
 			self.file.seek( offset )
 			self.file.truncate()
-		get_log(Params.LOG_INFO, 'cache')\
-				('%s: Resuming partial file in cache at byte %s', self, self.tell())
+		mainlog.info('%s: Resuming partial file in cache at byte %s', self, self.tell())
 
 	def open_full( self ):
 		assert not self.file
@@ -180,12 +180,10 @@ class File(object):
 
 	def remove_full( self ):
 		os.remove( self.abspath() )
-		get_log(Params.LOG_NOTE, 'cache')\
-				('%s: Removed complete file from cache', self)
+		mainlog.note('%s: Removed complete file from cache', self)
 
 	def remove_partial( self ):
-		get_log(Params.LOG_NOTE, 'cache')\
-				('%s: Removed partial file from cache', self)
+		mainlog.note('%s: Removed partial file from cache', self)
 		os.remove( self.abspath() + Runtime.PARTIAL )
 
 	def read( self, pos, size ):
@@ -214,6 +212,5 @@ class File(object):
 			try:
 				self.close()
 			except Exception, e:
-				get_log(Params.LOG_WARN)\
-						("%s: Error on closing cache file: %s", self, e)
+				mainlog.warn("%s: Error on closing cache file: %s", self, e)
 

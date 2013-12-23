@@ -28,7 +28,10 @@ import Runtime
 from util import *
 from error import *
 from pprint import pformat
+import log
 
+
+mainlog = log.get_log('main')
 
 
 class ProxyData(object):
@@ -76,8 +79,7 @@ class ProxyData(object):
 	
 		self.mtime = None
 
-		get_log(Params.LOG_DEBUG)\
-			("%s: empty instance", self)
+		mainlog.debug("%s: empty instance", self)
 
 	def set_content_length(self, value):
 		if self.cache.file:
@@ -91,8 +93,7 @@ class ProxyData(object):
 			mtime = calendar.timegm( time.strptime(
 				value, Params.TIMEFMT ) )
 		except:
-			get_log(Params.LOG_ERR)\
-					( 'Error: illegal time format in Last-Modified: %s.', value )
+			mainlog.err( 'Error: illegal time format in Last-Modified: %s.', value )
 			# XXX: Try again, should make a list of alternate (but invalid) date formats
 			try:
 				tmhdr = re.sub(
@@ -108,8 +109,7 @@ class ProxyData(object):
 						value,
 						Params.ALTTIMEFMT ) )
 				except:
-					get_log(Params.LOG_ERR)\
-							( 'Fatal: unable to parse Last-Modified: %s.', value )
+					mainlog.err( 'Fatal: unable to parse Last-Modified: %s.', value )
 		
 		if mtime:
 			self.descriptor.mtime = mtime
@@ -166,11 +166,9 @@ class ProxyData(object):
 		self.descriptor = Descriptor.find_latest(url)
 		if not self.descriptor or not self.descriptor.id:
 			self.descriptor = Descriptor()
-			get_log(Params.LOG_DEBUG)\
-					('%s: Initialized new descriptor. ', self)
+			mainlog.debug('%s: Initialized new descriptor. ', self)
 		else:
-			get_log(Params.LOG_DEBUG)\
-					('%s: Found existing descriptor for %r ', self, self.descriptor.path)
+			mainlog.debug('%s: Found existing descriptor for %r ', self, self.descriptor.path)
 
 	def exists( self ):
 		return self.descriptor != None and self.descriptor.id != None
@@ -183,15 +181,14 @@ class ProxyData(object):
 		The location will be subject to the specific heuristics of the backend
 		type, this path will be readable from cache.path.
 		"""
-		get_log(Params.LOG_DEBUG)\
-				( "%s: Init cache: %s", self, Runtime.CACHE )
+		mainlog.debug( "%s: Init cache: %s", self, Runtime.CACHE )
 		self.cache = Cache.load_backend_type( Runtime.CACHE )()
 		if netpath:
 			assert netpath[:2] == '//', netpath
 			netpath = netpath[2:]
 			netpath = Rules.Join.rewrite(netpath)
 			self.cache.init( netpath )
-			get_log(Params.LOG_INFO)( '%s: Prepped cache, position: %s',
+			mainlog.info( '%s: Prepped cache, position: %s',
 					self, self.cache.abspath() )
 
 	def open_cache( self ):
@@ -200,18 +197,15 @@ class ProxyData(object):
 		self.cache.stat()
 
 	def move( self ):
-		get_log(Params.LOG_DEBUG)\
-				("Error: TODO: ProxyData.move")
+		mainlog.debug("Error: TODO: ProxyData.move")
 
 	def set_broken( self ):
-		get_log(Params.LOG_DEBUG)\
-				("Error: TODO: ProxyData.set_broken")
+		mainlog.debug("Error: TODO: ProxyData.set_broken")
 
 	def close(self):
 		self.cache = None
 		self.descriptor = None
-		get_log(Params.LOG_DEBUG)\
-				("%s: closed ", self)
+		mainlog.debug("%s: closed ", self)
 
 	def set_data(self, attribute, value):
 		assert not getattr( self.descriptor, attribute ), attribute
@@ -222,8 +216,7 @@ class ProxyData(object):
 		if not self.descriptor.resource:
 			self.descriptor.resource = Resource()
 		self.map_to_data( HTTP.filter_entity_headers( self.protocol.args() ) )
-		#get_log(Params.LOG_DEBUG)\
-		#		( '%s: update_data %r ', self, self.descriptor )
+		mainlog.debug( '%s: update_data %r ', self, self.descriptor )
 
 # before client response headers
 	def finish_data(self):
@@ -234,8 +227,7 @@ class ProxyData(object):
 		assert self.descriptor.id
 # XXX
 #		if not self.descriptor.id:
-		get_log(Params.LOG_DEBUG)\
-			('%s finish_data %r %r ', self, self.descriptor, self.descriptor.resource )
+		mainlog.debug('%s finish_data %r %r ', self, self.descriptor, self.descriptor.resource )
 
 	###
 
@@ -275,8 +267,7 @@ class ProxyData(object):
 				else:
 					setattr( self.descriptor, hm, ht(hv) )
 			else:
-				get_log(Params.LOG_WARN)\
-					("Unrecognized entity header %s", hn)
+				mainlog.warn("Unrecognized entity header %s", hn)
 
 	def map_to_headers(self):
 		headerdict = HeaderDict()
@@ -313,8 +304,7 @@ class ProxyData(object):
 
 		req_headers = request.headers
 
-		get_log(Params.LOG_DEBUG)\
-				( "%s: Preparing for request to %s", self, self.protocol.url )
+		mainlog.debug( "%s: Preparing for request to %s", self, self.protocol.url )
 
 		self.init_data( self.protocol.url )
 
@@ -323,8 +313,7 @@ class ProxyData(object):
 			abspath = self.cache.abspath()
 			self.set_data( 'path', abspath )
 			self.set_data( 'mtime', time.time() )
-			get_log(Params.LOG_DEBUG)\
-					( '%s: Prepared descriptor at %r', self, abspath )
+			mainlog.debug( '%s: Prepared descriptor at %r', self, abspath )
 
 		else:
 			assert self.descriptor.exists()
@@ -332,8 +321,7 @@ class ProxyData(object):
 			self.init_cache( )
 			self.cache.path = self.descriptor.path.replace( Runtime.PARTIAL, '' )
 			self.cache.stat()
-			get_log(Params.LOG_DEBUG)\
-					( 'Existing descriptor at %r', self.descriptor.path )
+			mainlog.debug( 'Existing descriptor at %r', self.descriptor.path )
 
 		# Prepare proxied request headers
 		via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
@@ -364,16 +352,14 @@ class ProxyData(object):
 
 			if self.cache.partial:
 				assert self.cache.size < self.descriptor.size, \
-						( "Cannot be partial", self.cache.size, self.descriptor.size )
-				get_log(Params.LOG_NOTE)\
-						('Requesting resume of partial file in cache: '
+						( "Illegal state: file should have been completed", self.cache.size, self.descriptor.size )
+				mainlog.note('Requesting resume of partial file in cache: '
 						'%i bytes, %s', self.cache.size, mdtime )
 				req_headers[ 'Range' ] = 'bytes=%i-' % ( self.cache.size,) # self.descriptor.size+1 )
 				req_headers[ 'If-Range' ] = mdtime
 
 			elif self.cache.full:
-				get_log(Params.LOG_INFO)\
-						( 'Checking complete file in cache: %s', mdtime )
+				mainlog.info( 'Checking complete file in cache: %s', mdtime )
 				req_headers[ 'If-Modified-Since' ] = mdtime
 				if self.descriptor.etag:
 					req_headers[ 'If-None-Match' ] = '"%s"' % self.descriptor.etag
@@ -387,7 +373,7 @@ class ProxyData(object):
 		Response type.
 		"""
 
-		get_log(Params.LOG_INFO) ("%s: Completing request", self)
+		mainlog.info ("%s: Completing request phase", self)
 
 		if not self.descriptor.id:
 
@@ -413,15 +399,13 @@ class ProxyData(object):
 					self.cache.abspath(), self.descriptor.path )
 
 		self.open_cache()
-		get_log(Params.LOG_INFO)\
-				("%s: open_cache %s", self, self.cache.partial or
+		mainlog.info("%s: open_cache %s", self, self.cache.partial or
 						self.cache.full)
 
 	def prepare_response( self ):
 		args = self.protocol.args()
 		args.update(self.map_to_headers())
-		get_log(Params.LOG_INFO)\
-				("%s: prepare_response %s", self, args)
+		mainlog.info ("%s: prepare_response %s", self, args)
 		via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
 		if args.setdefault('Via', via) != via:
 			args['Via'] += ', '+ via
@@ -429,16 +413,15 @@ class ProxyData(object):
 		return args
 
 	def finish_response( self ):
-		get_log(Params.LOG_INFO)\
-				("%s: finish_response", self)
 		size = self.cache.tell()
+		mainlog.info("%s: finish_response at cache.tell=%i", self, size)
 		#print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
 		#				size, self.descriptor.size, self.cache.size,\
 		#				self.descriptor.mtime, self.cache.mtime )
 		if size == self.descriptor.size:
 			self.cache.stat()
 			if self.cache.partial:
-# XXX: this should mve into Cache again:
+# XXX: this should mve back to Cache again: finalize Cache file by stripping PARTIAL suffix
 				abspath = os.path.join( Runtime.ROOT, self.cache.path )
 				assert os.path.exists(
 						Cache.suffix_ext( abspath, Runtime.PARTIAL )
@@ -448,13 +431,12 @@ class ProxyData(object):
 						abspath 
 					)
 				os.utime( abspath, ( self.descriptor.mtime, self.descriptor.mtime ) )
-				get_log(Params.LOG_NOTE, 'cache')\
-						("%s: Finalized %r at %i", self, abspath, size )
+				mainlog.note("%s: Finalized %r at %i", self, abspath, size )
 				self.descriptor.path = abspath
 				self.descriptor.commit()
 		else:
-			get_log(Params.LOG_NOTE, 'cache')\
-					("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
+			mainlog.debug("Descriptor does not match: %s", self.descriptor.size)
+			mainlog.note("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
 			os.utime( self.descriptor.path, ( self.descriptor.mtime, self.descriptor.mtime ) )
 		#print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
 		#				size, self.descriptor.size, self.cache.size,\
@@ -464,17 +446,14 @@ class ProxyData(object):
 		#url = self.get_content_location()
 		self.finish_data()
 		#self.close()
-
-		get_log(Params.LOG_INFO)\
-				("ProxyData.finish_response is done. ")
+		mainlog.info("ProxyData.finish_response is done. ")
 		return
 # XXX
 		complete = '/tmp/htcache-systemtest3.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt'
 		while not os.path.exists( complete ):
-			log("NO STAT", Params.LOG_CRIT)
+			mainlog.crit("NO STAT %s", complete)
 			time.sleep(1)
-		get_log(Params.LOG_INFO)\
-				("STAT %s", os.stat(complete))
+		mainlog.info("STAT %s", os.stat(complete))
 
 # XXX
 #		if url:
@@ -555,8 +534,7 @@ class SessionMixin(object):
 		try:
 			return self.fetch(*args)
 		except NoResultFound, e:
-			get_log(Params.LOG_INFO)\
-					( "%s find: No results for %r", self, args )
+			mainlog.info( "%s find: No results for %r", self, args )
 
 	def fetch(self, *args):
 		"""
@@ -675,11 +653,9 @@ def get_session(dbref, initialize=False):
 	engine = create_engine(dbref)#, encoding='utf8')
 	#engine.raw_connection().connection.text_factory = unicode
 	if initialize:
-		get_log(Params.LOG_DEBUG)\
-				("Applying SQL DDL to DB %s ", dbref)
+		mainlog.debug("Applying SQL DDL to DB %s ", dbref)
 		SqlBase.metadata.create_all(engine) # issue DDL create 
-		get_log(Params.LOG_INFO)\
-			("Updated data schema")
+		mainlog.info("Updated data schema")
 	session = sessionmaker(bind=engine)()
 	return session
 
@@ -758,8 +734,7 @@ def find_records(q):
 #					if res[4][k2] == props[k][k2]:
 #						print path
 	backend.close()
-	get_log(Params.LOG_DEBUG)\
-			("End of findinfo", Params.LOG_DEBUG)
+	mainlog.debug("End of findinfo")
 
 
 # TODO: integrate with other print_info
@@ -772,8 +747,7 @@ def print_info(*paths):
 			path = Params.ROOT + path
 #		path = path.replace(Params.ROOT, '')
 		if path not in backend:
-			get_log(Params.LOG_DEBUG)\
-					("Unknown cache location: %s", path)
+			mainlog.debug("Unknown cache location: %s", path)
 		else:
 			print path, backend.find(path)
 			recordcnt += 1
@@ -820,14 +794,14 @@ def check_data(cache, uripathnames, mediatype, d1, d2, meta, features):
 	if cache.partial:
 		pathname += '.incomplete'
 	if not (cache.partial or cache.full):
-		log("Missing %s" % pathname)
+		mainlog.info("Missing %s" % pathname)
 		return
 	if 'Content-Length' not in meta:
-		log("Missing content length of %s" % pathname)
+		mainlog.info("Missing content length of %s" % pathname)
 		return
 	length = int(meta['Content-Length'])
 	if cache.full() and os.path.getsize(pathname) != length:
-		log("Corrupt file: %s, size should be %s" % (pathname, length))
+		mainlog.err("Corrupt file: %s, size should be %s" % (pathname, length))
 		return
 	return True
 
@@ -856,7 +830,7 @@ def check_files():
 	#else:
 	#	descriptors = SessionMixin.get_instance(main=False)
 	pcount, rcount = 0, 0
-	log("Iterating paths in cache root location. ")
+	mainlog.info("Iterating paths in cache root location. ")
 
 	for root, dirs, files in os.walk(Params.ROOT):
 
@@ -872,26 +846,26 @@ def check_files():
 			pcount += 1
 			if f not in backend.descriptors:
 				if os.path.isfile(f):
-					log("Missing descriptor for %s" % f)
+					mainlog.warn("Missing descriptor for %s" % f)
 					if Runtime.PRUNE:
 						size = os.path.getsize(f)
 						if size < Runtime.MAX_SIZE_PRUNE:
 							os.unlink(f)
-							log("Removed unknown file %s" % f)
+							mainlog.warn("Removed unknown file %s" % f)
 						else:
-							log("Keeping %sMB" % (size / (1024 ** 2)))#, f))
+							mainlog.note("Keeping %sMB" % (size / (1024 ** 2)))#, f))
 				elif not (os.path.isdir(f) or os.path.islink(f)):
-					log("Unrecognized path %s" % f)
+					mainlog.warn("Unrecognized path %s" % f)
 			elif f in backend.descriptors:
 				rcount += 1
 				descr = backend.descriptors[f]
 				assert isinstance(descr, Record)
 				uriref = descr[0][0]
-				log("Found resource %s" % uriref, threshold=1)
+				mainlog.info("Found resource %s" % uriref, threshold=1)
 # XXX: hardcoded paths.. replace once Cache/Resource is properly implemented
 				port = 80
 				if len(descr[0]) != 1:
-					log("Multiple references %s" % f)
+					mainlog.note("Multiple references %s" % f)
 					continue
 				urlparts = urlparse.urlparse(uriref)
 				hostname = urlparts.netloc
@@ -904,7 +878,7 @@ def check_files():
 				cache = get_cache(hostinfo, pathname)
 				#print 'got cache', cache.getsize(), cache.path
 # end
-	log("Finished checking %s cache locations, found %s resources" % (
+	mainlog.note("Finished checking %s cache locations, found %s resources" % (
 		pcount, rcount))
 	backend.close()
 
@@ -922,7 +896,7 @@ def check_cache():
 	count = len(refs)
 	log("Iterating %s descriptors" % count)
 	for i, ref in enumerate(refs):
-		log("%i, %s" % (i, ref), Params.LOG_DEBUG)
+		mainlog.debug("%i, %s" % (i, ref))
 		descr = backend.descriptors[ref]
 		log("Record data: [%s] %r" %(ref, descr.data,), 2)
 		urirefs, mediatype, d1, d2, meta, features = descr

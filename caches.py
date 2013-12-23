@@ -8,7 +8,10 @@ import time, os
 from hashlib import md5
 import Cache, Params, Runtime
 from util import *
+import log
 
+
+mainlog = log.get_log('main')
 
 
 class FileTreeQ(Cache.File):
@@ -22,8 +25,7 @@ class FileTreeQ(Cache.File):
 
 	def init(self, path):
 		assert Params.PARTIAL not in path
-		get_log(Params.LOG_DEBUG, 'cache')\
-				("%s: init %r", self, path)
+		mainlog.debug("%s: init %r", self, path)
 		psep = Runtime.ENCODE_PATHSEP
 		# encode query and/or fragment parts
 		sep = Cache.min_pos(path.find('#'), path.find( '?' )) 
@@ -75,8 +77,7 @@ class FileTreeQH(Cache.File):
 
 	def init(self, path):
 		assert Params.PARTIAL not in path
-		get_log(Params.LOG_DEBUG, 'cache')\
-				("%s: init %r", self, path)
+		mainlog.debug("%s: init %r", self, path)
 		# encode query if present
 		sep = path.find( '?' )
 		# other encoding in query/fragment part		
@@ -111,8 +112,7 @@ class FileTreeQH(Cache.File):
 class PartialMD5Tree(Cache.File):
 	def init(self, path):
 		assert Params.PARTIAL not in path
-		get_log(Params.LOG_DEBUG, 'cache')\
-				("%s: init %r", self, path)
+		mainlog.debug("%s: init %r", self, path)
 		if Runtime.ARCHIVE:
 			path = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path 
 
@@ -129,8 +129,7 @@ class PartialMD5Tree(Cache.File):
 class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
 	def init(self, path):
 		assert Params.PARTIAL not in path
-		get_log(Params.LOG_DEBUG, 'cache')\
-				("%s: init %r", self, path)
+		mainlog.debug("%s: init %r", self, path)
 		path2 = path
 		if Runtime.ARCHIVE:
 			path2 = time.strftime( Runtime.ARCHIVE, time.gmtime() ) + path2
@@ -152,8 +151,7 @@ class FileTree(FileTreeQ, FileTreeQH, PartialMD5Tree):
 class RefHash(Cache.File):
 
 	def __init__(self, path):
-		get_log(Params.LOG_DEBUG, 'cache')\
-				("RefHash.__init__ %r", path)
+		mainlog.debug("RefHash.__init__ %r", path)
 		super(RefHash, self).__init__(path)
 		self.refhash = md5(path).hexdigest()
 		self.path = self.refhash
@@ -163,8 +161,7 @@ class RefHash(Cache.File):
 
 	def open_new(self):
 		self.path = Runtime.PARTIAL + os.sep + self.refhash
-		get_log(Params.LOG_DEBUG, 'cache')\
-				('%s: Preparing new file in cache: %s', self, self.path)
+		mainlog.debug('%s: Preparing new file in cache: %s', self, self.path)
 		self.file = open( self.abspath(), 'w+' )
 
 	def open_full(self):
@@ -179,14 +176,12 @@ class RefHash(Cache.File):
 			assert offset <= self.tell(), 'range does not match file in cache'
 			self.file.seek( offset )
 			self.file.truncate()
-		get_log(Params.LOG_INFO, 'cache')\
-				('Resuming partial file in cache at byte %i', self.tell())
+		mainlog.info('Resuming partial file in cache at byte %i', self.tell())
 
 	def remove_partial(self):
 		self.path = Runtime.PARTIAL + os.sep + self.refhash
 		os.remove( self.abspath() )
-		get_log(Params.LOG_NOTE, 'cache')\
-				("Dropped partial file.")
+		mainlog.note("Dropped partial file.")
 
 	def partial( self ):
 		self.path = Runtime.PARTIAL + os.sep + self.refhash

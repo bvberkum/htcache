@@ -22,9 +22,9 @@ PORT=8888
 NUM="$1"
 PROJECTDIR=$(pwd)
 PREFIX="/tmp/htcache-systemtest$NUM"
-LOG_LEVEL=7
-ERR_LEVEL=7
-LOG_FACILITIES="--log-facility protocol --log-facility cache"
+#LOG_LEVEL=7
+#ERR_LEVEL=7
+#LOG_FACILITIES="--log-facility protocol --log-facility cache"
 [ -n "$URL_HTTP" ] && [ -n "$URL_CHUNKED" ] && [ -n "$URL_FTP" ] || {
     echo "Must provide URL_* env vars for testing. "
     exit 1
@@ -54,13 +54,13 @@ function startserver
     }
   done
   if ! ./htcache \
+        --daemon $PREFIX.log \
         -p $PORT -r $PREFIX.cache \
         --data-dir $PREFIX.data \
-        --daemon $PREFIX.log \
-        --log-level $LOG_LEVEL \
-        --error-level $ERR_LEVEL \
-          $LOG_FACILITIES \
         --pid-file $PID $*;
+#        --log-level $LOG_LEVEL \
+#        --error-level $ERR_LEVEL \
+#          $LOG_FACILITIES \
   then
     test -e $PID && rm $PID
     exit 1
@@ -190,7 +190,7 @@ if which curl > /dev/null; then
     fi
     curl $CURLARGS -s -S -o $PREFIX.$2 --dump-header $PREFIX.$2.headers $1 \
         -H "X-HTCache-SystemTest: $1 $2" $3 1>&2
-    echo "Finished file download at $(stat -c "%s" $PREFIX.$2) bytes"
+    echo "Finished download $2 at $(stat -c "%s" $PREFIX.$2) bytes"
     splitheaders $2
   }
 else
@@ -478,18 +478,19 @@ case $1 in
     ;;
 
   8)
-    summary "JOINING DOWNLOADS"
+    summary "JOINING THREE+TWO DOWNLOADS"
     
     clean
     startserver
     download http://$URL_HTTP out
-    sleep 0.5
+    # this test fails when background downloads have not finished when stopserver is called
+    # it should wait until the proxy finishes
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 0.2
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2 > /dev/null & sleep 0.16
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out3 > /dev/null & sleep 0.2
-    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out4
+    http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out4 && sleep 0.5
     http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out5
-    sleep 0.5
+    sleep 15.5
     stopserver
     backup_coverage $1
 

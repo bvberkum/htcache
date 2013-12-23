@@ -9,7 +9,11 @@ import os, socket, time
 import Params, Protocol, Runtime
 from HTTP import HTTP
 from util import *
+import log
 
+
+
+mainlog = log.get_log('main')
 
 
 class HtRequest:
@@ -49,8 +53,7 @@ class HtRequest:
 
 		line = chunk[ :eol ]
 
-		get_log(Params.LOG_NOTE, 'request')\
-				('Client sends %r', print_str(line, 96))
+		#mainlog.note('Client sends %r', print_str(line, 96))
 
 		fields = line.split()
 		assert len( fields ) == 3, 'Invalid header line: %r' % line
@@ -74,14 +77,12 @@ class HtRequest:
 
 		line = chunk[ :eol ]
 		if ':' in line:
-			get_log(Params.LOG_DEBUG, 'request')\
-					('> '+ line.rstrip())
+			mainlog.debug('> '+ line.rstrip())
 			key, value = line.split( ':', 1 )
 			if key.lower() in HTTP.Header_Map:
 				key = HTTP.Header_Map[key.lower()]
 			else:
-				get_log(Params.LOG_WARN, 'request')\
-						("Warning: %r not a known HTTP (request) header (%r)", 
+				mainlog.warn("Warning: %r not a known HTTP (request) header (%r)", 
 						key, value.strip())
 				key = key.title() 
 			assert key not in self.__headers, 'duplicate req. header: %s' % key
@@ -91,16 +92,14 @@ class HtRequest:
 			if self.__size:
 				assert self.__verb == 'POST', \
 						'%s request conflicts with message body' % self.__verb
-				get_log(Params.LOG_INFO, 'request')\
-						('Opening temporary file for POST upload')
+				mainlog.info('Opening temporary file for POST upload')
 				self.__body = os.tmpfile()
 				self.__parse = self.__parse_body
 			else:
 				self.__body = None
 				self.__parse = None
 		else:
-			get_log(Params.LOG_INFO, 'request')\
-					('Error: Ignored header line: %r', line)
+			mainlog.info('Error: Ignored header line: %r', line)
 
 		return eol
 
@@ -119,13 +118,12 @@ class HtRequest:
 
 	def recv( self, sock ):
 		"""
-		Receive request, parsing header and optional body. Once parsers have
-		finished, determine wether 
-		
-		Resource, and prepare Protocol for relaying the request to the content
-		origin server.
-		"""
+		Receive request from client, parsing header and optional body. 
+		Once parsers have finished, determine Protocol type for htcache/fiber.
 
+		The Protocol instance takes over and relays this request to the 
+		target server.
+		"""
 		assert not self.Protocol, "Cant have protocol"
 
 		chunk = sock.recv( Params.MAXCHUNK )
@@ -198,14 +196,13 @@ class HtRequest:
 			hostinfo = "%s:%s" % (host, port)
 
 		if port == Runtime.PORT:
-			log("Direct request: %s" % path, Params.LOG_INFO)
+			mainlog.info("Direct request: %s", path)
 			localhosts = ( 'localhost', Runtime.HOSTNAME, '127.0.0.1', '127.0.1.1' )
 			assert host in localhosts, "Cannot service for %s, use from %s" % (host, localhosts)
 			#self.Response = Response.DirectResponse
 			self.Protocol = Protocol.ProxyProtocol
 
-		get_log(Params.LOG_DEBUG, 'request')\
-				('scheme=%s, host=%s, port=%s, path=%s' % (scheme, host, port, path))
+		mainlog.debug('scheme=%s, host=%s, port=%s, path=%s', scheme, host, port, path)
 
 		self.__scheme = scheme
 		self.__host = host
@@ -260,8 +257,9 @@ class HtRequest:
 	@property
 	def envelope(self):
 		"""
-		Used before protocol is determined but while requet is received. After recv finishes parsing
-		the server response, Request.requrl and Request.hostinfo are available instead.
+		Used before protocol is determined while request is received and send
+		through. After recv finishes parsing the server response, Request.requrl 
+		and Request.hostinfo are available instead of .envelope()
 		"""
 		assert self.__reqpath[0] == '/' , self.__reqpath
 		return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
@@ -295,8 +293,7 @@ class HtRequest:
 	def headers(self):
 		# XXX: used before protocol is determined,  assert self.Protocol
 		if not self.Protocol and self.__parse == self.__parse_args:
-			get_log(Params.LOG_WARN, 'request')\
-					("Warning: parsing headers is not finished. ")
+			mainlog.warn("Warning: parsing headers is not finished. ")
 		return self.__headers.copy()
 
 	def range(self):

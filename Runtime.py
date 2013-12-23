@@ -31,7 +31,7 @@ PARTIAL = None
 PROXY_INJECT = None
 
 # misc. program params
-LOG = False
+LOG = None
 DEBUG = False
 INTERACTIVE = False
 
@@ -39,3 +39,7 @@ PRUNE = None
 MAX_SIZE_PRUNE = 11*(1024**2)
 
 COMMANDS = []
+
+# Some dynamic run time stuff
+options, arguments = None, None
+loggers = { }
