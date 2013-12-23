@@ -1,14 +1,15 @@
 """ """
 import os, re, anydbm, sets
 import Params
+import bsddb
 try:
     import cjson as json
     json_read = json.decode
     json_write = json.encode
 except:
     import json as json
-    json_read = json.read
-    json_write = json.write
+    json_read = json.loads#read
+    json_write = json.dumps#write
 
 
 class Descriptor(object):
@@ -26,7 +27,11 @@ class AnyDBStorage(object):
 
     def __init__(self, path):
         if not os.path.exists(path):
-            anydbm.open(path, 'n').close()
+            try:
+                anydbm.open(path, 'n').close()
+            except bsddb.db.DBAccessError, e:
+                print path
+                raise e
         self.__be = anydbm.open(path, 'rw')
 
     def close(self):
