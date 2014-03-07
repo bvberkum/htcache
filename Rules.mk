@@ -103,8 +103,9 @@ test-protocol::
 		echo $$PASSED passed checks, $$ERRORS errors
 
 debug::
-	-mkdir debug-root
-	htcache -v -v -r debug-root -f debug-root/resources.db
+	mkdir -p debug-root
+	[ -e "debug-root/resources.db" ] || { sqlite3 debug-root/resources.db; }
+	htcache -v -v -v -r debug-root --data sqlite:///debug-root/resources.db
 
 #$(SNAPSHOT_$d):
 #	echo $$(expr $$(cat REVISION) + 1) > REVISION

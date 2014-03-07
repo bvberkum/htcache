@@ -74,8 +74,9 @@ class DataResponse:
 		assert protocol.data.cache
 		assert protocol.data.descriptor.mediatype
 
-		if self.__end == -1:
+		if self.__end == -1 and protocol.data.descriptor.size:
 			self.__end = protocol.data.descriptor.size
+		#assert 'Content-Length' in args
 
 		# TODO: on/off:
 		#if protocol.capture:
@@ -86,10 +87,9 @@ class DataResponse:
 #			args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
 
 		assert 'Last-Modified' in args
-		assert 'Content-Length' in args
 		assert 'Content-Type' in args
 
-		if self.__pos == 0 and self.__end == self.__protocol.size:
+		if self.__pos == 0 and self.__end in ( -1, self.__protocol.size ):
 			head = 'HTTP/1.1 200 OK'
 
 		elif self.__end >= 0:
@@ -101,10 +101,15 @@ class DataResponse:
 			else:
 				args[ 'Content-Range' ] = 'bytes %i-%i/*' % (
 						self.__pos, self.__end - 1 )
-		else:
+
+		elif self.__end != -1:
 			head = 'HTTP/1.1 416 Requested Range Not Satisfiable'
 			args[ 'Content-Range' ] = 'bytes */*'
 			args[ 'Content-Length' ] = '0'
+
+		else:
+			assert False, dict( request=( self.__pos, self.__end ), proto=(
+				protocol.tell(), protocol.size ), size=protocol.data.descriptor.size )
 
 		mainlog.note('HTCache responds %r', head.strip())
 
@@ -133,6 +138,7 @@ class DataResponse:
 #					("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
 			return True
 		else:
+			assert self.__end != None
 			return False
 
 	def send( self, sock ):
@@ -203,17 +209,17 @@ class DataResponse:
 				#		(pattern, substitute), count))
 
 	def finalize(self, client):
-		mainlog.debug('%s: finalizing' % self)
+		mainlog.debug('%s: finalizing %s' % (self, self.__protocol.tell()))
 		self.__protocol.finish()
 
 	def __str__(self):
 		if self.__end:
-			return "[DataResponse %s %s/%s, %s/%s]" % (
+			return "[DataResponse %s cache=%s/%s, req=%s/%s]" % (
 					hex(id(self)),
 					self.__protocol.tell(), self.__protocol.size,
 					self.__pos, self.__end)
 		else:
-			return "[DataResponse %s %s/%s]" % (
+			return "[DataResponse %s cache=%s/%s]" % (
 					hex(id(self)),
 					self.__protocol.tell(),
 					self.__protocol.size)
@@ -240,6 +246,7 @@ class ChunkedDataResponse( DataResponse ):
 				self.Done = not self.hasdata()
 				return
 			if len( tail ) < chunksize + 2:
+				mainlog.debug('Waiting for chunk end')
 				return
 			assert tail[ chunksize:chunksize+2 ] == '\r\n', \
 					'chunked data error: chunk does not match announced size'

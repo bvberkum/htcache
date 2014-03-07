@@ -271,9 +271,10 @@ class ProxyData(object):
 
 	def map_to_headers(self):
 		headerdict = HeaderDict()
-		headerdict.update({
-			'Content-Length': self.descriptor.size,
-		})
+		if self.descriptor.size:
+			headerdict.update({
+				'Content-Length': self.descriptor.size,
+			})
 #		if self.descriptor.resource:
 #			headerdict.update({
 #				'Content-Location': self.descriptor.resource.url
@@ -311,7 +312,7 @@ class ProxyData(object):
 		if not self.descriptor.path:
 			self.init_cache( self.protocol.url )
 			abspath = self.cache.abspath()
-			self.set_data( 'path', abspath )
+			self.set_data( 'path', self.cache.path )
 			self.set_data( 'mtime', time.time() )
 			mainlog.debug( '%s: Prepared descriptor at %r', self, abspath )
 
@@ -395,8 +396,8 @@ class ProxyData(object):
 				if not self.descriptor.resource.url:
 					self.descriptor.resource.url = self.protocol.url
 		else:
-			assert self.cache.abspath() == self.descriptor.path, (
-					self.cache.abspath(), self.descriptor.path )
+			assert self.cache.path == self.descriptor.path, (
+					self.cache.abspath(), self.descriptor, self.cache.path)
 
 		self.open_cache()
 		mainlog.info("%s: open_cache %s", self, self.cache.partial or
@@ -406,6 +407,12 @@ class ProxyData(object):
 		args = self.protocol.args()
 		args.update(self.map_to_headers())
 		mainlog.info ("%s: prepare_response %s", self, args)
+		#assert 'Content-Length' in args and args['Content-Length'] > 0, dict(
+		#		to_headers=self.map_to_headers(), 
+		#		to_data=self.map_to_data(),
+		#		size=self.protocol.size,
+		#		protohdr=args,
+		#	)
 		via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
 		if args.setdefault('Via', via) != via:
 			args['Via'] += ', '+ via
@@ -415,9 +422,8 @@ class ProxyData(object):
 	def finish_response( self ):
 		size = self.cache.tell()
 		mainlog.info("%s: finish_response at cache.tell=%i", self, size)
-		#print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
-		#				size, self.descriptor.size, self.cache.size,\
-		#				self.descriptor.mtime, self.cache.mtime )
+		if not self.descriptor.size:
+			self.descriptor.size = size
 		if size == self.descriptor.size:
 			self.cache.stat()
 			if self.cache.partial:
@@ -432,12 +438,12 @@ class ProxyData(object):
 					)
 				os.utime( abspath, ( self.descriptor.mtime, self.descriptor.mtime ) )
 				mainlog.note("%s: Finalized %r at %i", self, abspath, size )
-				self.descriptor.path = abspath
+				self.descriptor.path = self.cache.path
 				self.descriptor.commit()
 		else:
 			mainlog.debug("Descriptor does not match: %s", self.descriptor.size)
 			mainlog.note("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
-			os.utime( self.descriptor.path, ( self.descriptor.mtime, self.descriptor.mtime ) )
+			os.utime( os.path.join( Runtime.ROOT,  self.descriptor.path ), ( self.descriptor.mtime, self.descriptor.mtime ) )
 		#print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
 		#				size, self.descriptor.size, self.cache.size,\
 		#				self.descriptor.mtime, self.cache.mtime )

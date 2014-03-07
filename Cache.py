@@ -96,10 +96,12 @@ class File(object):
 
 	def full_path(self):
 		assert Runtime.ROOT
+		assert not self.path.startswith(Runtime.ROOT)
 		return os.path.join( Runtime.ROOT, self.path )
 
 	def partial_path(self):
 		assert Runtime.PARTIAL
+		assert not self.path.endswith(Runtime.PARTIAL)
 		return suffix_ext( self.full_path(), Runtime.PARTIAL )
 
 	def stat( self ):
@@ -203,6 +205,7 @@ class File(object):
 		self.file.close()
 		self.file = None
 		self.partial, self.full = None, None
+		mainlog.debug("%s: Closed %s", self, self.path)
 
 #	def __nonzero__(self):
 #	  return ( self.complete() or self.partial ) != None
@@ -211,6 +214,7 @@ class File(object):
 		if self.file:
 			try:
 				self.close()
+				mainlog.warn("%s: Forced close", self)
 			except Exception, e:
 				mainlog.warn("%s: Error on closing cache file: %s", self, e)
 

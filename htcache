@@ -16,10 +16,10 @@ import traceback
 
 # XXX: development tooling:
 try:
-    import coverage
-    coverage.process_startup()
+	import coverage
+	coverage.process_startup()
 except ImportError, e:
-    pass
+	pass
 
 
 import fiber
@@ -48,176 +48,168 @@ to locally stored data.
 
 def HTCache_fiber_handler( client, address ):
 
-    mainlog.debug("Log level is at %s", Runtime.VERBOSE)
+	mainlog.debug("Log level is at %s", Runtime.VERBOSE)
 
-    protocol = None
-    request = Request.HtRequest()
-#    mainlog.debug ('%s: New Request from %r, downloads: %s; +1', 
-#                    request, address, len(DOWNLOADS))
+	protocol = None
+	request = Request.HtRequest()
+#	mainlog.debug ('%s: New Request from %r, downloads: %s; +1', 
+#					request, address, len(DOWNLOADS))
 
-    while not request.Protocol:
-        mainlog.debug('%s: Reading request', request)
-        yield fiber.RECV( client, Params.TIMEOUT )
-        request.recv( client )
+	while not request.Protocol:
+		mainlog.debug('%s: Reading request', request)
+		yield fiber.RECV( client, Params.TIMEOUT )
+		request.recv( client )
 
-    try:
-        while request in DOWNLOADS:
-            # Already downloading, inspect the downloader protocol and create follower
-            protocol = DOWNLOADS[ request ]
-            if protocol.Response:
-                if issubclass( protocol.Response, Response.DataResponse ):
-                    mainlog.info('Checking with %r for data for %r ' % (protocol.data, request))
-                    while not protocol.data.exists():
-                        mainlog.info('Waiting to join downloads for %r' % request)
-                        yield fiber.WAIT()
-                        # XXX: wait till data has finished and closed, then
-                        # re-use it for this download???
+	try:
+		while request in DOWNLOADS:
+			# Already downloading, inspect the downloader protocol and create follower
+			protocol = DOWNLOADS[ request ]
+			if protocol.Response:
+				if issubclass( protocol.Response, Response.DataResponse ):
+					mainlog.info('Checking with %r for data for %r ' % (protocol.data, request))
+					while not protocol.data.exists():
+						mainlog.info('Waiting to join downloads for %r' % request)
+						yield fiber.WAIT()
+						# XXX: wait till data has finished and closed, then
+						# re-use it for this download???
 # FIXME: Cant do this, proto is shared among reqs. Instead init new and designate one of the
 # protocols as downloader and rest as followers
 # This means second concurrent request does not need to wait for downloader to complete and write descriptor record
-                        #assert protocol.data.descriptor
-                        #if not protocol.data.descriptor:
-                        #    protocol.data.prepare_static()
-                    else:
-                        mainlog.info('Joining running download, re-using protocol: %s, %s' % (protocol, protocol.tell()))
-                        break
-                else:
-                        mainlog.warn('Error? not a DataResponse')
-                # Cancel for non-data response
-                del DOWNLOADS[ request ]
-            else:
-                yield fiber.WAIT()
-        else:
-            # 
-            mainlog.info('Switching to %s', request.Protocol.__name__)
-            protocol = DOWNLOADS[ request ] = request.Protocol( request )
-            mainlog.debug('%s: New %s for %s', protocol,
-                            request.Protocol.__name__, request)
+						#assert protocol.data.descriptor
+						#if not protocol.data.descriptor:
+						#	protocol.data.prepare_static()
+					else:
+						mainlog.info('Joining running download, re-using protocol: %s, %s' % (protocol, protocol.tell()))
+						break
+				else:
+						mainlog.warn('Error? not a DataResponse')
+				# Cancel for non-data response
+				del DOWNLOADS[ request ]
+			else:
+				yield fiber.WAIT()
+		else:
+			# 
+			mainlog.info('Switching to %s', request.Protocol.__name__)
+			protocol = DOWNLOADS[ request ] = request.Protocol( request )
+			mainlog.debug('%s: New %s for %s', protocol,
+							request.Protocol.__name__, request)
 
-            if not protocol.Response:
-                server = protocol.socket()
+			if not protocol.Response:
+				server = protocol.socket()
 
-            while not protocol.Response:
-                if protocol.hasdata():
-                    #mainlog.debug
-                    #        ('%s: Sending for %s', protocol, request)
-                    yield fiber.SEND( server, Params.TIMEOUT )
-                    protocol.send( server )
-                else:
-                    #mainlog.debug
-                    #        ('%s: Receiving for %s', protocol, request)
-                    yield fiber.RECV( server, Params.TIMEOUT )
-                    protocol.recv( server )
+			while not protocol.Response:
+				if protocol.hasdata():
+					#mainlog.debug
+					#		('%s: Sending for %s', protocol, request)
+					yield fiber.SEND( server, Params.TIMEOUT )
+					protocol.send( server )
+				else:
+					#mainlog.debug
+					#		('%s: Receiving for %s', protocol, request)
+					yield fiber.RECV( server, Params.TIMEOUT )
+					protocol.recv( server )
 
-        mainlog.note('Switching to %s', protocol.Response.__name__)
-        response = protocol.Response( protocol, request )
-        mainlog.debug('%s: New %s for %s', response,
-                        protocol.Response.__name__, request)
-        server = protocol.socket()
+		mainlog.note('Switching to %s', protocol.Response.__name__)
+		response = protocol.Response( protocol, request )
+		mainlog.debug('%s: New %s for %s', response,
+						protocol.Response.__name__, request)
+		server = protocol.socket()
 
-    except Exception, e:
-        mainlog.crit('Warning: Switching to ExceptionResponse, reason: %s', e)
-        response = Response.ExceptionResponse( protocol, request )
+	except Exception, e:
+		mainlog.crit('Warning: Switching to ExceptionResponse, reason: %s', e)
+		response = Response.ExceptionResponse( protocol, request )
 
-    # XXX: blocks while client has not read data
-    while not response.Done:
-        if response.hasdata():
-            mainlog.debug('%s: Writing for %s', response, request)
-            yield fiber.SEND( client, Params.TIMEOUT )
-            response.send( client )
-        elif response.needwait():
-            yield fiber.WAIT( response.needwait() )
-        else:
-            mainlog.debug('%s: Reveiving for %s', response, request)
-            yield fiber.RECV( server, Params.TIMEOUT )
-            response.recv( server )
+	# XXX: blocks while client has not read data
+	while not response.Done:
+		if response.hasdata():
+			mainlog.debug('%s: Writing for %s', response, request)
+			yield fiber.SEND( client, Params.TIMEOUT )
+			response.send( client )
+		elif response.needwait():
+			yield fiber.WAIT( response.needwait() )
+		else:
+			mainlog.debug('%s: Reveiving for %s', response, request)
+			yield fiber.RECV( server, Params.TIMEOUT )
+			response.recv( server )
 
-    assert protocol
-    assert hasattr(protocol, 'data')
-    mainlog.note('Transaction completed for %r with data %s', 
-            request, protocol.data)
+	assert protocol
+	assert hasattr(protocol, 'data')
+	mainlog.note('Transaction completed for %r with data %s', 
+			request, protocol.data)
 
-    response.finalize(client)
+	response.finalize(client)
 
-    if request in DOWNLOADS:
-        del DOWNLOADS[request]
+	if request in DOWNLOADS:
+		del DOWNLOADS[request]
 
 
 def run():
-    """
-    1. Parse argv, initialize runtime environment
-    2. Fork passing environment and print PID, or continue normally
-    """
+	"""
+	1. Parse argv, initialize runtime environment
+	2. Fork passing environment and print PID, or continue normally
+	"""
 
-    # Parse argv, init settings
-    try:
+	# Parse argv, init settings
+	try:
 
-        Command.CLIParams().parse()
+		Command.CLIParams().parse()
 
-    except Exception:
-        traceback.print_exc()
-        print >>sys.stderr, "Failure during initalization"
+	except Exception:
+		traceback.print_exc()
+		print >>sys.stderr, "Failure during initalization"
 
 
-    ### Cache Maintenance static entry - exits upon completion
+	### Cache Maintenance static entry - exits upon completion
 
-    try:
+	try:
 
-        if Command.run():
-            if Command.exceptions:
-                if Runtime.DEBUG:
-                    print
-                    print "Detailed error reports: "
-                    for tp, exc, tb in Command.exceptions:
-                        traceback.print_exception(tp, exc, tb)
-                sys.exit(1)
-            else:
-                sys.exit(0)
+		if Command.run():
+			if Command.exceptions:
+				if Runtime.DEBUG:
+					print
+					print "Detailed error reports: "
+					for tp, exc, tb in Command.exceptions:
+						traceback.print_exception(tp, exc, tb)
+				sys.exit(1)
+			else:
+				sys.exit(0)
 
-    except Exception:
-        # XXX: programming catch
-        traceback.print_exc()
-        print >>sys.stderr, "Error running commands"
+	except Exception:
+		# XXX: programming catch
+		traceback.print_exc()
+		print >>sys.stderr, "Error running commands"
 
-    print 1, repr(mainlog.output), mainlog.threshold
-    print 2, repr(mainlog)
-    print 3, Runtime.loggers['main']
-    assert mainlog == Runtime.loggers['main']
-    assert log.get_log('main') == Runtime.loggers['main']
-    print 4, repr(mainlog.output), mainlog.threshold
-    Runtime.loggers['main'].config(Runtime.VERBOSE, 'stdout')
-    print 5, repr(mainlog.output), mainlog.threshold
-    print >>mainlog.output, "6", mainlog.output.fileno()
-    #		print self, 'prepare_direct_response'
-#		print Params.LOG, Runtime.LOG
+	assert mainlog == Runtime.loggers['main']
+	assert log.get_log('main') == Runtime.loggers['main']
+	Runtime.loggers['main'].config(Runtime.VERBOSE, 'stdout')
 
-    ### Normal proxy subroutine
+	### Normal proxy subroutine
 
-    while True:
-        #print "htcache.run loop "
-        try:
-            fiber.spawn(
-                    HTCache_fiber_handler,
-                    Runtime.HOSTNAME,
-                    Runtime.PORT,
-                    Runtime.DEBUG,
-                    Runtime.LOG,
-                    Runtime.PID_FILE )
+	while True:
+		#print "htcache.run loop "
+		try:
+			fiber.spawn(
+					HTCache_fiber_handler,
+					Runtime.HOSTNAME,
+					Runtime.PORT,
+					Runtime.DEBUG,
+					Runtime.LOG,
+					Runtime.PID_FILE )
 
-            #print 'spawn returned'
-            #break
+			#print 'spawn returned'
+			#break
 
-        except fiber.Restart, e:
-            Resource.SessionMixin.close_instance('default')
-            for mod in ( Params, Runtime, Command, Protocol, Request, Response, Resource, fiber):
-                mod = reload(mod)
+		except fiber.Restart, e:
+			Resource.SessionMixin.close_instance('default')
+			for mod in ( Params, Runtime, Command, Protocol, Request, Response, Resource, fiber):
+				mod = reload(mod)
 
-        except Exception, e:
-            traceback.print_exc()
-            sys.exit(1)
-            break
+		except Exception, e:
+			traceback.print_exc()
+			sys.exit(1)
+			break
 
 
 if __name__ == '__main__':
-    run()
+	run()
 

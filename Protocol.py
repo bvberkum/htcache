@@ -311,11 +311,9 @@ class HttpProtocol(CachingProtocol):
 			self.__recvbuf = self.__recvbuf[ bytecnt: ]
 		sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
-		# Header was parsed
-
-# XXX: chunking..
-#		assert self.__args.pop( 'Transfer-Encoding', None ) != 'chunked', \
-#				"Chunked response: %s %s" % ( self.__status, self.url)
+		# Server response header was parsed
+		self.chunked = self.__args.pop( 'Transfer-Encoding', None )
+# XXX: transfer-encoding, chunking.. to client too?
 
 		# Check wether to step back now
 		if self.prepare_nocache_response():
@@ -431,9 +429,9 @@ class HttpProtocol(CachingProtocol):
 		if Runtime.PROXY_INJECT and mediatype and 'html' in mediatype:
 			mainlog.note("XXX: Rewriting HTML resource: "+self.url)
 			self.rewrite = True
-		te = self.__args.get( 'Transfer-Encoding', None ) 
-		mainlog.info("%s: set_dataresponse %s", self, te)
-		if te == 'chunked':
+		#te = self.__args.get( 'Transfer-Encoding', None ) 
+		if self.chunked:#te == 'chunked':
+			mainlog.info("%s: Chunked response", self)
 			self.Response = Response.ChunkedDataResponse
 		else:
 			self.Response = Response.DataResponse
