@@ -144,7 +144,6 @@ def fork( output, pid_file ):
 	For monitoring and control, we'll use HTTP or a separate process that
 	reads from FIFO or file logs.
 	"""
-	mainlog.note( '[ FORK ] to %s, %s ', output, pid_file )
 
 	# Make temporary sub process
 	try:
@@ -152,21 +151,23 @@ def fork( output, pid_file ):
 		nul = open( '/dev/null', 'r' )
 		pid = os.fork()
 	except IOError, e:
-		print 'error: failed to open', e.filename
+		mainlog.crit('[ FORK ] Error: failed to open %s', e.filename)
 		sys.exit( 1 )
 	except OSError, e:
-		print 'error: failed to fork process:', e.strerror
+		mainlog.crit('[ FORK ] Error: failed to fork process: %s', e.strerror)
 		sys.exit( 1 )
 	except Exception, e:
-		print 'fork error:', e
+		mainlog.crit('[ FORK ] Error: %s', e )
 		sys.exit( 1 )
 
 	if pid:
+		#mainlog.debug(' [ FORK ] Waiting for daemon to start...')
 		# Wait for second fork to complete, then exit current process
 		temp_pid, status = os.wait()
-		#print 'fork2 is done, exited from', pid
-		#print 'closing invocation process'
+		mainlog.debug( '[ FORK ] OK, daemon running.')
 		sys.exit( status >> 8 )
+	else:
+		mainlog.note( '[ FORK ] preparing daemon process with log %s ', output )
 
 	try: 
 		os.chdir( os.sep )
@@ -182,12 +183,16 @@ def fork( output, pid_file ):
 	if pid2:
 		open(pid_file, 'wb').write(str(pid2))
 		sys.exit( 0 )
+		mainlog.note( '[ FORK ] Daemon running at PID %s ', pid2 )
+	else:
+		mainlog.debug( '[ FORK ] Continueing daemon ' )
 
 	# xxx; if we do this from the session leader, when/how does this become a controlling terminal?
 	os.dup2( log.fileno(), sys.stdout.fileno() )
 	os.dup2( log.fileno(), sys.stderr.fileno() )
 	os.dup2( nul.fileno(), sys.stdin.fileno() )
 
+	return pid2
 
 def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
@@ -204,6 +209,15 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 	pid_file
 		Filename.
 	"""
+
+	if daemon_log:
+		# continue as new process in its own session
+		pid = fork( daemon_log, pid_file )
+		if pid:
+			mainlog.debug('[ FIBER ] Forked to PID %s', PID)
+			return
+		else:
+			mainlog.debug('[ FIBER ] Continueing proxy startup')
 
 
 	# set up listening socket
@@ -222,14 +236,6 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 		mainlog.err("[ ERR ] unable to bind to %s:%i", hostname, port)
 		raise
 	listener.listen( 5 )
-
-	if daemon_log:
-		pid = None
-		if os.path.exists(pid_file):
-			pid = open(pid_file).read()
-		print 'Forking to', daemon_log, pid_file
-		# continue as new process in its own session
-		fork( daemon_log, pid_file )
 
 	if debug:
 		myFiber = DebugFiber

@@ -22,9 +22,9 @@ PORT=8888
 NUM="$1"
 PROJECTDIR=$(pwd)
 PREFIX="/tmp/htcache-systemtest$NUM"
-LOG_LEVEL=4 # err
-LOG_LEVEL=0
-#ERR_LEVEL=7
+# log level should be 'debug' for test to capture results correctly
+LOG_LEVEL=0 # debug
+#ERR_LEVEL=7 # emerg
 #LOG_FACILITIES="--log-facility protocol --log-facility cache"
 # FIXME: restore defaults here again
 [ -n "$URL_HTTP" ] && [ -n "$URL_CHUNKED" ] && [ -n "$URL_FTP" ] || {

@@ -21,7 +21,6 @@ try:
 except ImportError, e:
 	pass
 
-
 import fiber
 import Params, Runtime, Command
 import Cache
@@ -186,7 +185,6 @@ def run():
 	### Normal proxy subroutine
 
 	while True:
-		#print "htcache.run loop "
 		try:
 			fiber.spawn(
 					HTCache_fiber_handler,
@@ -195,9 +193,6 @@ def run():
 					Runtime.DEBUG,
 					Runtime.LOG,
 					Runtime.PID_FILE )
-
-			#print 'spawn returned'
-			#break
 
 		except fiber.Restart, e:
 			Resource.SessionMixin.close_instance('default')

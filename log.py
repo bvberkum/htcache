@@ -66,11 +66,10 @@ class Log(object):
 #			)
 
 	def emit_check(self, level):
-		v = not Runtime.QUIET and level >= self.threshold#Runtime.VERBOSE >= level
+		v = not Runtime.QUIET and level >= self.threshold
 		return v
 
 	def emit(self, msg, *args):
-		#print 'log call', self.output
 		if args:
 			print >>self.output, msg % args
 		else:
@@ -88,7 +87,6 @@ class Log(object):
 						'info': 1,
 						'debug': 0,
 					})[name]):
-#				print 'emitting', self.output, msg, args
 				self.emit(msg, *args)
 		return level_call
 

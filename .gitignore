@@ -1,5 +1,5 @@
 #.coverage
 dist
 *.sw[op]
-#*.pyc
-#*.log
+*.pyc
+*.log
