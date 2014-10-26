@@ -73,11 +73,9 @@
 2014-10-26 12:14:32+01:00, dandy, On branch dev, bc7f35f24ba73fd468458f96b111a7b6b5128368, unit, 7, 0, 0
 2014-10-26 12:16:22+01:00, dandy, On branch dev, bc7f35f24ba73fd468458f96b111a7b6b5128368, system, 46, 41
 2014-10-26 12:16:31+01:00, dandy, On branch dev, bc7f35f24ba73fd468458f96b111a7b6b5128368, protocol, 1, 90
-# rewrote some of the forking code
-2014-10-26 14:03:37+01:00, dandy, On branch dev, b02025165b309f1264e802e536902bad26f18889, unit, 7, 0, 0
 2014-10-26 14:05:15+01:00, dandy, On branch dev, b02025165b309f1264e802e536902bad26f18889, system, 47, 40
-2014-10-26 14:05:24+01:00, dandy, On branch dev, b02025165b309f1264e802e536902bad26f18889, protocol, 1, 90
-
-2014-10-26 14:08:02+01:00, dandy, On branch dev, b02025165b309f1264e802e536902bad26f18889, unit, 7, 0, 0
-2014-10-26 14:09:36+01:00, dandy, On branch dev, b02025165b309f1264e802e536902bad26f18889, system, 47, 40
-2014-10-26 14:09:44+01:00, dandy, On branch dev, b02025165b309f1264e802e536902bad26f18889, protocol, 1, 90
+2014-10-26 14:40:10+01:00, dandy, On branch dev, a438dae5aa80b5a8dd2c42c052eddd3ac1918ee4, system, 49, 38
+2014-10-26 15:00:00+01:00, dandy, On branch dev, a438dae5aa80b5a8dd2c42c052eddd3ac1918ee4, system, 51, 37
+2014-10-26 15:36:21+01:00, dandy, On branch dev, a438dae5aa80b5a8dd2c42c052eddd3ac1918ee4, system, 53, 35
+2014-10-26 15:54:44+01:00, dandy, On branch dev, a438dae5aa80b5a8dd2c42c052eddd3ac1918ee4, system, 58, 30
+2014-10-26 16:07:39+01:00, dandy, On branch dev, a438dae5aa80b5a8dd2c42c052eddd3ac1918ee4, system, 59, 29

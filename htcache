@@ -47,7 +47,7 @@ to locally stored data.
 
 def HTCache_fiber_handler( client, address ):
 
-	mainlog.debug("Log level is at %s", log.name(Runtime.LOG_LEVEL))
+	mainlog.debug("[ HTCACHE ] Log level is at %s", log.name(Runtime.LOG_LEVEL))
 
 	protocol = None
 	request = Request.HtRequest()
@@ -55,7 +55,7 @@ def HTCache_fiber_handler( client, address ):
 #					request, address, len(DOWNLOADS))
 
 	while not request.Protocol:
-		mainlog.debug('%s: Reading request', request)
+		mainlog.debug('[ HTCACHE ] %s: Reading request', request)
 		yield fiber.RECV( client, Params.TIMEOUT )
 		request.recv( client )
 
@@ -65,9 +65,9 @@ def HTCache_fiber_handler( client, address ):
 			protocol = DOWNLOADS[ request ]
 			if protocol.Response:
 				if issubclass( protocol.Response, Response.DataResponse ):
-					mainlog.info('Checking with %r for data for %r ' % (protocol.data, request))
+					mainlog.info('[ HTCACHE ] Checking with %r for data for %r ' % (protocol.data, request))
 					while not protocol.data.exists():
-						mainlog.info('Waiting to join downloads for %r' % request)
+						mainlog.info('[ HTCACHE ] Waiting to join downloads for %r' % request)
 						yield fiber.WAIT()
 						# XXX: wait till data has finished and closed, then
 						# re-use it for this download???
@@ -78,19 +78,19 @@ def HTCache_fiber_handler( client, address ):
 						#if not protocol.data.descriptor:
 						#	protocol.data.prepare_static()
 					else:
-						mainlog.info('Joining running download, re-using protocol: %s, %s' % (protocol, protocol.tell()))
+						mainlog.info('[ HTCACHE ] Joining running download, re-using protocol: %s, %s' % (protocol, protocol.tell()))
 						break
 				else:
-						mainlog.warn('Error? not a DataResponse')
+						mainlog.warn('[ HTCACHE ] Error? not a DataResponse')
 				# Cancel for non-data response
 				del DOWNLOADS[ request ]
 			else:
 				yield fiber.WAIT()
 		else:
 			# 
-			mainlog.info('Switching to %s', request.Protocol.__name__)
+			mainlog.info('[ HTCACHE ] Switching to %s', request.Protocol.__name__)
 			protocol = DOWNLOADS[ request ] = request.Protocol( request )
-			mainlog.debug('%s: New %s for %s', protocol,
+			mainlog.debug('[ HTCACHE ] %s: New %s for %s', protocol,
 							request.Protocol.__name__, request)
 
 			if not protocol.Response:
@@ -108,32 +108,32 @@ def HTCache_fiber_handler( client, address ):
 					yield fiber.RECV( server, Params.TIMEOUT )
 					protocol.recv( server )
 
-		mainlog.note('Switching to %s', protocol.Response.__name__)
+		mainlog.note('[ HTCACHE ] Switching to %s', protocol.Response.__name__)
 		response = protocol.Response( protocol, request )
-		mainlog.debug('%s: New %s for %s', response,
+		mainlog.debug('[ HTCACHE ] %s: New %s for %s', response,
 						protocol.Response.__name__, request)
 		server = protocol.socket()
 
 	except Exception, e:
-		mainlog.crit('Warning: Switching to ExceptionResponse, reason: %s', e)
+		mainlog.crit('[ HTCACHE ] Warning: Switching to ExceptionResponse, reason: %s', e)
 		response = Response.ExceptionResponse( protocol, request )
 
 	# XXX: blocks while client has not read data
 	while not response.Done:
 		if response.hasdata():
-			mainlog.debug('%s: Writing for %s', response, request)
+			mainlog.debug('[ HTCACHE ] %s: Writing for %s', response, request)
 			yield fiber.SEND( client, Params.TIMEOUT )
 			response.send( client )
 		elif response.needwait():
 			yield fiber.WAIT( response.needwait() )
 		else:
-			mainlog.debug('%s: Reveiving for %s', response, request)
+			mainlog.debug('[ HTCACHE ] %s: Reveiving for %s', response, request)
 			yield fiber.RECV( server, Params.TIMEOUT )
 			response.recv( server )
 
 	assert protocol
 	assert hasattr(protocol, 'data')
-	mainlog.note('Transaction completed for %r with data %s', 
+	mainlog.note('[ HTCACHE ] Transaction completed for %r with data %s', 
 			request, protocol.data)
 
 	response.finalize(client)

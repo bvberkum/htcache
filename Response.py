@@ -1,7 +1,7 @@
 import hashlib, socket, time, traceback, urlparse, urllib
 
 import fiber
-import Params, Resource, Rules, HTTP, Runtime
+import Params, Resource, Rules, HTTP, Runtime, Command
 from util import json_write, json_read
 import log
 
@@ -374,9 +374,10 @@ class DirectResponse:
 			)
 
 	def serve_downloads(self, status, protocol, request):
+		assert isinstance(request.url, basestring), request.url
 		self.prepare_response(
 				"200 OK",
-				"No data for %r %r %r %r"%request.url
+				"No data for %r "%request.url
 			)
 
 	def serve_echo(self, status, protocol, request):
@@ -456,7 +457,7 @@ class DirectResponse:
 
 	def serve_params(self, status, protocol, request):
 		msg = Command.print_info(True)
-		self.prepare_response(status, msg, mime='application/json')
+		self.prepare_response(status, json_write(msg), mime='application/json')
 
 	def serve_descriptor(self, status, protocol, request):
 		q = urlparse.urlparse( request.url[3] )[4]
@@ -492,6 +493,9 @@ class DirectResponse:
 			lines = msg
 		else:
 			lines = [msg]
+		assert isinstance(status, basestring), status
+		for l in lines:
+			assert isinstance(l, basestring), l
 		headers = "Access-Control-Allow-Origin: *\r\nContent-Type: "+mime+"\r\n"
 		self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
 				'\r\n%s' % ( status, headers, '\n'.join( lines ) )

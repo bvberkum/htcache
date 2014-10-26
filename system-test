@@ -48,7 +48,7 @@ function clean
 
 function startserver
 {
-  echo "[ system-test] Starting server at port $PORT"
+  echo "[ TEST ] Starting server at port $PORT"
   for n in data cache
   do
 	[ -d $PREFIX.$n ] || {
@@ -67,7 +67,7 @@ function startserver
 	test -e $PID && rm $PID
 	exit 1
   else
-	echo Started server, running at PID $(cat $PID)
+	echo "[ TEST ] Started server, running at PID $(cat $PID)"
   fi
 }
 
@@ -77,9 +77,9 @@ function stopserver
   then
 	if kill -int `cat $PID`
 	then
-		echo "Interrupted server at $(cat $PID)"
+		echo "[ TEST ] Interrupted server at PID $(cat $PID)"
 	else
-		echo "Error closing server normally"
+		echo "[ TEST ] Error stopping server"
 	fi
 	rm $PID
   fi
@@ -102,7 +102,7 @@ function abort
 	echo
 	sleep 1
   else
-	echo "ERROR: download finished unexpectedly soon"
+	echo "[ TEST ] ERROR: download finished unexpectedly soon"
 	exit 1
   fi
 }
@@ -187,16 +187,16 @@ if which curl > /dev/null; then
   {
 	if test -e $PREFIX.$2;
 	then
-	  echo "Resuming unfinished download at $(stat -c "%s" $PREFIX.$2) bytes"
+	  echo "[ TEST ] Resuming unfinished download at $(stat -c "%s" $PREFIX.$2) bytes"
 	  CURLARGS="-C - "
 	fi
 	curl $CURLARGS -s -S -o $PREFIX.$2 --dump-header $PREFIX.$2.headers $1 \
 		-H "X-HTCache-SystemTest: $1 $2" $3 1>&2
-	echo "Finished download $2 at $(stat -c "%s" $PREFIX.$2) bytes"
+	echo "[ TEST ] Finished download $2 at $(stat -c "%s" $PREFIX.$2) bytes"
 	splitheaders $2
   }
 else
-  echo "ERROR: no download tool available, install curl"
+  echo "[ TEST ] ERROR: no download tool available, install curl"
   exit 1
 fi
 
@@ -280,7 +280,7 @@ function check_equal
 
 function check_log
 {
-  if grep $3 -q "$2" $PREFIX.log; then
+  if grep $3 -iq "$2" $PREFIX.log; then
 	check "$1" PASSED
   else
 	check "$1" ERROR
@@ -365,11 +365,11 @@ case $1 in
 
 	#htcache_command --print-location http://$URL_HTTP
 	INCOMPLETE=$(htcache_command -q --print-location http://$URL_HTTP)
-	P=$(( ${#PREFIX} + 7 ))
-	echo INCOMPLETE=$INCOMPLETE
-	echo INCOMPLETE:P=${INCOMPLETE:$P}
+	#P=$(( ${#PREFIX} + 7 ))
+	#echo INCOMPLETE=$INCOMPLETE
+	#echo INCOMPLETE:P=${INCOMPLETE:$P}
 	
-	check_exists "file cached, not finalized" cache/${INCOMPLETE:$P}
+	check_exists "file cached, not finalized" cache/${INCOMPLETE}
 	# XXX: No headers are ever present, need to check if older versions did
 	#	splitheaders cached
 	#	check_equal "headers are equal" normal.entity.headers cached.entity.headers
@@ -426,8 +426,8 @@ case $1 in
 	;;
 
   5)
+	summary "REDOWNLOADING CHANGED FILE"
 # XXX: cannot test without descriptor of aux. command to load descriptor into DB
-#	summary "REDOWNLOADING CHANGED FILE"
 #
 #   clean
 #	startserver
@@ -464,8 +464,8 @@ case $1 in
 	;;
 
   7)
+	summary "RESUMING PARTIAL CHANGED FILE IN CACHE"
 # XXX: cannot test without descriptor of aux. command to load descriptor into DB
-#	summary "RESUMING PARTIAL CHANGED FILE IN CACHE"
 #
 #	clean
 #	startserver
@@ -719,6 +719,7 @@ case $1 in
 	backup_coverage $1.8
 	htcache_command --check-join-rules > $PREFIX.htcache_command/check-join-rules
 	backup_coverage $1.9
+	check_log_errors
 	;;
 
   22)

@@ -27,6 +27,7 @@ class DNSLookupException(Exception):
 DNSCache = {}
 
 def connect( addr ):
+	# FIXME: return HTTP 5xx
 	assert Runtime.ONLINE, \
 			'operating in off-line mode'
 	if addr not in DNSCache:
@@ -224,6 +225,7 @@ class HttpProtocol(CachingProtocol):
 
 		# Forward request to remote server, fiber will handle this
 		head = 'GET /%s HTTP/1.1' % path
+		# FIXME return proper HTTP error upon connection failure
 		self.__socket = connect(request.hostinfo)
 		self.__sendbuf = '\r\n'.join(
 			[ head ] + map( ': '.join, proxy_req_headers.items() ) + [ '', '' ] )
@@ -335,7 +337,7 @@ class HttpProtocol(CachingProtocol):
 		elif self.__status == HTTP.PARTIAL_CONTENT \
 				and self.cache.partial:
 
-			mainlog.info("Updating partial download. ", Params.LOG_INFO)
+			mainlog.info("Updating partial download. ")
 			self.__args = self.data.prepare_response()
 			if self.__args['ETag']:
 				assert self.__args['ETag'].strip('"') == self.data.descriptor.etag, (

@@ -423,27 +423,31 @@ class ProxyData(object):
 		size = self.cache.tell()
 		mainlog.info("%s: finish_response at cache.tell=%i", self, size)
 		if not self.descriptor.size:
+			mainlog.debug("%s Updated descriptor size from cache pointer %s", self, self.cache)
 			self.descriptor.size = size
 		if size == self.descriptor.size:
 			self.cache.stat()
 			if self.cache.partial:
-# XXX: this should mve back to Cache again: finalize Cache file by stripping PARTIAL suffix
 				abspath = os.path.join( Runtime.ROOT, self.cache.path )
-				assert os.path.exists(
-						Cache.suffix_ext( abspath, Runtime.PARTIAL )
-					)
-				os.rename( 
-						Cache.suffix_ext( abspath, Runtime.PARTIAL ),
-						abspath 
-					)
+				assert abspath == self.cache.full_path()
+				partial_path = self.cache.partial_path()
+				assert os.path.exists( partial_path ), partial_path
+				assert partial_path == Cache.suffix_ext( abspath, Runtime.PARTIAL )
+				os.rename( partial_path, abspath )
 				os.utime( abspath, ( self.descriptor.mtime, self.descriptor.mtime ) )
 				mainlog.note("%s: Finalized %r at %i", self, abspath, size )
 				self.descriptor.path = self.cache.path
+				assert Runtime.PARTIAL not in self.descriptor.path
 				self.descriptor.commit()
 		else:
 			mainlog.debug("Descriptor does not match: %s", self.descriptor.size)
 			mainlog.note("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
+			self.descriptor.path = Cache.suffix_ext( self.cache.path, Runtime.PARTIAL )
 			os.utime( os.path.join( Runtime.ROOT,  self.descriptor.path ), ( self.descriptor.mtime, self.descriptor.mtime ) )
+			assert Runtime.PARTIAL in self.descriptor.path
+			assert not self.descriptor.path.startswith(Runtime.ROOT), self.descriptor.path
+			self.descriptor.commit()
+
 		#print self, 'finish_response, tell=%i, meta.size=%i, file.size=%i, meta.mtime=%s, file.mtime=%s' % (
 		#				size, self.descriptor.size, self.cache.size,\
 		#				self.descriptor.mtime, self.cache.mtime )
@@ -826,7 +830,7 @@ def get_cache(hostinfo, path):
 	XXX: rewrite path to cache location, ie. instantiate Cache object and
 	return. All location rewriting should be handled here? or use database instead..
 	"""
-	assert False, "write get_cache method"
+	assert False, ("TODO: write get_cache method", hostinfo, path)
 
 def check_files():
 	backend = SessionMixin.get_instance(True)

@@ -231,9 +231,9 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
 	try:
 		listener.bind( ( hostname, port ) )
-		mainlog.debug("[ BIND ] serving at %s:%i", hostname, port)
+		mainlog.debug("[ BIND ] Started serving at %s:%i", hostname, port)
 	except:
-		mainlog.err("[ ERR ] unable to bind to %s:%i", hostname, port)
+		mainlog.err("[ ERR ] Unable to bind to %s:%i", hostname, port)
 		raise
 	listener.listen( 5 )
 

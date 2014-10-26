@@ -113,6 +113,7 @@ class HTTP:
 					'X-Content-Type-Options',
 					'X-Powered-By',
 					'X-Relationship', # used by htcache
+					'X-HTCache-SystemTest', # used by htcache
 					'X-Id',
 					'X-Varnish',
 					'Status',
