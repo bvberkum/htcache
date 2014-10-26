@@ -48,7 +48,7 @@ to locally stored data.
 
 def HTCache_fiber_handler( client, address ):
 
-	mainlog.debug("Log level is at %s", Runtime.VERBOSE)
+	mainlog.debug("Log level is at %s", log.name(Runtime.LOG_LEVEL))
 
 	protocol = None
 	request = Request.HtRequest()
@@ -181,7 +181,7 @@ def run():
 
 	assert mainlog == Runtime.loggers['main']
 	assert log.get_log('main') == Runtime.loggers['main']
-	Runtime.loggers['main'].config(Runtime.VERBOSE, 'stdout')
+	Runtime.loggers['main'].config(Runtime.LOG_LEVEL, 'stdout')
 
 	### Normal proxy subroutine
 

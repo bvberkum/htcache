@@ -794,8 +794,8 @@ def check_data(cache, uripathnames, mediatype, d1, d2, meta, features):
 
 	All rules should be applied.
 	"""
-	if not Params.VERBOSE:
-		Params.VERBOSE = 1
+	if not Params.LOG_LEVEL:
+		Params.LOG_LEVEL = 1
 	pathname = cache.path
 	if cache.partial:
 		pathname += '.incomplete'

@@ -8,8 +8,8 @@ VERSION = 0.4
 
 # defaults
 QUIET = False
-VERBOSE = 7 # error
-ERROR_LEVEL = VERBOSE
+LOG_LEVEL = 7 # 
+ERROR_LEVEL = LOG_LEVEL
 DEBUG = []
 DEBUG_BE = False
 DEBUG_FIBER = False

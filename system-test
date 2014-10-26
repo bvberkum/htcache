@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/bin/bash
 # 
 # System tests originally for http-replicator. Adapted to test
 # proxy functionality of htcache in live web situations. Public domain.
@@ -22,7 +22,8 @@ PORT=8888
 NUM="$1"
 PROJECTDIR=$(pwd)
 PREFIX="/tmp/htcache-systemtest$NUM"
-#LOG_LEVEL=7
+LOG_LEVEL=4 # err
+LOG_LEVEL=0
 #ERR_LEVEL=7
 #LOG_FACILITIES="--log-facility protocol --log-facility cache"
 # FIXME: restore defaults here again
@@ -58,8 +59,8 @@ function startserver
 		--daemon $PREFIX.log \
 		-p $PORT -r $PREFIX.cache \
 		--data-dir $PREFIX.data \
-		--pid-file $PID $*;
-#		--log-level $LOG_LEVEL \
+		--pid-file $PID $* \
+		--log-level $LOG_LEVEL
 #		--error-level $ERR_LEVEL \
 #		  $LOG_FACILITIES \
   then

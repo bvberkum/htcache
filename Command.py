@@ -303,16 +303,16 @@ class CLIParams:
 #					action="callback",
 #					callback=opt_loglevel
 #			)),
-#			(("--log-level",),
-#				"set output level for selected facilities", dict(
-#					metavar="[0-7]",
-#					type=int,
-#					# fixme: rename verbose to log_level some convenient time
-#					dest="verbose",
-#					default=Params.VERBOSE,
-#					action="callback",
-#					callback=opt_loglevel
-#			)),
+			(("--log-level",),
+				"set output level for selected facilities", dict(
+					metavar="[0-7]",
+					type=int,
+					# fixme: rename verbose to log_level some convenient time
+					#dest="verbose",
+					default=Params.LOG_LEVEL,
+					action="callback",
+					callback=opt_loglevel
+			)),
 #			(("--log-main-args",), "", dict_update(logger_args, 
 #				metavar="[level,location]",
 #				default='0,stdout')),
@@ -457,7 +457,7 @@ def print_info(return_data=False):
 				"debug": Runtime.DEBUG,
 				"static": Runtime.STATIC,
 				"pid": open(Runtime.PID_FILE).read().strip(),
-				"log-level": Runtime.VERBOSE,
+				"log-level": Runtime.LOG_LEVEL,
 			},
 			"config": {
 				"proxy": {

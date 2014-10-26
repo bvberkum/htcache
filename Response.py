@@ -113,7 +113,7 @@ class DataResponse:
 
 		mainlog.note('HTCache responds %r', head.strip())
 
-		if Runtime.VERBOSE == log.DEBUG:
+		if Runtime.LOG_LEVEL == log.DEBUG:
 			for key in args:
 				if not args[key]:
 					mainlog.err("Error: no value %s" % key)

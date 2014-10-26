@@ -214,6 +214,7 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 			socket.SOL_SOCKET, 
 			socket.SO_REUSEADDR, 
 			listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
+
 	try:
 		listener.bind( ( hostname, port ) )
 		mainlog.debug("[ BIND ] serving at %s:%i", hostname, port)
@@ -223,8 +224,12 @@ def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 	listener.listen( 5 )
 
 	if daemon_log:
+		pid = None
+		if os.path.exists(pid_file):
+			pid = open(pid_file).read()
+		print 'Forking to', daemon_log, pid_file
 		# continue as new process in its own session
-		fork( daemon_log, pid_file ) 
+		fork( daemon_log, pid_file )
 
 	if debug:
 		myFiber = DebugFiber

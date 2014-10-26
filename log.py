@@ -12,8 +12,18 @@ ERR, \
 WARN, \
 NOTE, \
 INFO, \
-DEBUG = range(0, 8)
+DEBUG = range(8, 0, -1)
 
+
+def name(level):
+	return [ 'emergency',
+		'alert',
+		'crit',
+		'err',
+		'warn',
+		'note',
+		'info',
+		'debug'][7-level]
 
 class Log(object):
 
@@ -56,8 +66,7 @@ class Log(object):
 #			)
 
 	def emit_check(self, level):
-		return True
-		v = not Runtime.QUIET and level <= self.threshold#Runtime.VERBOSE >= level
+		v = not Runtime.QUIET and level >= self.threshold#Runtime.VERBOSE >= level
 		return v
 
 	def emit(self, msg, *args):
@@ -70,14 +79,14 @@ class Log(object):
 	def __getattr__(self, name):
 		def level_call(msg, *args):
 			if self.emit_check(({
-						'emerg': 0,
-						'alert': 1,
-						'crit': 2,
-						'err': 3,
-						'warn': 4,
-						'note': 5,
-						'info': 6,
-						'debug': 7,
+						'emerg': 7,
+						'alert': 6,
+						'crit': 5,
+						'err': 4,
+						'warn': 3,
+						'note': 2,
+						'info': 1,
+						'debug': 0,
 					})[name]):
 #				print 'emitting', self.output, msg, args
 				self.emit(msg, *args)
@@ -110,6 +119,7 @@ def get_log(name):#module=None, level=Params.NOTE, facility=None):
 
 def log(args, t=NOTE, f=None):
 	return log_(args, t, f)
+
 def log_(args, threshold=NOTE, facility=None):
 	"""
 	Not much of a log..
