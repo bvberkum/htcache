@@ -627,14 +627,16 @@ case $1 in
 	summary "STATIC MODE"
 
 	clean
+	startserver
+	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP normal
+	stopserver
 	startserver --static
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
+	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP static
 	stopserver
 	backup_coverage $1
 
 	check_log "serving directly from cache without consulting server" "Static mode; serving file directly from cache"
-	check_equal "cached and served file are equal" cache/$URL_HTTP out2
+	check_equal "cached and served file are equal" cache/$URL_HTTP static
 	check_log_errors
 	;;
 

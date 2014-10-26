@@ -60,6 +60,8 @@ rewriting init script
 
 Tests
 ______
+TODO: review all tests
+TODO: need to wrap up sqlstore changes, shoudl fix header errors 
 
 system test 8
 

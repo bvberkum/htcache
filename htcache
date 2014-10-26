@@ -131,10 +131,11 @@ def HTCache_fiber_handler( client, address ):
 			yield fiber.RECV( server, Params.TIMEOUT )
 			response.recv( server )
 
-	assert protocol
-	assert hasattr(protocol, 'data')
-	mainlog.note('[ HTCACHE ] Transaction completed for %r with data %s', 
-			request, protocol.data)
+	#assert protocol
+	#assert hasattr(protocol, 'data')
+	if protocol:
+		mainlog.note('[ HTCACHE ] Transaction completed for %r with data %s', 
+				request, protocol.data)
 
 	response.finalize(client)
 

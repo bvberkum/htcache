@@ -210,10 +210,13 @@ class HttpProtocol(CachingProtocol):
 		self.data = Resource.ProxyData( self )
 
 		# Skip server-round trip in static mode
-		if Runtime.STATIC and self.cache.full: # FIXME
+		if Runtime.STATIC: # and self.cache.full: # FIXME
 			mainlog.note('Static mode; serving file directly from cache')
-			self.data.prepare_static()
-			self.Response = Response.DataResponse
+			self.__socket = None
+			if self.data.prepare_static():
+				self.Response = Response.DataResponse
+			else:
+				self.Response = Response.NotFoundResponse
 			return
 
 		proxy_req_headers = self.data.prepare_request( request )
@@ -226,7 +229,11 @@ class HttpProtocol(CachingProtocol):
 		# Forward request to remote server, fiber will handle this
 		head = 'GET /%s HTTP/1.1' % path
 		# FIXME return proper HTTP error upon connection failure
-		self.__socket = connect(request.hostinfo)
+		try:
+			self.__socket = connect(request.hostinfo)
+		except Exception, e:
+			self.Response = Response.ExceptionResponse( self, e )
+			return
 		self.__sendbuf = '\r\n'.join(
 			[ head ] + map( ': '.join, proxy_req_headers.items() ) + [ '', '' ] )
 		self.__recvbuf = ''
@@ -427,7 +434,7 @@ class HttpProtocol(CachingProtocol):
 		assert self.cache.partial, "Missing cache but receiving partial entity. "
 
 	def set_dataresponse(self):
-		mediatype = self.__args.get( 'Content-Type', None )
+		mediatype = self.data.descriptor.mediatype	
 		if Runtime.PROXY_INJECT and mediatype and 'html' in mediatype:
 			mainlog.note("XXX: Rewriting HTML resource: "+self.url)
 			self.rewrite = True
@@ -455,7 +462,7 @@ class HttpProtocol(CachingProtocol):
 		return self.print_message(self.__args)
 
 	def args( self ):
-		return self.__args.copy()
+		return hasattr(self, '__args') and self.__args.copy() or {}
 
 	def socket( self ):
 		return self.__socket

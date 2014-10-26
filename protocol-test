@@ -5,6 +5,7 @@
 - Test for specific service features.
 """
 import sys
+import socket
 
 import urllib
 import difflib
@@ -28,7 +29,8 @@ class ProtocolTest:
         proxies = {}
         data = None
         if proxy:
-            proxies = {'http':'http://dandy:8081'}
+            hostname = socket.gethostname()
+            proxies = {'http':'http://'+hostname+':8081'}
         try:
             f = urllib.urlopen(self.url, data, proxies)
         except Exception, e:

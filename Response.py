@@ -86,8 +86,8 @@ class DataResponse:
 #		if self.__protocol.rewrite:
 #			args['Access-Control-Allow-Origin'] = "%s:%i" % request.hostinfo
 
-		assert 'Last-Modified' in args
-		assert 'Content-Type' in args
+		#assert 'Last-Modified' in args
+		#assert 'Content-Type' in args
 
 		if self.__pos == 0 and self.__end in ( -1, self.__protocol.size ):
 			head = 'HTTP/1.1 200 OK'
@@ -528,12 +528,12 @@ class DirectResponse:
 class NotFoundResponse( DirectResponse ):
 
 	def __init__( self, protocol, request ):
-		if request.url()[0] == 'ftp':
+		if request.url.startswith('ftp'):
 			DirectResponse.__init__( self,
 					protocol, request,
 					status='550 Not Found'
 				)
-		elif request.url()[0] == 'http':
+		else:#if request.url.startswith('http'):
 			DirectResponse.__init__( self,
 					protocol, request,
 					status='404 Not Found'

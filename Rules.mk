@@ -90,7 +90,18 @@ test-system:: $/
 #        coverage html --omit '/usr/*'
 
 test-protocol::
+	@-rm -rf /tmp/htcache-test-protocol.cache/
+	@mkdir /tmp/htcache-test-protocol.cache/
+	@-rm -rf /tmp/htcache-test-protocol.data/
+	@mkdir /tmp/htcache-test-protocol.data/
+	@./htcache --daemon /tmp/htcache-test-protocol.log \
+		-p 8081 -r /tmp/htcache-test-protocol.cache/ \
+		--data-dir /tmp/htcache-test-protocol.data/ \
+		--pid-file /tmp/htcache-test-protocol.pid \
+		--log-level 0 \
+	;
 	@./protocol-test 2>&1 | tee protocoltest.log
+	@kill -int `cat /tmp/htcache-test-protocol.pid`
 	@\
 		DATE=$$(echo $$(date --rfc-3339=seconds));\
 		HOST=$$(echo $$(hostname -s));\

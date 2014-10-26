@@ -215,7 +215,12 @@ class ProxyData(object):
 # after server response headers
 		if not self.descriptor.resource:
 			self.descriptor.resource = Resource()
-		self.map_to_data( HTTP.filter_entity_headers( self.protocol.args() ) )
+		resp_headers = self.protocol.args()
+		mediatype = resp_headers.get( 'Content-Type', None )
+		if not mediatype:
+			resp_headers['Content-Type'] = 'application/octet-stream'
+		self.map_to_data( HTTP.filter_entity_headers( resp_headers ) )
+		self.descriptor.mediatype_auth = mediatype != None
 		mainlog.debug( '%s: update_data %r ', self, self.descriptor )
 
 # before client response headers
@@ -284,7 +289,7 @@ class ProxyData(object):
 		headerdict.update({
 			'Last-Modified': self.get_last_modified(),
 		})
-		if self.descriptor.mediatype:
+		if self.descriptor.mediatype and self.descriptor.mediatype_auth:
 			headerdict.update({
 				'Content-Type': self.get_content_type(),
 			})
@@ -479,15 +484,17 @@ class ProxyData(object):
 		"""
 		self.init_data( self.protocol.url )
 		self.init_cache( )
+		if not self.descriptor.id:
+			return False
+
 		self.cache.path = self.descriptor.path.replace( Runtime.PARTIAL, '' )
 		self.cache.stat()
-		assert self.descriptor.id,\
-				"Nothing there to open: no descriptor. "
 		assert self.cache.full,\
 				"Nothing there to open: no content. "
 		self.open_cache()
 		#assert self.data.is_open() and self.cache.full(), \
 		#	"XXX: sanity check, cannot have partial served content, serve error instead"
+		return True
 
 	def __str__(self):
 		return "[ProxyData %s]" % hex(id(self))
@@ -590,6 +597,7 @@ class Descriptor(SqlBase, SessionMixin):
 			backref='descriptors')
 	path = Column(String(255), nullable=True)
 	mediatype = Column(String(255), nullable=False)
+	mediatype_auth = Column(Boolean, nullable=False)
 	charset = Column(String(255), nullable=True)
 	language = Column(String(255), nullable=True)
 	size = Column(Integer, nullable=True)
