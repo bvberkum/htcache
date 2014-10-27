@@ -125,7 +125,7 @@ class CachingProtocol(object):
 			mainlog.info("Direct request: %s", path)
 			localhosts = ( 'localhost', Runtime.HOSTNAME, '127.0.0.1', '127.0.1.1' )
 			assert host in localhosts, "Cannot service for %s, use from %s" % (host, localhosts)
-			self.Response = Response.DirectResponse
+			self.Response = Response.ProxyResponse
 
 		# XXX: Respond by writing message as plain text, e.g echo/debug it:
 		#self.Response = Response.DirectResponse
@@ -232,7 +232,7 @@ class HttpProtocol(CachingProtocol):
 		try:
 			self.__socket = connect(request.hostinfo)
 		except Exception, e:
-			self.Response = Response.ExceptionResponse( self, e )
+			self.Response = Response.ExceptionResponse( self, request, e )
 			return
 		self.__sendbuf = '\r\n'.join(
 			[ head ] + map( ': '.join, proxy_req_headers.items() ) + [ '', '' ] )
@@ -606,7 +606,7 @@ class ProxyProtocol:
 	"""
 	"""
 
-	Response = Response.DirectResponse
+	Response = Response.ProxyResponse
 	data = None
 
 	def __init__( self, request ):
@@ -616,7 +616,7 @@ class ProxyProtocol:
 		self.status = HTTP.OK
 		if method is not 'GET':
 			self.status = HTTP.METHOD_NOT_ALLOWED
-		if self.reqname not in Response.DirectResponse.urlmap.keys():
+		if self.reqname not in Response.ProxyResponse.urlmap.keys():
 			self.status = HTTP.NOT_FOUND
 		assert proto in ('', 'HTTP/1.0', 'HTTP/1.1'), proto
 

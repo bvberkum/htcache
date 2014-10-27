@@ -50,7 +50,7 @@ class BlindResponse:
 		pass
 
 
-class ProxyResponse(BlindResponse):
+class BlindProxyResponse(BlindResponse):
 
 	pass
 
@@ -334,6 +334,48 @@ class BlockedImageContentResponse:
 class DirectResponse:
 
 	Done = False
+	
+	def __init__(self):
+		self.__sendbuf = None
+
+	def prepare_buffer(self, status, msg, mime='text/plain'):
+		if isinstance(msg, list):
+			lines = msg
+		else:
+			lines = [msg]
+		assert isinstance(status, basestring), status
+		for l in lines:
+			assert isinstance(l, basestring), l
+		headers = "Access-Control-Allow-Origin: *\r\nContent-Type: "+mime+"\r\n"
+		self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
+				'\r\n%s' % ( status, headers, '\n'.join( lines ) )
+
+	def hasdata( self ):
+		return True#return bool( self.__sendbuf )
+
+	def send( self, sock ):
+		assert not self.Done
+		if self.__sendbuf:
+			bytecnt = sock.send( self.__sendbuf )
+			self.__sendbuf = self.__sendbuf[ bytecnt: ]
+			if not self.__sendbuf:
+				self.Done = True
+		else:
+			self.Done = True
+
+	def needwait( self ):
+		return False
+
+	def recv( self ):
+		raise AssertionError
+
+	def __str__(self):
+		return "[DirectResponse %s]" % hex(id(self))
+
+	def finalize(self, client):
+		client.close()
+
+class ProxyResponse(DirectResponse):
 
 	"""
 	HTCache generated response for request directly to
@@ -354,6 +396,7 @@ class DirectResponse:
 	}
 
 	def __init__( self, protocol, request, status='200 Okeydokey, here it comes', path=None):
+		DirectResponse.__init__(self)
 		if status[0] == '2':
 			path = protocol.reqname
 			if '?' in path:
@@ -367,7 +410,7 @@ class DirectResponse:
 		getattr(self, self.action)(status, protocol, request)
 
 	def serve_list(self, status, protocol, request):
-		self.prepare_response(
+		self.prepare_buffer(
 				"200 OK",
 				"# Downloads \n"
 				"" + ('\n'.join(map(str,Runtime.DOWNLOADS.keys())))
@@ -375,7 +418,7 @@ class DirectResponse:
 
 	def serve_downloads(self, status, protocol, request):
 		assert isinstance(request.url, basestring), request.url
-		self.prepare_response(
+		self.prepare_buffer(
 				"200 OK",
 				"No data for %r "%request.url
 			)
@@ -422,11 +465,11 @@ class DirectResponse:
 				#print "JSON: ",request.recvbuf()
 				raise
 		# TODO: echos only
-		self.prepare_response(status,
+		self.prepare_buffer(status,
 				json_write(req), mime="application/json")
 
 	def reload_proxy(self, status, protocol, request):
-		self.prepare_response(status, "Reloading gateway")
+		self.prepare_buffer(status, "Reloading gateway")
 
 	def serve_stylesheet(self, status, protocol, request):
 		cssdata = open(Params.PROXY_INJECT_CSS).read()
@@ -457,7 +500,7 @@ class DirectResponse:
 
 	def serve_params(self, status, protocol, request):
 		msg = Command.print_info(True)
-		self.prepare_response(status, json_write(msg), mime='application/json')
+		self.prepare_buffer(status, json_write(msg), mime='application/json')
 
 	def serve_descriptor(self, status, protocol, request):
 		q = urlparse.urlparse( request.url[3] )[4]
@@ -473,11 +516,11 @@ class DirectResponse:
 		descriptors = Resource.get_backend()
 		if cache.path in descriptors:
 			descr = descriptors[cache.path]
-			self.prepare_response(status,
+			self.prepare_buffer(status,
 					json_write(descr),
 					mime='application/json')
 		else:
-			self.prepare_response("404 No Data", "No data for %s %s %s %s"%request.url)
+			self.prepare_buffer("404 No Data", "No data for %s %s %s %s"%request.url)
 
 	def serve_script(self, status, protocol, request):
 		jsdata = open(Params.PROXY_INJECT_JS).read()
@@ -488,55 +531,32 @@ class DirectResponse:
 			jsdata
 		])
 
-	def prepare_response(self, status, msg, mime='text/plain'):
-		if isinstance(msg, list):
-			lines = msg
-		else:
-			lines = [msg]
-		assert isinstance(status, basestring), status
-		for l in lines:
-			assert isinstance(l, basestring), l
-		headers = "Access-Control-Allow-Origin: *\r\nContent-Type: "+mime+"\r\n"
-		self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
-				'\r\n%s' % ( status, headers, '\n'.join( lines ) )
-
-	def hasdata( self ):
-		return bool( self.__sendbuf )
-
-	def send( self, sock ):
-		assert not self.Done
-		bytecnt = sock.send( self.__sendbuf )
-		self.__sendbuf = self.__sendbuf[ bytecnt: ]
-		if not self.__sendbuf:
-			self.Done = True
-
 	def finalize(self, client):
 		if self.action == 'reload_proxy':
 			client.close()
 			raise fiber.Restart()
 
-	def needwait( self ):
-		return False
-
-	def recv( self ):
-		raise AssertionError
-
 	def __str__(self):
-		return "[DirectResponse %s]" % hex(id(self))
+		return "[ProxyResponse %s]" % hex(id(self))
 
 
 class NotFoundResponse( DirectResponse ):
 
 	def __init__( self, protocol, request ):
 		if request.url.startswith('ftp'):
-			DirectResponse.__init__( self,
-					protocol, request,
-					status='550 Not Found'
+			DirectResponse.__init__( self )
+			self.prepare_buffer(
+					'550 Not Found', 'Not Found'
 				)
-		else:#if request.url.startswith('http'):
-			DirectResponse.__init__( self,
-					protocol, request,
-					status='404 Not Found'
+		elif request.url.startswith('http'):
+			DirectResponse.__init__( self )
+			self.prepare_buffer(
+					'404 Not Found', 'Not Found'
+				)
+		else:
+			DirectResponse.__init__( self )
+			self.prepare_buffer(
+					'400 Unknown', 'Unknown failure'
 				)
 
 	def __str__(self):
@@ -545,14 +565,17 @@ class NotFoundResponse( DirectResponse ):
 
 class ExceptionResponse( DirectResponse ):
 
-	def __init__( self, protocol, request ):
-		traceback.print_exc()
-		DirectResponse.__init__( self,
-				protocol, request,
-				status='500 Internal Server Error'
-			)
+	def __init__( self, protocol, request, e=None ):
+		DirectResponse.__init__( self )
+		self.e = e
+		lines = [
+				"Exception: %r" % e,
+			]
+		mainlog.warn("Writing exception info to client: %r", self.e)
+		lines.extend( traceback.format_exc().split('\r\n') )
+		status = '500 Internal Server Error'
+		self.prepare_buffer(status, lines)
 
 	def __str__(self):
 		return "[ExceptionResponse %s]" % hex(id(self))
-
 

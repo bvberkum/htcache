@@ -108,15 +108,17 @@ def HTCache_fiber_handler( client, address ):
 					yield fiber.RECV( server, Params.TIMEOUT )
 					protocol.recv( server )
 
-		mainlog.note('[ HTCACHE ] Switching to %s', protocol.Response.__name__)
-		response = protocol.Response( protocol, request )
+		if isinstance(protocol.Response, Response.DirectResponse):
+			response = protocol.Response
+		else:
+			response = protocol.Response( protocol, request )
+			server = protocol.socket()
 		mainlog.debug('[ HTCACHE ] %s: New %s for %s', response,
-						protocol.Response.__name__, request)
-		server = protocol.socket()
+						response.__class__.__name__, request)
 
 	except Exception, e:
 		mainlog.crit('[ HTCACHE ] Warning: Switching to ExceptionResponse, reason: %s', e)
-		response = Response.ExceptionResponse( protocol, request )
+		response = Response.ExceptionResponse( protocol, request, e )
 
 	# XXX: blocks while client has not read data
 	while not response.Done:
@@ -127,6 +129,7 @@ def HTCache_fiber_handler( client, address ):
 		elif response.needwait():
 			yield fiber.WAIT( response.needwait() )
 		else:
+			assert server
 			mainlog.debug('[ HTCACHE ] %s: Reveiving for %s', response, request)
 			yield fiber.RECV( server, Params.TIMEOUT )
 			response.recv( server )
