@@ -113,14 +113,17 @@ class ProxyData(object):
 		
 		if mtime:
 			self.descriptor.mtime = mtime
-# XXX:			if self.cache.stat():
-#				self.cache.utime( mtime )
+# XXX:			
+		if self.cache.stat():
+			self.cache.utime( mtime )
+		else:
+			mainlog.warn( 'Failed setting last-modified to %r', value )
 
 	def get_last_modified(self):
-		if self.descriptor.mtime >= 0:
-			mtime = self.descriptor.mtime
-		else:
-			mtime = self.cache.mtime
+		#if self.descriptor.mtime >= 0:
+		mtime = self.descriptor.mtime
+		#else:
+		#	mtime = self.cache.mtime
 		return time.strftime(
 					Params.TIMEFMT, time.gmtime( mtime ) )
 
@@ -199,8 +202,9 @@ class ProxyData(object):
 	def move( self ):
 		mainlog.debug("Error: TODO: ProxyData.move")
 
-	def set_broken( self ):
+	def set_broken( self, status ):
 		mainlog.debug("Error: TODO: ProxyData.set_broken")
+		mainlog.debug(self.descriptor)
 
 	def close(self):
 		self.cache = None
@@ -329,10 +333,6 @@ class ProxyData(object):
 			self.cache.stat()
 			mainlog.debug( 'Existing descriptor at %r', self.descriptor.path )
 
-		# Prepare proxied request headers
-		via = "%s:%i" % (Runtime.HOSTNAME, Runtime.PORT)
-		if req_headers.setdefault('Via', via) != via:
-			req_headers['Via'] += ', '+ via
 		# XXX: should it do something with encoding?
 		req_headers.pop( 'Accept-Encoding', None )
 		# TODO: RFC 2616 14.35.2 Range requests and partial content response
@@ -358,7 +358,8 @@ class ProxyData(object):
 
 			if self.cache.partial:
 				assert self.cache.size < self.descriptor.size, \
-						( "Illegal state: file should have been completed", self.cache.size, self.descriptor.size )
+						( "Illegal state: file should have been completed, missing %s bytes, cache is %r",
+								self.descriptor.size-self.cache.size, self.cache.size )
 				mainlog.note('Requesting resume of partial file in cache: '
 						'%i bytes, %s', self.cache.size, mdtime )
 				req_headers[ 'Range' ] = 'bytes=%i-' % ( self.cache.size,) # self.descriptor.size+1 )
@@ -444,8 +445,11 @@ class ProxyData(object):
 				self.descriptor.path = self.cache.path
 				assert Runtime.PARTIAL not in self.descriptor.path
 				self.descriptor.commit()
+		elif size > self.descriptor.size:
+			mainlog.note("%s: Error: Too much data for %s: %s bytes", self, self.descriptor.path, size )
+			mainlog.crit("%s: Too much data for %s: %s bytes", self, self.descriptor.path, size )
+
 		else:
-			mainlog.debug("Descriptor does not match: %s", self.descriptor.size)
 			mainlog.note("%s: Closed partial %r at %s bytes", self, self.descriptor.path, size )
 			self.descriptor.path = Cache.suffix_ext( self.cache.path, Runtime.PARTIAL )
 			os.utime( os.path.join( Runtime.ROOT,  self.descriptor.path ), ( self.descriptor.mtime, self.descriptor.mtime ) )
@@ -498,6 +502,13 @@ class ProxyData(object):
 
 	def __str__(self):
 		return "[ProxyData %s]" % hex(id(self))
+
+	def __nonzero__(self):
+		"""
+		Return false for new
+		"""
+		return self.exists()
+
 
 ### Descriptor Storage types:
 
@@ -617,7 +628,8 @@ class Descriptor(SqlBase, SessionMixin):
 			language=self.language,
 			quality=self.quality,
 			mtime=self.mtime,
-			mediatype=self.mediatype
+			mediatype=self.mediatype,
+			mediatype_auth=self.mediatype_auth
 		))
 
 	@staticmethod

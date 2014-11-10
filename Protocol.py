@@ -6,7 +6,7 @@ reads this to the client.
 import calendar, os, time, socket, re
 
 import Params, Runtime, Response, Resource, Rules
-from HTTP import HTTP
+import HTTP
 #from util import *
 import log
 
@@ -343,9 +343,11 @@ class HttpProtocol(CachingProtocol):
 
 		elif self.__status == HTTP.PARTIAL_CONTENT \
 				and self.cache.partial:
-
-			mainlog.info("Updating partial download. ")
+			mainlog.debug("Updating partial download. ")
 			self.__args = self.data.prepare_response()
+			startpos, endpos = HTTP.parse_content_range(self.__args['Content-Range'])
+			assert endpos == '*' or endpos == self.data.descriptor.size, \
+					"Expected server to continue to end of resource."
 			if self.__args['ETag']:
 				assert self.__args['ETag'].strip('"') == self.data.descriptor.etag, (
 						self.__args['ETag'], self.data.descriptor.etag )
@@ -462,7 +464,11 @@ class HttpProtocol(CachingProtocol):
 		return self.print_message(self.__args)
 
 	def args( self ):
-		return hasattr(self, '__args') and self.__args.copy() or {}
+		try:
+			return self.__args.copy()
+		except AttributeError, e:
+			return {}
+		#return hasattr(self, '__args') and self.__args.copy() or {}
 
 	def socket( self ):
 		return self.__socket

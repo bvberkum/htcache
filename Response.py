@@ -334,6 +334,7 @@ class BlockedImageContentResponse:
 class DirectResponse:
 
 	Done = False
+	action = ''
 	
 	def __init__(self):
 		self.__sendbuf = None
@@ -351,16 +352,15 @@ class DirectResponse:
 				'\r\n%s' % ( status, headers, '\n'.join( lines ) )
 
 	def hasdata( self ):
-		return True#return bool( self.__sendbuf )
+		assert self.__sendbuf, self
+		return bool( self.__sendbuf )
 
 	def send( self, sock ):
 		assert not self.Done
-		if self.__sendbuf:
-			bytecnt = sock.send( self.__sendbuf )
-			self.__sendbuf = self.__sendbuf[ bytecnt: ]
-			if not self.__sendbuf:
-				self.Done = True
-		else:
+		assert self.__sendbuf, self
+		bytecnt = sock.send( self.__sendbuf )
+		self.__sendbuf = self.__sendbuf[ bytecnt: ]
+		if not self.__sendbuf:
 			self.Done = True
 
 	def needwait( self ):
@@ -408,6 +408,7 @@ class ProxyResponse(DirectResponse):
 			path = 'echo'
 		self.action = self.urlmap[path]
 		getattr(self, self.action)(status, protocol, request)
+		mainlog.debug('ProxyResponse init: %s, %s', path, self)
 
 	def serve_list(self, status, protocol, request):
 		self.prepare_buffer(
@@ -448,7 +449,7 @@ class ProxyResponse(DirectResponse):
 
 		lines.append( traceback.format_exc() )
 
-		self.__sendbuf = "HTTP/1.1 %s\r\n"\
+		self._DirectResponse__sendbuf = "HTTP/1.1 %s\r\n"\
 			"Access-Control-Allow-Origin: *\r\n"\
 			"Content-Type: text/plain\r\n"\
 			"\r\n%s" % ( status, '\n'.join( lines ) )
@@ -473,7 +474,7 @@ class ProxyResponse(DirectResponse):
 
 	def serve_stylesheet(self, status, protocol, request):
 		cssdata = open(Params.PROXY_INJECT_CSS).read()
-		self.__sendbuf = "\r\n".join( [
+		self._DirectResponse__sendbuf = "\r\n".join( [
 			"HTTP/1.1 %s" % status,
 			"Content-Type: text/css\r\n",
 			cssdata
@@ -495,7 +496,7 @@ class ProxyResponse(DirectResponse):
 			'</body>',
 			'</html>']
 
-		self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/html\r\n'\
+		self._DirectResponse__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/html\r\n'\
 				'\r\n%s' % ( status, '\n'.join( lines ) )
 
 	def serve_params(self, status, protocol, request):
@@ -524,7 +525,7 @@ class ProxyResponse(DirectResponse):
 
 	def serve_script(self, status, protocol, request):
 		jsdata = open(Params.PROXY_INJECT_JS).read()
-		self.__sendbuf = "\r\n".join( [
+		self._DirectResponse__sendbuf = "\r\n".join( [
 			"HTTP/1.1 %s" % status,
 			"Content-Type: application/javascript\r\n"
 			"Access-Control-Allow-Origin: *\r\n",

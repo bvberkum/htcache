@@ -5,15 +5,15 @@
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest1.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 1289
+[ TEST ] Started server, running at PID 13673
 [ TEST ] Finished download out1 at 478105 bytes
 [ TEST ] Finished download out2 at 478105 bytes
-[ TEST ] Interrupted server at PID 1289
+[ TEST ] Interrupted server at PID 13673
  * file cached and finalized                                           PASSED 
  * record exists                                                       PASSED 
  * separate download and served file are equal                         PASSED 
  * cached and served file are equal                                    PASSED 
- * normal and served entity headers are equal                          ERROR not equal
+ * normal and served entity headers are equal                          PASSED 
  * served HTTP v1.1 OK                                                 PASSED 
  * served via proxy                                                    PASSED 
  * log is clean                                                        PASSED 
@@ -24,9 +24,9 @@
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest2.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 1402
+[ TEST ] Started server, running at PID 13808
 [ TEST ] Finished download normal at 478105 bytes
-[ TEST ] Interrupted server at PID 1402
+[ TEST ] Interrupted server at PID 13808
  * aborted client read                                                 PASSED 
  * record exists                                                       PASSED 
  * file cached, not finalized                                          PASSED 
@@ -38,11 +38,11 @@
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest3.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 1490
+[ TEST ] Started server, running at PID 13882
 [ TEST ] Finished download out at 478105 bytes
 [ TEST ] Finished download out1 at 478105 bytes
 [ TEST ] Finished download out2 at 478105 bytes
-[ TEST ] Interrupted server at PID 1490
+[ TEST ] Interrupted server at PID 13882
  * first file cached and finalized                                     PASSED 
  * record exists                                                       PASSED 
  * cached and normal file are equal                                    PASSED 
@@ -54,19 +54,8 @@
  * second file served from cache                                       PASSED 
  * cached and first served file are equal                              PASSED 
  * cached and second served file are equal                             PASSED 
- * normal and first served headers are equal                           ERROR not equal:
-Content-Length: 478105
-Content-Type: text/plain
-ETag: "74b99-43bd7b89ac200"
-Last-Modified: Sat, 06 Oct 2007 19:06:48 GMT
-	Last-Modified: Sun, 26 Oct 2014 17:56:18 GMT
-Server: Apache/2
- * normal and second served headers are equal                          ERROR not equal:
-Content-Type: text/plain
-ETag: "74b99-43bd7b89ac200"
-Last-Modified: Sat, 06 Oct 2007 19:06:48 GMT
-	Last-Modified: Sun, 26 Oct 2014 17:56:18 GMT
-Server: Apache/2
+ * normal and first served headers are equal                           PASSED 
+ * normal and second served headers are equal                          PASSED 
  * log is clean                                                        PASSED 
 
 =============================================================================
@@ -76,15 +65,14 @@ Server: Apache/2
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest4.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 1695
+[ TEST ] Started server, running at PID 14131
 [ TEST ] Resuming unfinished download at 24576 bytes
-curl: (33) HTTP server doesn't seem to support byte ranges. Cannot resume.
-[ TEST ] Finished download out2 at 24576 bytes
-[ TEST ] Interrupted server at PID 1695
+[ TEST ] Finished download out2 at 478105 bytes
+[ TEST ] Interrupted server at PID 14131
  * received complete file                                              PASSED 
- * served partial file                                                 ERROR 
- * cached and served file are equal                                    ERROR not equal
- * log is clean                                                        ERROR 
+ * served partial file                                                 PASSED 
+ * cached and served file are equal                                    PASSED 
+ * log is clean                                                        PASSED 
 
 =============================================================================
  SYSTEM-TEST 5: REDOWNLOADING CHANGED FILE
@@ -96,15 +84,15 @@ curl: (33) HTTP server doesn't seem to support byte ranges. Cannot resume.
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest6.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 1751
+[ TEST ] Started server, running at PID 14220
 
-./system-test: line 98:  1753 Terminated              http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1
-[ TEST ] Finished download out2 at 1448 bytes
-[ TEST ] Interrupted server at PID 1751
+./system-test: line 98: 14222 Terminated              http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1
+[ TEST ] Finished download out2 at 478105 bytes
+[ TEST ] Interrupted server at PID 14220
  * cached and served file are equal                                    PASSED 
- * htcache asks for missing part                                       ERROR 
- * server sends part                                                   ERROR 
- * htcache resumes content                                             ERROR 
+ * htcache asks for missing part                                       PASSED 
+ * server sends part                                                   PASSED 
+ * htcache resumes content                                             PASSED 
  * finalized file                                                      PASSED 
  * log is clean                                                        PASSED 
 
@@ -118,25 +106,24 @@ curl: (33) HTTP server doesn't seem to support byte ranges. Cannot resume.
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest8.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 1818
+[ TEST ] Started server, running at PID 14312
 [ TEST ] Finished download out at 478105 bytes
-[ TEST ] Finished download out4 at 1883822 bytes
-curl: (7) Failed to connect to dandy.wylnd.net port 8888: Connection refused
-stat: cannot stat ‘/tmp/htcache-systemtest8.out5’: No such file or directory
-[ TEST ] Finished download out5 at  bytes
-mv: cannot stat ‘/tmp/htcache-systemtest8.out5.entity.headers’: No such file or directory
-sort: cannot read: /tmp/htcache-systemtest8.out5.entity.headers.tmp: No such file or directory
-rm: cannot remove ‘/tmp/htcache-systemtest8.out5.entity.headers.tmp’: No such file or directory
-./system-test: line 78: kill: (1818) - No such process
-[ TEST ] Error stopping server
+[ TEST ] Finished download out4 at 478105 bytes
+[ TEST ] Finished download out5 at 659 bytes
+[ TEST ] Interrupted server at PID 14312
+Trying partial for first file /tmp/htcache-systemtest8.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.incomplete.txt
  * cache and normal download are equal                                 ERROR not equal
  * downloads are joined                                                ERROR 
+Trying partial for first file /tmp/htcache-systemtest8.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.incomplete.txt
  * cache and first download are equal                                  ERROR not equal
+Trying partial for first file /tmp/htcache-systemtest8.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.incomplete.txt
  * cache and second concurrent download are equal                      ERROR not equal
+Trying partial for first file /tmp/htcache-systemtest8.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.incomplete.txt
  * cache and third concurrent download are equal                       ERROR not equal
- * cache and subsequent download are equal                             PASSED 
- * cache and second subsequent download are equal                      ERROR 2nd missing:
--> out5
+Trying partial for first file /tmp/htcache-systemtest8.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.incomplete.txt
+ * cache and subsequent download are equal                             ERROR not equal
+Trying partial for first file /tmp/htcache-systemtest8.cache/www.w3.org/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.incomplete.txt
+ * cache and second subsequent download are equal                      ERROR not equal
  * log is clean                                                        ERROR 
 
 =============================================================================
@@ -145,14 +132,14 @@ rm: cannot remove ‘/tmp/htcache-systemtest8.out5.entity.headers.tmp’: No suc
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest9.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2023
+[ TEST ] Started server, running at PID 14644
 [ TEST ] Finished download out1 at 72200 bytes
 Giving ChunkedScript server a rest for 5 seconds..
 [ TEST ] Finished download out2 at 72200 bytes
 [ TEST ] Finished download out3 at 72200 bytes
 [ TEST ] Finished download out6 at 5 bytes
 [ TEST ] Finished download out7 at 10615 bytes
-[ TEST ] Interrupted server at PID 2023
+[ TEST ] Interrupted server at PID 14644
  * normal and proxy response entity 1 are equal                        PASSED 
  * normal and proxy response entity 2 are equal                        PASSED 
  * server sends chunked data                                           PASSED 
@@ -166,13 +153,13 @@ Giving ChunkedScript server a rest for 5 seconds..
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest10.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2235
-[ TEST ] Finished download out at 402 bytes
-[ TEST ] Interrupted server at PID 2235
- * blocked request to server                                           ERROR 
- * server sent 403                                                     ERROR 
- * served HTML                                                         ERROR 
- * log is clean                                                        ERROR 
+[ TEST ] Started server, running at PID 14915
+[ TEST ] Finished download out at 2005 bytes
+[ TEST ] Interrupted server at PID 14915
+ * blocked request to server                                           PASSED 
+ * server sent 403                                                     PASSED 
+ * served HTML                                                         PASSED 
+ * log is clean                                                        PASSED 
 
 =============================================================================
  SYSTEM-TEST 11: BLIND PROXY RESPONSE
@@ -180,10 +167,10 @@ Giving ChunkedScript server a rest for 5 seconds..
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest11.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2277
+[ TEST ] Started server, running at PID 14954
 [ TEST ] Finished download out at 478105 bytes
-[ TEST ] Interrupted server at PID 2277
- * blocked request to server                                           ERROR 
+[ TEST ] Interrupted server at PID 14954
+ * blocked request to server                                           PASSED 
  * served HTTP v1.* OK                                                 PASSED 
  * log is clean                                                        PASSED 
 
@@ -193,7 +180,7 @@ Giving ChunkedScript server a rest for 5 seconds..
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest12.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2345
+[ TEST ] Started server, running at PID 15022
 [ TEST ] Finished download out1 at 312708 bytes
 curl: (52) Empty reply from server
 stat: cannot stat ‘/tmp/htcache-systemtest12.out2’: No such file or directory
@@ -201,7 +188,7 @@ stat: cannot stat ‘/tmp/htcache-systemtest12.out2’: No such file or director
 mv: cannot stat ‘/tmp/htcache-systemtest12.out2.entity.headers’: No such file or directory
 sort: cannot read: /tmp/htcache-systemtest12.out2.entity.headers.tmp: No such file or directory
 rm: cannot remove ‘/tmp/htcache-systemtest12.out2.entity.headers.tmp’: No such file or directory
-[ TEST ] Interrupted server at PID 2345
+[ TEST ] Interrupted server at PID 15022
  * separate download and served file are equal                         ERROR 2nd missing:
 -> out2
  * cached and served file are equal                                    ERROR 1st missing:
@@ -214,7 +201,7 @@ rm: cannot remove ‘/tmp/htcache-systemtest12.out2.entity.headers.tmp’: No su
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest13.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2417
+[ TEST ] Started server, running at PID 15094
 curl: (52) Empty reply from server
 stat: cannot stat ‘/tmp/htcache-systemtest13.out1’: No such file or directory
 [ TEST ] Finished download out1 at  bytes
@@ -227,7 +214,7 @@ stat: cannot stat ‘/tmp/htcache-systemtest13.out2’: No such file or director
 mv: cannot stat ‘/tmp/htcache-systemtest13.out2.entity.headers’: No such file or directory
 sort: cannot read: /tmp/htcache-systemtest13.out2.entity.headers.tmp: No such file or directory
 rm: cannot remove ‘/tmp/htcache-systemtest13.out2.entity.headers.tmp’: No such file or directory
-[ TEST ] Interrupted server at PID 2417
+[ TEST ] Interrupted server at PID 15094
  * first file cached and finalized                                     ERROR 
  * second file served from cache                                       ERROR 
  * cached and first served file are equal                              ERROR 1st missing:
@@ -242,20 +229,20 @@ rm: cannot remove ‘/tmp/htcache-systemtest13.out2.entity.headers.tmp’: No su
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest14.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2454
+[ TEST ] Started server, running at PID 15131
 curl: (52) Empty reply from server
 curl: (52) Empty reply from server
-stat: cannot stat ‘/tmp/htcache-systemtest14.out1’: No such file or directory
-[ TEST ] Finished download out1 at  bytes
 stat: cannot stat ‘/tmp/htcache-systemtest14.out2’: No such file or directory
 [ TEST ] Finished download out2 at  bytes
-mv: cannot stat ‘/tmp/htcache-systemtest14.out1.entity.headers’: No such file or directory
-mv: cannot stat ‘/tmp/htcache-systemtest14.out2.entity.headers’: No such file or directory
-sort: sort: cannot read: /tmp/htcache-systemtest14.out1.entity.headers.tmp: No such file or directory
-cannot read: /tmp/htcache-systemtest14.out2.entity.headers.tmp: No such file or directory
-rm: rm: cannot remove ‘/tmp/htcache-systemtest14.out2.entity.headers.tmp’: No such file or directory
-cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such file or directory
-[ TEST ] Interrupted server at PID 2454
+stat: cannot stat ‘/tmp/htcache-systemtest14.out1’: No such file or directory
+[ TEST ] Finished download out1 at  bytes
+mv: mv: cannot stat ‘/tmp/htcache-systemtest14.out1.entity.headers’: No such file or directory
+cannot stat ‘/tmp/htcache-systemtest14.out2.entity.headers’: No such file or directory
+sort: cannot read: /tmp/htcache-systemtest14.out1.entity.headers.tmp: No such file or directory
+sort: cannot read: /tmp/htcache-systemtest14.out2.entity.headers.tmp: No such file or directory
+rm: cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such file or directory
+rm: cannot remove ‘/tmp/htcache-systemtest14.out2.entity.headers.tmp’: No such file or directory
+[ TEST ] Interrupted server at PID 15131
  * htcache resumes file                                                ERROR 
  * cached and served file are equal                                    ERROR 1st missing:
 -> cache/ftp.debian.org:21/debian/doc/FAQ/debian-faq.en.pdf.gz
@@ -267,15 +254,15 @@ cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such f
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest16.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2501
+[ TEST ] Started server, running at PID 15178
 [ TEST ] Finished download normal at 478105 bytes
-[ TEST ] Interrupted server at PID 2501
+[ TEST ] Interrupted server at PID 15178
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest16.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2532
+[ TEST ] Started server, running at PID 15236
 [ TEST ] Finished download static at 478105 bytes
-[ TEST ] Interrupted server at PID 2532
+[ TEST ] Interrupted server at PID 15236
  * serving directly from cache without consulting server               PASSED 
  * cached and served file are equal                                    PASSED 
  * log is clean                                                        PASSED 
@@ -286,11 +273,10 @@ cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such f
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest17.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2584
+[ TEST ] Started server, running at PID 15294
 [ TEST ] Finished download out at 350 bytes
-[ TEST ] Interrupted server at PID 2584
- * refusing to connect to server                                       ERROR 
- * log is clean                                                        ERROR 
+[ TEST ] Interrupted server at PID 15294
+ * refusing to connect to server                                       PASSED 
 
 =============================================================================
  SYSTEM-TEST 18: MISC
@@ -298,10 +284,10 @@ cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such f
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest18.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2624
+[ TEST ] Started server, running at PID 15333
 [ TEST ] Finished download out at 1251 bytes
 [ TEST ] Finished download out1 at 1251 bytes
-[ TEST ] Interrupted server at PID 2624
+[ TEST ] Interrupted server at PID 15333
  * cached and normal file are equal                                    PASSED 
  * log is clean                                                        PASSED 
 
@@ -311,9 +297,9 @@ cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such f
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest19.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2723
+[ TEST ] Started server, running at PID 15467
 [ TEST ] Finished download out2 at 1251 bytes
-[ TEST ] Interrupted server at PID 2723
+[ TEST ] Interrupted server at PID 15467
  * log is clean                                                        PASSED 
 
 =============================================================================
@@ -322,35 +308,17 @@ cannot remove ‘/tmp/htcache-systemtest14.out1.entity.headers.tmp’: No such f
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest20.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2790
-[ TEST ] Finished download info at 794 bytes
+[ TEST ] Started server, running at PID 15534
+[ TEST ] Finished download info at 795 bytes
 [ TEST ] Finished download downloads at 47 bytes
 [ TEST ] Finished download list at 68 bytes
-curl: (52) Empty reply from server
-stat: cannot stat ‘/tmp/htcache-systemtest20.echo’: No such file or directory
-[ TEST ] Finished download echo at  bytes
-mv: cannot stat ‘/tmp/htcache-systemtest20.echo.entity.headers’: No such file or directory
-sort: cannot read: /tmp/htcache-systemtest20.echo.entity.headers.tmp: No such file or directory
-rm: cannot remove ‘/tmp/htcache-systemtest20.echo.entity.headers.tmp’: No such file or directory
-[ TEST ] Finished download out at 478105 bytes
+[ TEST ] Finished download echo at 315 bytes
 [ TEST ] Finished download page-info at 676 bytes
-curl: (52) Empty reply from server
-stat: cannot stat ‘/tmp/htcache-systemtest20.dhtml.css’: No such file or directory
-[ TEST ] Finished download dhtml.css at  bytes
-mv: cannot stat ‘/tmp/htcache-systemtest20.dhtml.css.entity.headers’: No such file or directory
-sort: cannot read: /tmp/htcache-systemtest20.dhtml.css.entity.headers.tmp: No such file or directory
-rm: cannot remove ‘/tmp/htcache-systemtest20.dhtml.css.entity.headers.tmp’: No such file or directory
-curl: (52) Empty reply from server
-stat: cannot stat ‘/tmp/htcache-systemtest20.dhtml.js’: No such file or directory
-[ TEST ] Finished download dhtml.js at  bytes
-mv: cannot stat ‘/tmp/htcache-systemtest20.dhtml.js.entity.headers’: No such file or directory
-sort: cannot read: /tmp/htcache-systemtest20.dhtml.js.entity.headers.tmp: No such file or directory
-rm: cannot remove ‘/tmp/htcache-systemtest20.dhtml.js.entity.headers.tmp’: No such file or directory
-[ TEST ] Interrupted server at PID 2790
- * dhtml.css                                                           ERROR 1st missing:
--> dhtml.css
- * dhtml.js                                                            ERROR 1st missing:
--> dhtml.js
+[ TEST ] Finished download dhtml.css at 1366 bytes
+[ TEST ] Finished download dhtml.js at 4576 bytes
+[ TEST ] Interrupted server at PID 15534
+ * dhtml.css                                                           PASSED 
+ * dhtml.js                                                            PASSED 
  * log is clean                                                        ERROR 
 
 =============================================================================
@@ -359,9 +327,9 @@ rm: cannot remove ‘/tmp/htcache-systemtest20.dhtml.js.entity.headers.tmp’: N
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest21.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 2943
+[ TEST ] Started server, running at PID 15708
 [ TEST ] Finished download out at 478105 bytes
-[ TEST ] Interrupted server at PID 2943
+[ TEST ] Interrupted server at PID 15708
  * log is clean                                                        PASSED 
 
 =============================================================================
@@ -370,9 +338,9 @@ rm: cannot remove ‘/tmp/htcache-systemtest20.dhtml.js.entity.headers.tmp’: N
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest22.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 3002
+[ TEST ] Started server, running at PID 15794
 [ TEST ] Finished download out2 at 391 bytes
-[ TEST ] Interrupted server at PID 3002
+[ TEST ] Interrupted server at PID 15794
  * Exception response                                                  PASSED 
  * DNS exception                                                       PASSED 
  * log is clean                                                        PASSED 
@@ -383,10 +351,10 @@ rm: cannot remove ‘/tmp/htcache-systemtest20.dhtml.js.entity.headers.tmp’: N
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest23.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 3043
+[ TEST ] Started server, running at PID 15835
 stat: cannot stat ‘/tmp/htcache-systemtest23.out3’: No such file or directory
 [ TEST ] Finished download out3 at  bytes
-[ TEST ] Interrupted server at PID 3043
+[ TEST ] Interrupted server at PID 15835
  * Moved Permanently                                                   PASSED 
  * log is clean                                                        PASSED 
 
@@ -396,11 +364,11 @@ stat: cannot stat ‘/tmp/htcache-systemtest23.out3’: No such file or director
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest24.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 3083
-[ TEST ] Finished download out4 at 357 bytes
-[ TEST ] Interrupted server at PID 3083
+[ TEST ] Started server, running at PID 15875
+[ TEST ] Finished download out4 at 211 bytes
+[ TEST ] Interrupted server at PID 15875
  * Forbidden                                                           PASSED 
- * log is clean                                                        ERROR 
+ * log is clean                                                        PASSED 
 
 =============================================================================
  SYSTEM-TEST 25: HTTP Not Found
@@ -408,9 +376,9 @@ stat: cannot stat ‘/tmp/htcache-systemtest23.out3’: No such file or director
 [ TEST ] Starting server at port 8888
 [ FORK ] preparing daemon process with log /tmp/htcache-systemtest25.log 
 [ FORK ] OK, daemon running.
-[ TEST ] Started server, running at PID 3123
+[ TEST ] Started server, running at PID 15939
 [ TEST ] Finished download out5 at 219 bytes
-[ TEST ] Interrupted server at PID 3123
+[ TEST ] Interrupted server at PID 15939
  * Not Found                                                           PASSED 
  * log is clean                                                        PASSED 
 
@@ -418,22 +386,23 @@ stat: cannot stat ‘/tmp/htcache-systemtest23.out3’: No such file or director
  SYSTEM-TEST 26: COVERAGE REPORT
  ---------------------------------------------------------------------------
 Generating coverage report
-Name       Stmts   Miss Branch BrMiss  Cover
---------------------------------------------
-Cache        142     36     34     14    72%
-Command      124     23     34     13    77%
-HTTP          26      1      4      1    93%
-Params        41      0      0      0   100%
-Protocol     291     55     71     25    78%
-Request      171     20     48     12    85%
-Resource     538    220    190    130    52%
-Response     320     50     99     36    79%
-Rules        131     54     56     26    57%
-Runtime       36      0      0      0   100%
-caches       127     75     52     38    37%
-error          2      0      0      0   100%
-fiber        215     61     48     17    70%
-log           63     18     18     10    65%
-util          67     21     20     11    63%
---------------------------------------------
-TOTAL       2294    634    674    333    67%
+Name          Stmts   Miss Branch BrMiss  Cover
+-----------------------------------------------
+Cache           142     28     34     12    77%
+Command         124     23     34     13    77%
+HTTP             22      2      8      2    87%
+HTTP_Status      14      0      0      0   100%
+Params           41      0      0      0   100%
+Protocol        296     42     71     23    82%
+Request         171     20     48     12    85%
+Resource        541    190    190    115    58%
+Response        322     81     97     43    70%
+Rules           131     54     56     26    57%
+Runtime          36      0      0      0   100%
+caches          127     75     52     38    37%
+error             2      0      0      0   100%
+fiber           215     67     48     17    68%
+log              63     18     18     10    65%
+util             67     20     20     11    64%
+-----------------------------------------------
+TOTAL          2314    620    676    322    68%

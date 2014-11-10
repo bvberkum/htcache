@@ -129,8 +129,8 @@ def HTCache_fiber_handler( client, address ):
 		elif response.needwait():
 			yield fiber.WAIT( response.needwait() )
 		else:
-			assert server
-			mainlog.debug('[ HTCACHE ] %s: Reveiving for %s', response, request)
+			assert server, "No server to read from. "
+			mainlog.debug('[ HTCACHE ] %s: Receiving for %s', response, request)
 			yield fiber.RECV( server, Params.TIMEOUT )
 			response.recv( server )
 
