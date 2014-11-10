@@ -127,6 +127,8 @@ class HtRequest:
 		assert not self.Protocol, "Cant have protocol"
 
 		chunk = sock.recv( Params.MAXCHUNK )
+		# XXX find a way to simply cancel request in fiber 
+		#if Params.DEBUG_CLIENT:
 		assert chunk, \
 				'client closed connection before sending a '\
 				'complete message header at %s, ' \
@@ -185,7 +187,7 @@ class HtRequest:
 		# Get the path
 		if '/' in host:
 			host, path = host.split( '/', 1 )
-		path = '/' + path
+			path = '/' + path
 
 		# Parse hostinfo
 		if ':' in host:
@@ -208,6 +210,7 @@ class HtRequest:
 		self.__host = host
 		self.__port = port
 		assert path[0] == '/', path
+		assert len(path) == 1 or path[1] != '/', (scheme,host,port,path)
 		self.__reqpath = path
 
 # XXX: need a test for this
@@ -262,6 +265,7 @@ class HtRequest:
 		and Request.hostinfo are available instead of .envelope()
 		"""
 		assert self.__reqpath[0] == '/' , self.__reqpath
+		assert len(self.__reqpath) == 1 or self.__reqpath[1] != '/' , self.__reqpath
 		return self.__verb.upper(), self.__reqpath, self.__prototag.upper()
 
 	@property

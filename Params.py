@@ -42,7 +42,9 @@ JOIN_FILE = '/etc/htcache/rules.join'
 NOCACHE_FILE = '/etc/htcache/rules.nocache'
 REWRITE_FILE = '/etc/htcache/rules.rewrite'
 
+# TODO: could use content-rewrite rules if that gets working
 PROXY_INJECT = False
+
 PARTIAL = '.incomplete'
 DEFAULT = 'default'
 

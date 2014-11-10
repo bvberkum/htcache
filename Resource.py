@@ -1,6 +1,5 @@
 """
 Resource storage and descriptor facade.
-
 """
 import anydbm, os, urlparse
 import time
@@ -185,12 +184,8 @@ class ProxyData(object):
 		type, this path will be readable from cache.path.
 		"""
 		mainlog.debug( "%s: Init cache: %s", self, Runtime.CACHE )
-		self.cache = Cache.load_backend_type( Runtime.CACHE )()
+		self.cache = get_cache( netpath )
 		if netpath:
-			assert netpath[:2] == '//', netpath
-			netpath = netpath[2:]
-			netpath = Rules.Join.rewrite(netpath)
-			self.cache.init( netpath )
 			mainlog.info( '%s: Prepped cache, position: %s',
 					self, self.cache.abspath() )
 
@@ -617,8 +612,8 @@ class Descriptor(SqlBase, SessionMixin):
 	etag = Column(String(255), nullable=True)
 #	key_names = [id]
 
-	def __str__(self):
-		return "Descriptor(%s)" % pformat(dict(
+	def copyDict(self):
+		return dict(
 			id=self.id,
 			resource_id=self.resource_id,
 			path=self.path,
@@ -630,7 +625,10 @@ class Descriptor(SqlBase, SessionMixin):
 			mtime=self.mtime,
 			mediatype=self.mediatype,
 			mediatype_auth=self.mediatype_auth
-		))
+		)
+
+	def __str__(self):
+		return "Descriptor(%s)" % pformat(self.copyDict())
 
 	@staticmethod
 	def find_latest( url ):
@@ -845,12 +843,19 @@ def validate_cache(pathname, uripathnames, mediatype, d1, d2, meta, features):
 def check_tree(pathname, uripathnames, mediatype, d1, d2, meta, features):
 	return True
 
-def get_cache(hostinfo, path):
+def get_cache(netpath=None, backend_type=None):
 	"""
-	XXX: rewrite path to cache location, ie. instantiate Cache object and
+	TODO: rewrite path to cache location, ie. instantiate Cache object and
 	return. All location rewriting should be handled here? or use database instead..
 	"""
-	assert False, ("TODO: write get_cache method", hostinfo, path)
+	if not backend_type:
+		backend_type = Runtime.CACHE
+	cache = Cache.load_backend_type( backend_type )()
+	if netpath:
+		assert netpath[:2] == '//', netpath
+		ref = Rules.Join.rewrite(netpath)
+		cache.init( ref )
+	return cache
 
 def check_files():
 	backend = SessionMixin.get_instance(True)
@@ -904,8 +909,8 @@ def check_files():
 				if urlparts.query:
 					#print urlparts
 					pathname += '?'+urlparts.query
-				hostinfo = hostname, port
-				cache = get_cache(hostinfo, pathname)
+				netpath = "//%s%s" % ( hostname, pathname )
+				cache = get_cache(netpath)
 				#print 'got cache', cache.getsize(), cache.path
 # end
 	mainlog.note("Finished checking %s cache locations, found %s resources" % (
@@ -942,10 +947,9 @@ def check_cache():
 		pathname = urlparts.path[1:]
 # XXX: cannot reconstruct--, or should always normalize?
 		if urlparts.query:
-			#print urlparts
 			pathname += '?'+urlparts.query
-		hostinfo = hostname, port
-		cache = get_cache(hostinfo, pathname)
+		netpath = "//%s%s" % ( hostname, pathname )
+		cache = get_cache(netpath)
 # end
 		act = None
 		if not check_data(cache, *descr):

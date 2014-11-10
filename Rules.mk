@@ -90,6 +90,7 @@ test-system:: $/
 #        coverage html --omit '/usr/*'
 
 test-protocol::
+	@echo "[ TEST ] Starting proxy for protocol tests..."
 	@-rm -rf /tmp/htcache-test-protocol.cache/
 	@mkdir /tmp/htcache-test-protocol.cache/
 	@-rm -rf /tmp/htcache-test-protocol.data/
@@ -100,6 +101,7 @@ test-protocol::
 		--pid-file /tmp/htcache-test-protocol.pid \
 		--log-level 0 \
 	;
+	@echo "[ TEST ] Started proxy, running tests..."
 	@./protocol-test 2>&1 | tee protocoltest.log
 	@kill -int `cat /tmp/htcache-test-protocol.pid`
 	@\
@@ -116,7 +118,7 @@ test-protocol::
 debug::
 	mkdir -p debug-root
 	[ -e "debug-root/resources.db" ] || { sqlite3 debug-root/resources.db; }
-	./htcache -v -v -v -r debug-root --data sqlite:///debug-root/resources.db
+	./htcache --log-level 1 -r debug-root --data sqlite:///debug-root/resources.db
 
 #$(SNAPSHOT_$d):
 #	echo $$(expr $$(cat REVISION) + 1) > REVISION

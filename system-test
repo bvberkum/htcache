@@ -542,7 +542,7 @@ case $1 in
 	check_equal "normal and proxy response entity 1 are equal" out1 out2
 	check_equal "normal and proxy response entity 2 are equal" out1 out3
 	check_log "server sends chunked data" "Transfer-Encoding: chunked"
-	check_log "processing chunked data" "Switching to ChunkedDataResponse"
+	check_log "processing chunked data" "New ChunkedDataResponse"
 	check_equal "cached and served file are equal" cache/$URL_CHUNKED out2
 	check_log_errors
 	;;

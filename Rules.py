@@ -106,6 +106,8 @@ class Join(AbstractRuleset):
 		"""
 		Rewrite a single path using loaded rules.
 		"""
+		if pathref[:2] == '//':
+			pathref = pathref[2:]
 		if klass.rules:
 			for pattern, regex, repl in klass.rules:
 				m = regex.match(pathref)

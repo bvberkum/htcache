@@ -347,9 +347,12 @@ class DirectResponse:
 		assert isinstance(status, basestring), status
 		for l in lines:
 			assert isinstance(l, basestring), l
-		headers = "Access-Control-Allow-Origin: *\r\nContent-Type: "+mime+"\r\n"
+		content = '\n'.join( lines )
+		headers = "Access-Control-Allow-Origin: *\r\n" + \
+			"Content-Type: "+mime+"\r\n" + \
+			"Content-Length: "+str(len(content))+"\r\n"
 		self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
-				'\r\n%s' % ( status, headers, '\n'.join( lines ) )
+				'\r\n%s' % ( status, headers, content ) 
 
 	def hasdata( self ):
 		assert self.__sendbuf, self
@@ -504,24 +507,34 @@ class ProxyResponse(DirectResponse):
 		self.prepare_buffer(status, json_write(msg), mime='application/json')
 
 	def serve_descriptor(self, status, protocol, request):
-		q = urlparse.urlparse( request.url[3] )[4]
-		url = urlparse.urlparse(urllib.unquote(q[4:]))
+		"""
+			/page-info?<netpath>
+		"""
+		assert isinstance( request.url, basestring )
+		q = urlparse.urlparse( request.url )[4]
+		url = urlparse.urlparse(urllib.unquote(q))
+		mainlog.warn([request.url, q, url])
 		# Translate URL to cache location
 		if ':' in url[1]:
 			hostinfo = url[1].split(':')
 			hostinfo[1] = int(hostinfo[1])
 		else:
 			hostinfo = url[1], 80
-		cache = Resource.get_cache(hostinfo, url[2][1:])
-		# Find and print descriptor
-		descriptors = Resource.get_backend()
-		if cache.path in descriptors:
-			descr = descriptors[cache.path]
+		if hostinfo[1] and hostinfo[1] == 80:
+			port = ''
+		else:
+			port = ':'+str(port)
+		netpath = "//%s%s%s" % ( hostinfo[0], port, url[2])
+		# Get resource for (translated) netpath
+		data = Resource.ProxyData(protocol)
+		data.init_data(netpath)
+		if data:
 			self.prepare_buffer(status,
-					json_write(descr),
+					json_write(data.descriptor.copyDict()),
 					mime='application/json')
 		else:
-			self.prepare_buffer("404 No Data", "No data for %s %s %s %s"%request.url)
+			self.prepare_buffer("404 No Data", 
+					"No data for %s"%netpath)
 
 	def serve_script(self, status, protocol, request):
 		jsdata = open(Params.PROXY_INJECT_JS).read()
