@@ -3,115 +3,115 @@ import Params, os
 
 def makedirs( path ):
 
-  dir = os.path.dirname( path )
-  if dir and not os.path.isdir( dir ):
-    if os.path.isfile( dir ):
-      print 'directory %s mistaken for file' % dir
-      os.remove( dir )
-    else:
-      makedirs( dir )
-    os.mkdir( dir )
+	dir = os.path.dirname( path )
+	if dir and not os.path.isdir( dir ):
+		if os.path.isfile( dir ):
+			print 'directory %s mistaken for file' % dir
+			os.remove( dir )
+		else:
+			makedirs( dir )
+		os.mkdir( dir )
 
 
 class File:
 
-  size = -1
-  mtime = -1
+	size = -1
+	mtime = -1
 
-  def __init__( self, path ):
+	def __init__( self, path ):
 
-    sep = path.find( '?' )
-    if sep != -1:
-      path = path[ :sep ] + path[ sep: ].replace( '/', '%2F' )
-      path = path[ :sep ] + path[ sep: ].replace( '%26', '/' )
-      path = path[ :sep ] + path[ sep: ].replace( '&', '/' )
-      path = path[ :sep ] + path[ sep: ].replace( ';', '/' )
-    if Params.FLAT:
-      path = os.path.basename( path )
-    if Params.VERBOSE:
-      print 'Cache position:', path
+		sep = path.find( '?' )
+		if sep != -1:
+			path = path[ :sep ] + path[ sep: ].replace( '/', '%2F' )
+			path = path[ :sep ] + path[ sep: ].replace( '%26', '/' )
+			path = path[ :sep ] + path[ sep: ].replace( '&', '/' )
+			path = path[ :sep ] + path[ sep: ].replace( ';', '/' )
+		if Params.FLAT:
+			path = os.path.basename( path )
+		if Params.VERBOSE:
+			print 'Cache position:', path
 
-    self.__path = Params.ROOT + path
-    print self.__path	
-    self.__file = None
+		self.__path = Params.ROOT + path
+		print self.__path	
+		self.__file = None
 
-  def partial( self ):
+	def partial( self ):
 
-    return os.path.isfile( self.__path + Params.SUFFIX ) and os.stat( self.__path + Params.SUFFIX )
+		return os.path.isfile( self.__path + Params.SUFFIX ) and os.stat( self.__path + Params.SUFFIX )
 
-  def full( self ):
+	def full( self ):
 
-    return os.path.isfile( self.__path ) and os.stat( self.__path )
+		return os.path.isfile( self.__path ) and os.stat( self.__path )
 
-  def open_new( self ):
+	def open_new( self ):
 
-    if Params.VERBOSE:
-      print 'Preparing new file in cache'
-    try:
-      makedirs( self.__path )
-      self.__file = open( self.__path + Params.SUFFIX, 'w+' )
-    except Exception, e:
-      print 'Failed to open file:', e
-      self.__file = os.tmpfile()
+		if Params.VERBOSE:
+			print 'Preparing new file in cache'
+		try:
+			makedirs( self.__path )
+			self.__file = open( self.__path + Params.SUFFIX, 'w+' )
+		except Exception, e:
+			print 'Failed to open file:', e
+			self.__file = os.tmpfile()
 
-  def open_partial( self, offset=-1 ):
+	def open_partial( self, offset=-1 ):
 
-    self.mtime = os.stat( self.__path + Params.SUFFIX ).st_mtime
-    self.__file = open( self.__path + Params.SUFFIX, 'a+' )
-    if offset >= 0:
-      assert offset <= self.tell(), 'range does not match file in cache'
-      self.__file.seek( offset )
-      self.__file.truncate()
-    if Params.VERBOSE:
-      print 'Resuming partial file in cache at byte', self.tell()
+		self.mtime = os.stat( self.__path + Params.SUFFIX ).st_mtime
+		self.__file = open( self.__path + Params.SUFFIX, 'a+' )
+		if offset >= 0:
+			assert offset <= self.tell(), 'range does not match file in cache'
+			self.__file.seek( offset )
+			self.__file.truncate()
+		if Params.VERBOSE:
+			print 'Resuming partial file in cache at byte', self.tell()
 
-  def open_full( self ):
+	def open_full( self ):
 
-    self.mtime = os.stat( self.__path ).st_mtime
-    self.__file = open( self.__path, 'r' )
-    self.size = self.tell()
-    if Params.VERBOSE:
-      print 'Reading complete file from cache'
+		self.mtime = os.stat( self.__path ).st_mtime
+		self.__file = open( self.__path, 'r' )
+		self.size = self.tell()
+		if Params.VERBOSE:
+			print 'Reading complete file from cache'
 
-  def remove_full( self ):
+	def remove_full( self ):
 
-    os.remove( self.__path )
-    print 'Removed complete file from cache'
+		os.remove( self.__path )
+		print 'Removed complete file from cache'
 
-  def remove_partial( self ):
+	def remove_partial( self ):
 
-    print 'Removed partial file from cache'
-    os.remove( self.__path + Params.SUFFIX )
+		print 'Removed partial file from cache'
+		os.remove( self.__path + Params.SUFFIX )
 
-  def read( self, pos, size ):
+	def read( self, pos, size ):
 
-    self.__file.seek( pos )
-    return self.__file.read( size )
+		self.__file.seek( pos )
+		return self.__file.read( size )
 
-  def write( self, chunk ):
+	def write( self, chunk ):
 
-    self.__file.seek( 0, 2 )
-    return self.__file.write( chunk )
+		self.__file.seek( 0, 2 )
+		return self.__file.write( chunk )
 
-  def tell( self ):
+	def tell( self ):
 
-    self.__file.seek( 0, 2 )
-    return self.__file.tell()
+		self.__file.seek( 0, 2 )
+		return self.__file.tell()
 
-  def close( self ):
+	def close( self ):
 
-    size = self.tell()
-    self.__file.close()
-    if self.mtime >= 0:
-      os.utime( self.__path + Params.SUFFIX, ( self.mtime, self.mtime ) )
-    if self.size == size:
-      os.rename( self.__path + Params.SUFFIX, self.__path )
-      if Params.VERBOSE:
-        print 'Finalized', self.__path
+		size = self.tell()
+		self.__file.close()
+		if self.mtime >= 0:
+			os.utime( self.__path + Params.SUFFIX, ( self.mtime, self.mtime ) )
+		if self.size == size:
+			os.rename( self.__path + Params.SUFFIX, self.__path )
+			if Params.VERBOSE:
+				print 'Finalized', self.__path
 
-  def __del__( self ):
+	def __del__( self ):
 
-    try:
-      self.close()
-    except:
-      pass
+		try:
+			self.close()
+		except:
+			pass

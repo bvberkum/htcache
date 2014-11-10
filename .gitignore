@@ -1,1 +1,5 @@
+#.coverage
+dist
+*.sw[op]
 *.pyc
+*.log
