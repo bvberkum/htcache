@@ -260,14 +260,14 @@ function check_equal
   [ "${2:0:1}" = "/" ] && F1=$2 || F1=$PREFIX.$2
   [ "${3:0:1}" = "/" ] && F2=$3 || F2=$PREFIX.$3
 if test ! -e $F1; then
-	if test "${F1:$((${#F1} - 4)):1}" = "."; then
-		F1=${F1:0:$((${#F1} - 4))}.incomplete.${F1:$((${#F1} - 3))}
+	if test "${F1:$(( ${#F1} - 4 )):1}" = "."; then
+		F1=${F1:0:$(( ${#F1} - 4 ))}.incomplete.${F1:$((${#F1} - 3))}
 		echo "Trying partial for first file $F1"
 	fi
 fi
 if test ! -e $F2; then
-	if test "${F2:$((${#F2} - 4)):1}" = "."; then
-		F2=${F2:0:$((${#F2} - 4))}.incomplete.${F2:$((${#F2} - 3))}
+	if test "${F2:$(( ${#F2} - 4 )):1}" = "."; then
+		F2=${F2:0:$(( ${#F2} - 4 ))}.incomplete.${F2:$((${#F2} - 3))}
 		echo "Trying partial for first file $F2"
 	fi
 fi
