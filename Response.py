@@ -7,6 +7,7 @@ import log
 
 mainlog =  log.get_log('main')
 
+
 class BlindResponse:
 
 	"""
@@ -228,11 +229,13 @@ class DataResponse:
 class ChunkedDataResponse( DataResponse ):
 
 	def __init__( self, protocol, request ):
+
 		DataResponse.__init__( self, protocol, request )
 		self.__protocol = protocol
 		self.__recvbuf = ''
 
 	def recv( self, sock ):
+
 		assert not self.Done
 		chunk = sock.recv( Params.MAXCHUNK )
 		assert chunk, 'chunked data error: connection closed prematurely'

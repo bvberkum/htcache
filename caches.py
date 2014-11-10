@@ -65,7 +65,7 @@ class FileTreeQ(Cache.File):
 			path += Params.DEFAULT
 
 		self.path = path
-		self.file = None
+		self.fp = None
 
 
 class FileTreeQH(Cache.File):
@@ -106,7 +106,7 @@ class FileTreeQH(Cache.File):
 				path += Params.DEFAULT
 
 		self.path = path
-		self.file = None
+		self.fp = None
 
 
 class PartialMD5Tree(Cache.File):
@@ -155,14 +155,14 @@ class RefHash(Cache.File):
 		super(RefHash, self).__init__(path)
 		self.refhash = md5(path).hexdigest()
 		self.path = self.refhash
-		self.file = None
+		self.fp = None
 		if not os.path.exists(Runtime.ROOT + Runtime.PARTIAL):
 			os.mkdir(Runtime.ROOT + Runtime.PARTIAL)
 
 	def open_new(self):
 		self.path = Runtime.PARTIAL + os.sep + self.refhash
 		mainlog.debug('%s: Preparing new file in cache: %s', self, self.path)
-		self.file = open( self.abspath(), 'w+' )
+		self.fp = open( self.abspath(), 'w+' )
 
 	def open_full(self):
 		self.path = self.refhash
@@ -171,11 +171,11 @@ class RefHash(Cache.File):
 	def open_partial(self, offset=-1):
 		self.path = Runtime.PARTIAL + os.sep + self.refhash
 		self.mtime = os.stat( self.abspath() ).st_mtime
-		self.file = open( self.abspath() , 'a+' )
+		self.fp = open( self.abspath() , 'a+' )
 		if offset >= 0:
 			assert offset <= self.tell(), 'range does not match file in cache'
-			self.file.seek( offset )
-			self.file.truncate()
+			self.fp.seek( offset )
+			self.fp.truncate()
 		mainlog.info('Resuming partial file in cache at byte %i', self.tell())
 
 	def remove_partial(self):

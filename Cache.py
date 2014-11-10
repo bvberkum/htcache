@@ -53,7 +53,7 @@ class File(object):
 		super( File, self ).__init__()
 		self.partial = None
 		self.full = None
-		self.file = None
+		self.fp = None
 		if path:
 			self.init(path)
 
@@ -87,7 +87,7 @@ class File(object):
 		self.path = path
 
 		mainlog.debug('%s: init %s', self, path)
-		self.file = None
+		self.fp = None
 
 		assert len(self.abspath()) < 255, \
 				"LBYL, cache location path to long for Cache.File! "
@@ -142,7 +142,7 @@ class File(object):
 		self.stat()
 
 	def open_new( self ):
-		assert not self.file
+		assert not self.fp
 
 		mainlog.note('%s: Preparing new file in cache', self)
 	
@@ -153,23 +153,23 @@ class File(object):
 			os.makedirs( tdir )
 
 		try:
-			self.file = open( new_file, 'w+' )
+			self.fp = open( new_file, 'w+' )
 		except Exception, e:
 			mainlog.note('%s: Failed to open file: %s', self, e)
-			self.file = os.tmpfile()
+			self.fp = os.tmpfile()
 
 	def open_partial( self, offset=-1 ):
-		assert not self.file
-		self.file = open( self.abspath(), 'a+' )
+		assert not self.fp
+		self.fp = open( self.abspath(), 'a+' )
 		if offset >= 0:
 			assert offset <= self.tell(), 'range does not match file in cache'
-			self.file.seek( offset )
-			self.file.truncate()
+			self.fp.seek( offset )
+			self.fp.truncate()
 		mainlog.info('%s: Resuming partial file in cache at byte %s', self, self.tell())
 
 	def open_full( self ):
-		assert not self.file
-		self.file = open( self.abspath(), 'r' )
+		assert not self.fp
+		self.fp = open( self.abspath(), 'r' )
 #		self.size = self.tell()
 
 	def open( self ):
@@ -189,21 +189,21 @@ class File(object):
 		os.remove( self.abspath() + Runtime.PARTIAL )
 
 	def read( self, pos, size ):
-		self.file.seek( pos )
-		return self.file.read( size )
+		self.fp.seek( pos )
+		return self.fp.read( size )
 
 	def write( self, chunk ):
-		self.file.seek( 0, 2 )
-		return self.file.write( chunk )
+		self.fp.seek( 0, 2 )
+		return self.fp.write( chunk )
 
 	def tell( self ):
-		self.file.seek( 0, 2 )
-		return self.file.tell()
+		self.fp.seek( 0, 2 )
+		return self.fp.tell()
 
 	def close( self ):
-		assert self.file
-		self.file.close()
-		self.file = None
+		assert self.fp
+		self.fp.close()
+		self.fp = None
 		self.partial, self.full = None, None
 		mainlog.debug("%s: Closed %s", self, self.path)
 
@@ -211,7 +211,7 @@ class File(object):
 #	  return ( self.complete() or self.partial ) != None
 
 	def __del__( self ):
-		if self.file:
+		if self.fp:
 			try:
 				self.close()
 				mainlog.warn("%s: Forced close", self)

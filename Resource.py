@@ -81,7 +81,7 @@ class ProxyData(object):
 		mainlog.debug("%s: empty instance", self)
 
 	def set_content_length(self, value):
-		if self.cache.file:
+		if self.cache.fp:
 			assert self.cache.size == int( value ),\
 				( self.cache.size, int( value ) )
 		self.descriptor.size = int( value )
@@ -176,7 +176,7 @@ class ProxyData(object):
 		return self.descriptor != None and self.descriptor.id != None
 
 	def is_open( self ):
-		return self.cache and self.cache.file != None
+		return self.cache and self.cache.fp != None
 
 	def init_cache( self, netpath=None ):
 		"""

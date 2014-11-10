@@ -16,7 +16,7 @@ import log
 mainlog = log.get_log('main')
 
 
-class HtRequest:
+class HttpRequest:
 
 	"""
 	The single type for requests acceptect by htcache. This should cover HTTP
@@ -36,6 +36,7 @@ class HtRequest:
 	Protocol = None
 
 	def __init__( self ):
+
 		self.__parse = self.__parse_head
 		self.__recvbuflen = 0
 		self.__recvbuf = ''
@@ -110,13 +111,14 @@ class HtRequest:
 
 		self.__body.write( chunk )
 		assert self.__body.tell() <= self.__size, \
-				 'message body exceeds content-length'
+				'message body exceeds content-length'
 		if self.__body.tell() == self.__size:
 			self.__parse = None
 
 		return len( chunk )
 
 	def recv( self, sock ):
+
 		"""
 		Receive request from client, parsing header and optional body. 
 		Once parsers have finished, determine Protocol type for htcache/fiber.
@@ -124,7 +126,8 @@ class HtRequest:
 		The Protocol instance takes over and relays this request to the 
 		target server.
 		"""
-		assert not self.Protocol, "Cant have protocol"
+
+		assert not self.Protocol
 
 		chunk = sock.recv( Params.MAXCHUNK )
 		# XXX find a way to simply cancel request in fiber 
@@ -140,7 +143,6 @@ class HtRequest:
 			bytecnt = self.__parse( self.__recvbuf )
 			if not bytecnt:
 				return
-#			assert bytecnt
 			self.__recvbuf = self.__recvbuf[ bytecnt: ]
 		assert not self.__recvbuf, 'client sends junk data after message header'
 
@@ -239,6 +241,7 @@ class HtRequest:
 			self.__headers['Via'] += ', '+ via
 
 	def recvbuf( self ):
+
 		assert self.Protocol, "No protocol yet"
 		assert self.__reqpath[0] == '/', self.__reqpath
 		lines = [ '%s %s HTTP/1.1' % ( self.__verb, self.__reqpath ) ]
@@ -249,6 +252,7 @@ class HtRequest:
 			lines.append( self.__body.read() )
 		else:
 			lines.append( '' )
+
 		return '\r\n'.join( lines )
 
 # XXX:
@@ -318,7 +322,8 @@ class HtRequest:
 				'invalid byterange specification: %s' % byterange
 
 	def __hash__( self ):
-		assert self.Protocol, "no protocol"
+
+		assert self.Protocol
 		assert self.__reqpath[0] == '/', self.__reqpath
 		return hash(( self.__host, self.__port, self.__reqpath ))
 
