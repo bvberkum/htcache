@@ -1,5 +1,11 @@
 import sys, os, select, time, socket, traceback
 
+import log
+
+
+mainlog = log.get_log('main')
+
+class Restart(Exception): pass
 
 class SEND:
 
@@ -53,6 +59,8 @@ class Fiber:
 			state = self.__generator.next()
 			assert isinstance( state, (SEND, RECV, WAIT) ), 'invalid waiting state %r' % state
 			self.state = state
+		except Restart:
+			raise 
 		except KeyboardInterrupt:
 			raise
 		except StopIteration:
@@ -91,7 +99,7 @@ class GatherFiber( Fiber ):
 	def write( self, string ):
 
 		if self.__newline:
-			self.__chunks.append( '%6.2f	 ' % ( time.time() - self.__start ) )
+			self.__chunks.append( '%6.2f   ' % ( time.time() - self.__start ) )
 		self.__chunks.append( string )
 		self.__newline = string.endswith( '\n' )
 
@@ -123,7 +131,7 @@ class DebugFiber( Fiber ):
 			sys.stdout = sys.stderr = self
 			Fiber.step( self, throw )
 			if self.state:
-				print 'Waiting at', self
+				mainlog.debug('Waiting at %s', self)
 		finally:
 			sys.stdout = stdout
 			sys.stderr = stderr
@@ -131,71 +139,101 @@ class DebugFiber( Fiber ):
 	def write( self, string ):
 
 		if self.__newline:
-			self.__stdout.write( '	%04X	 ' % self.__id )
+			self.__stdout.write( '  %04X   ' % self.__id )
 		self.__stdout.write( string )
 		self.__stdout.flush()
 		self.__newline = string.endswith( '\n' )
 
 
-def fork( output ):
+def fork(output, pid_file):
 
+# XXX fix output
 	try:
 		log = open( output, 'w' )
 		nul = open( '/dev/null', 'r' )
 		pid = os.fork()
 	except IOError, e:
-		print 'error: failed to open', e.filename
+		mainlog.crit('[ FORK ] Error: failed to open %s', e.filename)
 		sys.exit( 1 )
 	except OSError, e:
-		print 'error: failed to fork process:', e.strerror
+		mainlog.crit('[ FORK ] Error: failed to fork process: %s', e.strerror)
 		sys.exit( 1 )
 	except Exception, e:
-		print 'error:', e
+		mainlog.crit('[ FORK ] Error: %s', e )
 		sys.exit( 1 )
 
 	if pid:
-		cpid, status = os.wait()
+		temp_pid, status = os.wait()
+		mainlog.debug( '[ FORK ] OK, daemon running.')
 		sys.exit( status >> 8 )
+	else:
+		mainlog.note( '[ FORK ] preparing daemon process with log %s ', output )
 
 	try: 
 		os.chdir( os.sep )
-		os.setsid() 
 		os.umask( 0 )
+		# set our first fork as session leader
+		os.setsid() 
+		# now fork to process that will run htcache
 		pid = os.fork()
 	except Exception, e: 
-		print 'error:', e
+		print ' [ FORK ] error:', e
 		sys.exit( 1 )
 
 	if pid:
-		print pid
+		open(pid_file, 'wb').write(str(pid))
 		sys.exit( 0 )
+		# Daemon running at PID %s ', pid
+	else:
+		mainlog.debug( '[ FORK ] Continueing daemon ' )
 
+	#os.dup2( log.fileno(), mainlog.output.fileno() )
+	#os.dup2( log.fileno(), mainlog.output.fileno() )
+	#os.dup2( mainlog.output.fileno(), sys.stdout.fileno() )
+	#os.dup2( mainlog.output.fileno(), sys.stderr.fileno() )
 	os.dup2( log.fileno(), sys.stdout.fileno() )
 	os.dup2( log.fileno(), sys.stderr.fileno() )
-	os.dup2( nul.fileno(), sys.stdin.fileno()	)
+	os.dup2( nul.fileno(), sys.stdin.fileno() )
+
+	return pid
 
 
-def spawn( generator, port, debug, log ):
+def spawn( generator, hostname, port, debug, daemon_log, pid_file ):
 
+
+	if daemon_log:
+		# continue as new process in its own session
+		pid = fork( daemon_log, pid_file )
+		if pid:
+			mainlog.debug('[ FIBER ] Forked to PID %s', PID)
+			return
+		else:
+			mainlog.debug('[ FIBER ] Continueing proxy startup')
+
+
+	# set up listening socket
+	listener = socket.socket(
+			socket.AF_INET, socket.SOCK_STREAM )
+	listener.setblocking( 0 )
+	listener.setsockopt(
+			socket.SOL_SOCKET, 
+			socket.SO_REUSEADDR, 
+			listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
 	try:
-		listener = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-		listener.setblocking( 0 )
-		listener.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, listener.getsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR ) | 1 )
-		listener.bind( ( '', port ) )
-		listener.listen( 5 )
-	except Exception, e:
-		print 'error: failed to create socket:', e
-		sys.exit( 1 )
-
-	if log:
-		fork( log )
+		listener.bind( ( hostname, port ) )
+		mainlog.debug("[ BIND ] Started serving at %s:%i", hostname, port)
+	except:
+		mainlog.err("[ ERR ] Unable to bind to %s:%i", hostname, port)
+		raise
+	listener.listen( 5 )
 
 	if debug:
 		myFiber = DebugFiber
 	else:
 		myFiber = GatherFiber
 
-	print '[ INIT ]', generator.__name__, 'started at %s:%i' % ( socket.gethostname(), port )
+	mainlog.note('[ INIT ] %s started at %s:%i', generator.__name__, hostname, port )
+
 	try:
 
 		fibers = []
@@ -234,10 +272,10 @@ def spawn( generator, port, debug, log ):
 					expire = state.expire
 
 			if expire is None:
-				print '[ IDLE ]', time.ctime()
+				mainlog.note('[ IDLE ] at %s, %s fibers'% (time.ctime(), len(fibers)))
 				sys.stdout.flush()
 				canrecv, cansend, dummy = select.select( tryrecv, trysend, [] )
-				print '[ BUSY ]', time.ctime()
+				mainlog.note('[ BUSY ] at %s, %s fibers'% (time.ctime(), len(fibers)))
 				sys.stdout.flush()
 			else:
 				canrecv, cansend, dummy = select.select( tryrecv, trysend, [], max( expire - now, 0 ) )
@@ -250,10 +288,25 @@ def spawn( generator, port, debug, log ):
 			for fileno in cansend:
 				trysend[ fileno ].step()
 
-	except KeyboardInterrupt:
-		print '[ DONE ]', generator.__name__, 'terminated'
+	except KeyboardInterrupt, e:
+		mainlog.note('[ DONE ] %s closing normally', generator.__name__)
 		sys.exit( 0 )
-	except:
-		print '[ DONE ]', generator.__name__, 'crashed'
+
+	except Restart:
+		mainlog.note('[ RESTART ] %s will now respawn', generator.__name__)
+		i = len( fibers )
+		while i:
+			i -= 1
+			#state = fibers[ i ].state
+		# close before sending response 
+		listener.close()
+		raise
+
+	except Exception, e:
+		mainlog.crit('[ CRIT ] %s crashed: %s', generator.__name__, e)
+		#print '[ DONE ]', generator.__name__, 'crashed'
 		traceback.print_exc( file=sys.stdout )
 		sys.exit( 1 )
+
+	mainlog.crit('[ END ] %s ', generator)
+

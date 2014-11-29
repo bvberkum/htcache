@@ -1,6 +1,7 @@
 import socket, time, traceback
 
 import Params
+import Runtime
 import log
 
 mainlog =  log.get_log('main')
@@ -13,28 +14,28 @@ class BlindResponse:
 
 	Done = False
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
 		self.__sendbuf = protocol.recvbuf()
 
-	def hasdata( self ):
+	def hasdata(self):
 
 		return bool( self.__sendbuf )
 
-	def send( self, sock ):
+	def send(self, sock):
 
 		assert not self.Done
-		bytecnt = sock.send( self.__sendbuf )
+		bytecnt = sock.send(self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
-	def needwait( self ):
+	def needwait(self):
 
 		return False
 
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		assert not self.Done
-		chunk = sock.recv( Params.MAXCHUNK )
+		chunk = sock.recv( Runtime.MAXCHUNK )
 		if chunk:
 			self.__sendbuf += chunk
 		elif not self.__sendbuf:
@@ -45,7 +46,7 @@ class DataResponse:
 
 	Done = False
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
 		self.__protocol = protocol
 		self.__pos, self.__end = request.range()
@@ -59,24 +60,24 @@ class DataResponse:
 		except:
 			args = {}
 
-		via = "%s:%i" % (socket.gethostname(), Params.PORT)
+		via = "%s:%i" % (socket.gethostname(), Runtime.PORT)
 		if args.setdefault('Via', via) != via:
 			args['Via'] += ', '+ via
 		args[ 'Connection' ] = 'close'
 		args[ 'Date' ] = time.strftime( Params.TIMEFMT, time.gmtime() )
 		if self.__protocol.mtime >= 0:
-			args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, time.gmtime( self.__protocol.mtime ) )
+			args[ 'Last-Modified' ] = time.strftime( Params.TIMEFMT, time.gmtime(self.__protocol.mtime ) )
 		if self.__pos == 0 and self.__end == self.__protocol.size:
 			head = 'HTTP/1.1 200 OK'
 			if self.__protocol.size >= 0:
-				args[ 'Content-Length' ] = str( self.__protocol.size )
+				args[ 'Content-Length' ] = str(self.__protocol.size )
 		elif self.__end >= 0:
 			head = 'HTTP/1.1 206 Partial Content'
-			args[ 'Content-Length' ] = str( self.__end - self.__pos )
+			args[ 'Content-Length' ] = str(self.__end - self.__pos )
 			if self.__protocol.size >= 0:
-				args[ 'Content-Range' ] = 'bytes %i-%i/%i' % ( self.__pos, self.__end - 1, self.__protocol.size )
+				args[ 'Content-Range' ] = 'bytes %i-%i/%i' % (self.__pos, self.__end - 1, self.__protocol.size )
 			else:
-				args[ 'Content-Range' ] = 'bytes %i-%i/*' % ( self.__pos, self.__end - 1 )
+				args[ 'Content-Range' ] = 'bytes %i-%i/*' % (self.__pos, self.__end - 1 )
 		else:
 			head = 'HTTP/1.1 416 Requested Range Not Satisfiable'
 			args[ 'Content-Range' ] = 'bytes */*'
@@ -84,16 +85,16 @@ class DataResponse:
 
 
 		mainlog.note('HTCache responds %r', head.strip())
-		if Params.VERBOSE > 1:
+		if Runtime.VERBOSE > 1:
 			for key in args:
-				print '> %s: %s' % ( key, args[ key ].replace( '\r\n', ' > ' ) )
+				mainlog.debug('> %s: %s' % ( key, args[ key ] )) #.replace( '\r\n', ' > ' ) ),
 
 		self.__sendbuf = '\r\n'.join( [ head ] +
 		    map( ': '.join, args.items() ) + [ '', '' ] )
-		if Params.LIMIT:
+		if Runtime.LIMIT:
 			self.__nextrecv = 0
 
-	def hasdata( self ):
+	def hasdata(self):
 
 		if self.__sendbuf:
 			return True
@@ -104,32 +105,40 @@ class DataResponse:
 		else:
 			return False
 
-	def send( self, sock ):
+	def send(self, sock):
 
 		assert not self.Done
 		if self.__sendbuf:
-			bytes = sock.send( self.__sendbuf )
-			self.__sendbuf = self.__sendbuf[ bytes: ]
+			bytecnt = sock.send(self.__sendbuf )
+			self.__sendbuf = self.__sendbuf[ bytecnt: ]
 		else:
-			bytes = Params.MAXCHUNK
-			if 0 <= self.__end < self.__pos + bytes:
-				bytes = self.__end - self.__pos
-			chunk = self.__protocol.read( self.__pos, bytes )
+			bytecnt = Runtime.MAXCHUNK
+			if 0 <= self.__end < self.__pos + bytecnt:
+				bytecnt = self.__end - self.__pos
+
+			chunk = self.__protocol.read( self.__pos, bytecnt )
+			#try:
 			self.__pos += sock.send( chunk )
-		self.Done = not self.__sendbuf and ( self.__pos >= self.__protocol.size >= 0 or self.__pos >= self.__end >= 0 )
+			#except Exception, e:
+			#	mainlog.err("Client aborted: %s", e)
+			#	self.Done = True
+			#	return
+		self.Done = not self.__sendbuf and (
+				self.__pos >= self.__protocol.size >= 0
+				or self.__pos >= self.__end >= 0 )
 
-	def needwait( self ):
+	def needwait(self):
+	
+		return Runtime.LIMIT and max(self.__nextrecv - time.time(), 0 )
 
-		return Params.LIMIT and max( self.__nextrecv - time.time(), 0 )
-
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		assert not self.Done
-		chunk = sock.recv( Params.MAXCHUNK )
+		chunk = sock.recv( Runtime.MAXCHUNK )
 		if chunk:
 			self.__protocol.write( chunk )
-			if Params.LIMIT:
-				self.__nextrecv = time.time() + len( chunk ) / Params.LIMIT
+			if Runtime.LIMIT:
+				self.__nextrecv = time.time() + ( len( chunk ) / Runtime.LIMIT )
 		else:
 			if self.__protocol.size >= 0:
 				assert self.__protocol.size == self.__protocol.tell(), 'connection closed prematurely'
@@ -141,16 +150,16 @@ class DataResponse:
 
 class ChunkedDataResponse( DataResponse ):
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
-		DataResponse.__init__( self, protocol, request )
+		DataResponse.__init__(self, protocol, request )
 		self.__protocol = protocol
 		self.__recvbuf = ''
 
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		assert not self.Done
-		chunk = sock.recv( Params.MAXCHUNK )
+		chunk = sock.recv( Runtime.MAXCHUNK )
 		assert chunk, 'chunked data error: connection closed prematurely'
 		self.__recvbuf += chunk
 		while '\r\n' in self.__recvbuf:
@@ -158,23 +167,28 @@ class ChunkedDataResponse( DataResponse ):
 			chunksize = int( head.split( ';' )[ 0 ], 16 )
 			if chunksize == 0:
 				self.__protocol.size = self.__protocol.tell()
-				print 'Connection closed at byte', self.__protocol.size
+				mainlog.debug('Connection closed at byte %i', self.__protocol.size)
 				self.Done = not self.hasdata()
 				return
 			if len( tail ) < chunksize + 2:
+				mainlog.debug('Waiting for chunk end')
 				return
-			assert tail[ chunksize:chunksize+2 ] == '\r\n', 'chunked data error: chunk does not match announced size'
-			if Params.VERBOSE > 1:
-				print 'Received', chunksize, 'byte chunk'
+			assert tail[ chunksize:chunksize+2 ] == '\r\n', \
+					'chunked data error: chunk does not match announced size'
+			mainlog.debug('Received %i byte chunk', chunksize)
 			self.__protocol.write( tail[ :chunksize ] )
 			self.__recvbuf = tail[ chunksize+2: ]
+		mainlog.debug('Received %i byte in chunks', len(self.__recvbuf))
+
+	def __str__(self):
+		return "[ChunkedDataResponse %s]" % hex(id(self))
 
 
 class DirectResponse:
 
 	Done = False
 
-	def __init__( self, status, request ):
+	def __init__(self, status, request):
 
 		lines = [ 'HTTP Replicator: %s' % status, '', 'Requesting:' ]
 		head, body = request.recvbuf().split( '\r\n\r\n', 1 )
@@ -186,13 +200,12 @@ class DirectResponse:
 		lines.append( traceback.format_exc() )
 
 		self.__sendbuf = 'HTTP/1.1 %s\r\nContent-Type: text/plain\r\n\r\n%s' % ( status, '\n'.join( lines ) )
-		
-	def hasdata( self ):
 
-		return bool( self.__sendbuf )
+	def hasdata(self):
 
-	def send( self, sock ):
+		return bool(self.__sendbuf )
 
+	def send(self, sock):
 		assert not self.Done
 		assert self.__sendbuf, self
 		bytecnt = sock.send( self.__sendbuf )
@@ -200,25 +213,24 @@ class DirectResponse:
 		if not self.__sendbuf:
 			self.Done = True
 
-	def needwait( self ):
-
+	def needwait(self):
 		return False
 
-	def recv( self ):
+	def recv(self):
 
 		raise AssertionError
 
 
-class NotFoundResponse( DirectResponse ):
+class NotFoundResponse( DirectResponse):
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
-		DirectResponse.__init__( self, '404 Not Found', request )
+		DirectResponse.__init__(self, '404 Not Found', request )
 
 
-class ExceptionResponse( DirectResponse ):
+class ExceptionResponse(DirectResponse):
 
-	def __init__( self, request ):
+	def __init__(self, request):
 
 		traceback.print_exc()
-		DirectResponse.__init__( self, '500 Internal Server Error', request )
+		DirectResponse.__init__(self, '500 Internal Server Error', request )

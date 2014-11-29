@@ -1,7 +1,7 @@
 import sys
 import os
 
-import Params
+import Runtime
 
 
 EMERG, \
@@ -40,7 +40,7 @@ class Log(object):
 		if location in ('stderr', 'stdout'):
 			output = getattr(sys, location)#.fileno()
 		elif not location.startswith(os.sep) and './' not in location and '..' not in location:
-			location = os.path.join(Params.LOG_DIR, location)
+			location = os.path.join(Runtime.LOG_DIR, location)
 		if not output:
 			try:
 				output = open(location, 'w+')
@@ -55,17 +55,17 @@ class Log(object):
 #		Determine wether to emit based on call-time environment.
 #		"""
 #		return \
-#				not Params.QUIET \
+#				not Runtime.QUIET \
 #			and \
-#				Params.ERROR_LEVEL >= self.level \
+#				Runtime.ERROR_LEVEL >= self.level \
 #			or ( 
-#					( self.facility in Params.LOG_FACILITIES ) \
+#					( self.facility in Runtime.LOG_FACILITIES ) \
 #				and \
-#					( Params.VERBOSE >= self.level )
+#					( Runtime.VERBOSE >= self.level )
 #			)
 
 	def emit_check(self, level):
-		v = not Params.QUIET and level >= self.threshold
+		v = not Runtime.QUIET and level >= self.threshold
 		return v
 
 	def emit(self, msg, *args):
@@ -105,14 +105,14 @@ LOG_CLASSES = {
 	'cient-tree': ClientTreeLog
 }
 
-def get_log(name):#module=None, level=Params.NOTE, facility=None):
+def get_log(name):#module=None, level=Runtime.NOTE, facility=None):
 	"""
 	Return logger instance for 
 	"""
-	if name not in Params.loggers:
+	if name not in Runtime.loggers:
 		log_class = LOG_CLASSES[name]
-		Params.loggers[name] = log_class()
-	return Params.loggers[name]
+		Runtime.loggers[name] = log_class()
+	return Runtime.loggers[name]
 
 def log(args, t=NOTE, f=None):
 	return log_(args, t, f)

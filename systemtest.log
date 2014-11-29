@@ -3,67 +3,94 @@
  SYSTEM-TEST 1: DOWNLOADING NEW FILE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest1.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31600
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 35  466k   35  163k    0     0   172k      0  0:00:02 --:--:--  0:00:02  171k 99  466k   99  463k    0     0   237k      0  0:00:01  0:00:01 --:--:--  237k100  466k  100  466k    0     0   239k      0  0:00:01  0:00:01 --:--:--  239k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0 44  466k   44  207k    0     0  60641      0  0:00:07  0:00:03  0:00:04 60631100  466k  100  466k    0     0   117k      0  0:00:03  0:00:03 --:--:--  117k
 [ TEST ] Finished download out1 at 478105 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 39  466k   39  183k    0     0   182k      0  0:00:02  0:00:01  0:00:01  182k 88  466k   88  413k    0     0   210k      0  0:00:02  0:00:01  0:00:01  210k100  466k  100  466k    0     0   216k      0  0:00:02  0:00:02 --:--:--  216k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:03 --:--:--     0  6  466k    6 30046    0     0   8481      0  0:00:56  0:00:03  0:00:53  8480 84  466k   84  393k    0     0  89027      0  0:00:05  0:00:04  0:00:01 89020100  466k  100  466k    0     0   101k      0  0:00:04  0:00:04 --:--:--  137k
 [ TEST ] Finished download out2 at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31600
  * file cached and finalized                                           PASSED 
  * separate download and served file are equal                         PASSED 
  * cached and served file are equal                                    PASSED 
+ * log is clean                                                        PASSED 
 
 =============================================================================
  SYSTEM-TEST 2: LEAVING PARTIAL FILE IN CACHE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest2.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31637
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-./system-test: line 58: 27190 Terminated              http_proxy=localhost:$PORT download http://$URL_HTTP out
-=============================================================================
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:03 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:03 --:--:--     0 53  466k   53  249k    0     0  55827      0  0:00:08  0:00:04  0:00:04 55823100  466k  100  466k    0     0  97865      0  0:00:04  0:00:04 --:--:--  138k
+[ TEST ] Finished download normal at 478105 bytes
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0=============================================================================
 
+[ TEST ] Interrupted server at PID 31637
+ * aborted client read                                                 PASSED 
  * file cached, not finalized                                          PASSED 
 
 =============================================================================
  SYSTEM-TEST 3: SERVING FILE FROM CACHE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest3.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31665
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 28  466k   28  133k    0     0   154k      0  0:00:03 --:--:--  0:00:03  154k 85  466k   85  401k    0     0   214k      0  0:00:02  0:00:01  0:00:01  214k100  466k  100  466k    0     0   227k      0  0:00:02  0:00:02 --:--:--  227k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0 41  466k   41  194k    0     0  82611      0  0:00:05  0:00:02  0:00:03 82600100  466k  100  466k    0     0   162k      0  0:00:02  0:00:02 --:--:--  162k
+[ TEST ] Finished download out at 478105 bytes
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0  466k    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0 30  466k   30  143k    0     0  58057      0  0:00:08  0:00:02  0:00:06 58051100  466k  100  466k    0     0   137k      0  0:00:03  0:00:03 --:--:--  137k
 [ TEST ] Finished download out1 at 478105 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  466k  100  466k    0     0  2003k      0 --:--:-- --:--:-- --:--:-- 2012k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  466k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  466k  100  466k    0     0  2024k      0 --:--:-- --:--:-- --:--:-- 2021k
 [ TEST ] Finished download out2 at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31665
  * first file cached and finalized                                     PASSED 
+ * cached and normal file are equal                                    PASSED 
+ * first file stored in cache                                          PASSED 
  * second file served from cache                                       PASSED 
  * cached and first served file are equal                              PASSED 
  * cached and second served file are equal                             PASSED 
+ * log is clean                                                        PASSED 
 
 =============================================================================
  SYSTEM-TEST 4: RESUMING PARTIAL FILE BY CLIENT
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest4.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31713
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  2  466k    2 14137    0     0  60237      0  0:00:07 --:--:--  0:00:07 60157
-./system-test: line 58: 27242 Terminated              download http://$URL_HTTP out
-[ TEST ] Resuming unfinished download at 40960 bytes
-** Resuming transfer from byte position 40960
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+./system-test: line 75: 31715 Terminated              download http://$URL_HTTP out
+[ TEST ] Resuming unfinished download at 12288 bytes
+** Resuming transfer from byte position 12288
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 17  426k   17 74518    0     0  90690      0  0:00:04 --:--:--  0:00:04 90654 82  426k   82  353k    0     0   192k      0  0:00:02  0:00:01  0:00:01  192k100  426k  100  426k    0     0   211k      0  0:00:02  0:00:02 --:--:--  211k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 15  454k   15 71334    0     0  61477      0  0:00:07  0:00:01  0:00:06 61441100  454k  100  454k    0     0   215k      0  0:00:02  0:00:02 --:--:--  215k
 [ TEST ] Finished download out at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31713
  * received complete file                                              PASSED 
  * served partial file                                                 PASSED 
  * cached and served file are equal                                    PASSED 
@@ -73,12 +100,17 @@
  SYSTEM-TEST 5: REDOWNLOADING CHANGED FILE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest5.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31747
+-rw-r--r-- 1 berend berend 0 Dec 14  1901 /tmp/htcache-systemtest5.cache/www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 12  466k   12 57558    0     0   107k      0  0:00:04 --:--:--  0:00:04  107k 62  466k   62  292k    0     0   191k      0  0:00:02  0:00:01  0:00:01  191k100  466k  100  466k    0     0   228k      0  0:00:02  0:00:02 --:--:--  228k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 16  466k   16 80726    0     0   100k      0  0:00:04 --:--:--  0:00:04  100k100  466k  100  466k    0     0   270k      0  0:00:01  0:00:01 --:--:--  270k
 [ TEST ] Finished download out at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31747
  * detected complete file in cache                                     PASSED 
  * downloading new file                                                PASSED 
  * cached and served file are equal                                    PASSED 
@@ -87,16 +119,20 @@
  SYSTEM-TEST 6: RESUMING PARTIAL UNCHANGED FILE IN CACHE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest6.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31777
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-./system-test: line 58: 27299 Terminated              http_proxy=localhost:$PORT download http://$URL_HTTP out1
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+./system-test: line 75: 31779 Terminated              http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 31  466k   31  146k    0     0   187k      0  0:00:02 --:--:--  0:00:02  187k 83  466k   83  388k    0     0   220k      0  0:00:02  0:00:01  0:00:01  220k100  466k  100  466k    0     0   239k      0  0:00:01  0:00:01 --:--:--  239k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 16  466k   16 80309    0     0   237k      0  0:00:01 --:--:--  0:00:01  237k 74  466k   74  347k    0     0   260k      0  0:00:01  0:00:01 --:--:--  259k100  466k  100  466k    0     0   288k      0  0:00:01  0:00:01 --:--:--  288k
 [ TEST ] Finished download out2 at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31777
  * replicator asks for missing part                                    PASSED 
  * received partial file                                               PASSED 
  * cached and served file are equal                                    PASSED 
@@ -105,36 +141,45 @@
  SYSTEM-TEST 7: RESUMING PARTIAL CHANGED FILE IN CACHE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest7.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31808
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 14  466k   14 67694    0     0   125k      0  0:00:03 --:--:--  0:00:03  125k 67  466k   67  314k    0     0   204k      0  0:00:02  0:00:01  0:00:01  204k100  466k  100  466k    0     0   227k      0  0:00:02  0:00:02 --:--:--  227k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0  466k    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0 54  466k   54  254k    0     0   106k      0  0:00:04  0:00:02  0:00:02  106k100  466k  100  466k    0     0   159k      0  0:00:02  0:00:02 --:--:--  159k
 [ TEST ] Finished download out at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31808
  * replicator asks for missing part                                    PASSED 
  * received complete file                                              PASSED 
  * cached and served file are equal                                    PASSED 
+ * log is clean                                                        PASSED 
 
 =============================================================================
  SYSTEM-TEST 8: JOINING DOWNLOADS
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest8.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31838
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  466k    0  1105    0     0   5156      0  0:01:32 --:--:--  0:01:32  5139 42  466k   42  199k    0     0   170k      0  0:00:02  0:00:01  0:00:01  170k 91  466k   91  426k    0     0   194k      0  0:00:02  0:00:02 --:--:--  194k100  466k  100  466k    0     0   202k      0  0:00:02  0:00:02 --:--:--  202k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0 23  466k   23  109k    0     0  35410      0  0:00:13  0:00:03  0:00:10 35409100  466k  100  466k    0     0   118k      0  0:00:03  0:00:03 --:--:--  118k
 [ TEST ] Finished download out at 478105 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 28  466k   28  135k    0     0   160k      0  0:00:02 --:--:--  0:00:02  160k  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  3  466k    3 17376    0     0  14713      0  0:00:32  0:00:01  0:00:31 14712  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 90  466k   90  421k    0     0   229k      0  0:00:02  0:00:01  0:00:01  229k 89  466k   89  419k    0     0   503k      0 --:--:-- --:--:-- --:--:--  503k100  466k  100  466k    0     0   241k      0  0:00:01  0:00:01 --:--:--  241k
-100  466k  100  466k    0     0   502k      0 --:--:-- --:--:-- --:--:--  502k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 28  466k   28  132k    0     0  62145      0  0:00:07  0:00:02  0:00:05 62123 28  466k   28  131k    0     0   650k      0 --:--:-- --:--:-- --:--:--  647k 69  466k   69  326k    0     0   275k      0  0:00:01  0:00:01 --:--:--  275k 69  466k   69  325k    0     0   101k      0  0:00:04  0:00:03  0:00:01  101k100  466k  100  466k    0     0   245k      0  0:00:01  0:00:01 --:--:--  245k
 [ TEST ] Finished download out2 at 478105 bytes
 =============================================================================
 
+curl: (18) transfer closed with 265 bytes remaining to read
+[ TEST ] Interrupted server at PID 31838
  * cache and normal download are equal                                 PASSED 
- * downloads are joined                                                PASSED 
- * cached and first served file are equal                              PASSED 
+ * downloads are joined                                                ERROR 
+ * cached and first served file are equal                              ERROR files not equal
  * cached and second served file are equal                             PASSED 
  * log is clean                                                        PASSED 
 
@@ -142,16 +187,20 @@
  SYSTEM-TEST 9: DOWNLOADING NEW FILE, CHUNKED TRANSFER
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest9.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31885
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 72200    0 72200    0     0   146k      0 --:--:-- --:--:-- --:--:--  146k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:03 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:04 --:--:--     0100 57370    0 57370    0     0  11507      0 --:--:--  0:00:04 --:--:-- 11506100 72200    0 72200    0     0  14455      0 --:--:--  0:00:04 --:--:-- 20765
 [ TEST ] Finished download out1 at 72200 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 72200    0 72200    0     0   127k      0 --:--:-- --:--:-- --:--:--  127k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 72200    0 72200    0     0   101k      0 --:--:-- --:--:-- --:--:--  101k
 [ TEST ] Finished download out2 at 72200 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31885
  * separate download and served file are equal                         PASSED 
  * server sends chunked data                                           PASSED 
  * processing chunked data                                             PASSED 
@@ -162,16 +211,20 @@
  SYSTEM-TEST 10: DOWNLOADING NEW FILE, FTP TRANSFER
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest10.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31921
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   415k      0 --:--:-- --:--:-- --:--:--  416k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0100  305k  100  305k    0     0  96903      0  0:00:03  0:00:03 --:--:-- 96933
 [ TEST ] Finished download out1 at 312708 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  305k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   463k      0 --:--:-- --:--:-- --:--:--  463k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   467k      0 --:--:-- --:--:-- --:--:--  468k
 [ TEST ] Finished download out2 at 312708 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31921
  * separate download and served file are equal                         PASSED 
  * cached and served file are equal                                    PASSED 
 
@@ -179,16 +232,20 @@
  SYSTEM-TEST 11: SERVING FILE FROM CACHE, FTP TRANSFER
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest11.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31962
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  5  305k    5 15928    0     0  31830      0  0:00:09 --:--:--  0:00:09 31792100  305k  100  305k    0     0   479k      0 --:--:-- --:--:-- --:--:--  479k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 30  305k   30 96024    0     0   126k      0  0:00:02 --:--:--  0:00:02  126k100  305k  100  305k    0     0   377k      0 --:--:-- --:--:-- --:--:--  377k
 [ TEST ] Finished download out1 at 312708 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   589k      0 --:--:-- --:--:-- --:--:--  590k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   473k      0 --:--:-- --:--:-- --:--:--  474k
 [ TEST ] Finished download out2 at 312708 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31962
  * first file cached and finalized                                     PASSED 
  * second file served from cache                                       PASSED 
  * cached and first served file are equal                              PASSED 
@@ -198,16 +255,20 @@
  SYSTEM-TEST 12: RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest12.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 31996
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-./system-test: line 58: 27492 Terminated              ftp_proxy=localhost:$PORT download ftp://$URL_FTP out1
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+./system-test: line 75: 31998 Terminated              ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out1
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  305k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   377k      0 --:--:-- --:--:-- --:--:--  377k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  305k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  305k  100  305k    0     0   391k      0 --:--:-- --:--:-- --:--:--  391k
 [ TEST ] Finished download out2 at 312708 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 31996
  * replicator resumes file                                             PASSED 
  * cached and served file are equal                                    PASSED 
 
@@ -215,13 +276,17 @@
  SYSTEM-TEST 13: RATE CONTROL
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest13.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 32026
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  466k    0  4344    0     0   8236      0  0:00:58 --:--:--  0:00:58  8227  3  466k    3 15928    0     0   9587      0  0:00:49  0:00:01  0:00:48  9583  5  466k    5 26064    0     0   9821      0  0:00:48  0:00:02  0:00:46  9820  7  466k    7 36200    0     0   9928      0  0:00:48  0:00:03  0:00:45  9928  9  466k    9 46336    0     0   9989      0  0:00:47  0:00:04  0:00:43  9988 11  466k   11 56472    0     0  10028      0  0:00:47  0:00:05  0:00:42 10215 13  466k   13 66608    0     0  10056      0  0:00:47  0:00:06  0:00:41 10213 16  466k   16 76744    0     0  10077      0  0:00:47  0:00:07  0:00:40 10213 18  466k   18 86880    0     0  10093      0  0:00:47  0:00:08  0:00:39 10213 20  466k   20 97016    0     0  10105      0  0:00:47  0:00:09  0:00:38 10213 22  466k   22  104k    0     0  10116      0  0:00:47  0:00:10  0:00:37 10213 24  466k   24  114k    0     0  10124      0  0:00:47  0:00:11  0:00:36 10213 26  466k   26  124k    0     0  10131      0  0:00:47  0:00:12  0:00:35 10213 28  466k   28  134k    0     0  10137      0  0:00:47  0:00:13  0:00:34 10213 30  466k   30  144k    0     0  10142      0  0:00:47  0:00:14  0:00:33 10213 33  466k   33  154k    0     0  10147      0  0:00:47  0:00:15  0:00:32 10213 35  466k   35  164k    0     0  10151      0  0:00:47  0:00:16  0:00:31 10213 37  466k   37  173k    0     0  10155      0  0:00:47  0:00:17  0:00:30 10213 39  466k   39  183k    0     0  10158      0  0:00:47  0:00:18  0:00:29 10213 41  466k   41  195k    0     0  10161      0  0:00:47  0:00:19  0:00:28 10217 43  466k   43  205k    0     0  10164      0  0:00:47  0:00:20  0:00:27 10215 46  466k   46  214k    0     0  10166      0  0:00:47  0:00:21  0:00:26 10215 48  466k   48  224k    0     0  10168      0  0:00:47  0:00:22  0:00:25 10215 50  466k   50  234k    0     0  10170      0  0:00:47  0:00:23  0:00:24 10215 52  466k   52  244k    0     0  10172      0  0:00:47  0:00:24  0:00:23 10213 54  466k   54  254k    0     0  10174      0  0:00:46  0:00:25  0:00:21 10213 56  466k   56  264k    0     0  10175      0  0:00:46  0:00:26  0:00:20 10213 58  466k   58  274k    0     0  10176      0  0:00:46  0:00:27  0:00:19 10213 60  466k   60  284k    0     0  10178      0  0:00:46  0:00:28  0:00:18 10215 62  466k   62  294k    0     0  10179      0  0:00:46  0:00:29  0:00:17 10213 65  466k   65  304k    0     0  10180      0  0:00:46  0:00:30  0:00:16 10213 67  466k   67  313k    0     0  10181      0  0:00:46  0:00:31  0:00:15 10213 69  466k   69  323k    0     0  10182      0  0:00:46  0:00:32  0:00:14 10213 71  466k   71  333k    0     0  10183      0  0:00:46  0:00:33  0:00:13 10213 73  466k   73  343k    0     0  10184      0  0:00:46  0:00:34  0:00:12 10213 75  466k   75  353k    0     0  10185      0  0:00:46  0:00:35  0:00:11 10213 77  466k   77  363k    0     0  10186      0  0:00:46  0:00:36  0:00:10 10213 80  466k   80  374k    0     0  10186      0  0:00:46  0:00:37  0:00:09 10215 82  466k   82  384k    0     0  10187      0  0:00:46  0:00:38  0:00:08 10215 84  466k   84  394k    0     0  10188      0  0:00:46  0:00:39  0:00:07 10215 86  466k   86  404k    0     0  10188      0  0:00:46  0:00:40  0:00:06 10215 88  466k   88  414k    0     0  10189      0  0:00:46  0:00:41  0:00:05 10215 90  466k   90  424k    0     0  10190      0  0:00:46  0:00:42  0:00:04 10213 92  466k   92  434k    0     0  10190      0  0:00:46  0:00:43  0:00:03 10213 95  466k   95  444k    0     0  10191      0  0:00:46  0:00:44  0:00:02 10213 97  466k   97  453k    0     0  10191      0  0:00:46  0:00:45  0:00:01 10213 99  466k   99  463k    0     0  10192      0  0:00:46  0:00:46 --:--:-- 10213100  466k  100  466k    0     0  10167      0  0:00:47  0:00:47 --:--:--  9946
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  0  466k    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0 11  466k   11 55024    0     0  22207      0  0:00:21  0:00:02  0:00:19 22205 32  466k   32  151k    0     0  44653      0  0:00:10  0:00:03  0:00:07 44650 54  466k   54  253k    0     0  57627      0  0:00:08  0:00:04  0:00:04 57623 75  466k   75  350k    0     0  65413      0  0:00:07  0:00:05  0:00:02 83902 95  466k   95  446k    0     0  70637      0  0:00:06  0:00:06 --:--:--   98k100  466k  100  466k    0     0  71565      0  0:00:06  0:00:06 --:--:--   98k
 [ TEST ] Finished download out at 478105 bytes
 =============================================================================
 
- * download speed; should be approximately 10240                       CHECK 
+[ TEST ] Interrupted server at PID 32026
+ * download speed; should be approximately 102400: 71565.000           CHECK 
  * cached and served file are equal                                    PASSED 
  * log is clean                                                        PASSED 
 
@@ -229,16 +294,20 @@
  SYSTEM-TEST 16: STATIC MODE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest16.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 32062
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  466k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 54  466k   54  253k    0     0   204k      0  0:00:02  0:00:01  0:00:01  204k100  466k  100  466k    0     0   242k      0  0:00:01  0:00:01 --:--:--  242k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  466k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 41  466k   41  195k    0     0   132k      0  0:00:03  0:00:01  0:00:02  132k100  466k  100  466k    0     0   227k      0  0:00:02  0:00:02 --:--:--  227k
 [ TEST ] Finished download out1 at 478105 bytes
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  466k  100  466k    0     0  11.0M      0 --:--:-- --:--:-- --:--:-- 11.1M
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  466k  100  466k    0     0  10.2M      0 --:--:-- --:--:-- --:--:-- 10.3M
 [ TEST ] Finished download out2 at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 32062
  * serving directly from cache without consulting server               PASSED 
  * cached and served file are equal                                    PASSED 
  * log is clean                                                        PASSED 
@@ -247,24 +316,32 @@
  SYSTEM-TEST 17: OFF-LINE MODE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest17.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 32093
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   660    0   660    0     0   103k      0 --:--:-- --:--:-- --:--:--  107k
-[ TEST ] Finished download out at 660 bytes
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100   652    0   652    0     0  59641      0 --:--:-- --:--:-- --:--:-- 65200
+[ TEST ] Finished download out at 652 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 32093
  * refusing to connect to server                                       PASSED 
 
 =============================================================================
  SYSTEM-TEST 18: DOWNLOADING NEW FILE, FLAT MODE
  ---------------------------------------------------------------------------
 [ TEST ] Starting server at port 8090
+[ FORK ] preparing daemon process with log /tmp/htcache-systemtest18.log 
+[ FORK ] OK, daemon running.
+[ TEST ] Started server, running at PID 32113
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 23  466k   23  110k    0     0   161k      0  0:00:02 --:--:--  0:00:02  161k 84  466k   84  392k    0     0   230k      0  0:00:02  0:00:01  0:00:01  230k100  466k  100  466k    0     0   248k      0  0:00:01  0:00:01 --:--:--  248k
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0 12  466k   12 61902    0     0  75292      0  0:00:06 --:--:--  0:00:06 75306100  466k  100  466k    0     0   260k      0  0:00:01  0:00:01 --:--:--  260k
 [ TEST ] Finished download out at 478105 bytes
 =============================================================================
 
+[ TEST ] Interrupted server at PID 32113
  * serving complete file                                               PASSED 
  * file cached and finalized                                           PASSED 
  * log is clean                                                        PASSED 
@@ -276,12 +353,14 @@ Generating coverage report
 Name       Stmts   Miss  Cover
 ------------------------------
 Cache         83     13    84%
-Params        66     18    73%
-Protocol     257     40    84%
-Request      130     24    82%
-Response     152     27    82%
-fiber        184     55    70%
-htcache       55     16    71%
-log           62     26    58%
+Command       89     31    65%
+Params        26      0   100%
+Protocol     255     40    84%
+Request      136     24    82%
+Response     156     30    81%
+Runtime       23      0   100%
+fiber        206     66    68%
+htcache       80     33    59%
+log           62     18    71%
 ------------------------------
-TOTAL        989    219    78%
+TOTAL       1116    255    77%
