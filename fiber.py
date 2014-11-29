@@ -9,47 +9,47 @@ class Restart(Exception): pass
 
 class SEND:
 
-	def __init__( self, sock, timeout ):
+	def __init__(self, sock, timeout):
 
 		self.fileno = sock.fileno()
 		self.expire = time.time() + timeout
 
-	def __str__( self ):
+	def __str__(self):
 
 		return 'SEND(%i,%s)' % ( self.fileno, time.strftime( '%H:%M:%S', time.localtime( self.expire ) ) )
 
 
 class RECV:
 
-	def __init__( self, sock, timeout ):
+	def __init__(self, sock, timeout):
 
 		self.fileno = sock.fileno()
 		self.expire = time.time() + timeout
 
-	def __str__( self ):
+	def __str__(self):
 
 		return 'RECV(%i,%s)' % ( self.fileno, time.strftime( '%H:%M:%S', time.localtime( self.expire ) ) )
 
 
 class WAIT:
 
-	def __init__( self, timeout = None ):
+	def __init__(self, timeout = None):
 
 		self.expire = timeout and time.time() + timeout or None
 
-	def __str__( self ):
+	def __str__(self):
 
 		return 'WAIT(%s)' % ( self.expire and time.strftime( '%H:%M:%S', time.localtime( self.expire ) ) )
 
 
 class Fiber:
 
-	def __init__( self, generator ):
+	def __init__(self, generator):
 
 		self.__generator = generator
 		self.state = WAIT()
 
-	def step( self, throw=None ):
+	def step(self, throw=None):
 
 		self.state = None
 		try:
@@ -71,21 +71,21 @@ class Fiber:
 		except:
 			traceback.print_exc()
 
-	def __repr__( self ):
+	def __repr__(self):
 
 		return '%i: %s' % ( self.__generator.gi_frame.f_lineno, self.state )
 
 
 class GatherFiber( Fiber ):
 
-	def __init__( self, generator ):
+	def __init__(self, generator):
 
 		Fiber.__init__( self, generator )
 		self.__chunks = [ '[ 0.00 ] %s\n' % time.ctime() ]
 		self.__start = time.time()
 		self.__newline = True
 
-	def step( self, throw=None ):
+	def step(self, throw=None):
 
 		stdout = sys.stdout
 		stderr = sys.stderr
@@ -96,14 +96,14 @@ class GatherFiber( Fiber ):
 			sys.stdout = stdout
 			sys.stderr = stderr
 
-	def write( self, string ):
+	def write(self, string):
 
 		if self.__newline:
 			self.__chunks.append( '%6.2f   ' % ( time.time() - self.__start ) )
 		self.__chunks.append( string )
 		self.__newline = string.endswith( '\n' )
 
-	def __del__( self ):
+	def __del__(self):
 
 		sys.stdout.writelines( self.__chunks )
 		if not self.__newline:
@@ -114,7 +114,7 @@ class DebugFiber( Fiber ):
 
 	id = 0
 
-	def __init__( self, generator ):
+	def __init__(self, generator):
 
 		Fiber.__init__( self, generator )
 		self.__id = DebugFiber.id
@@ -123,7 +123,7 @@ class DebugFiber( Fiber ):
 		self.__stdout = sys.stdout
 		DebugFiber.id = ( self.id + 1 ) % 65535
 
-	def step( self, throw=None ):
+	def step(self, throw=None):
 
 		stdout = sys.stdout
 		stderr = sys.stderr
@@ -136,7 +136,7 @@ class DebugFiber( Fiber ):
 			sys.stdout = stdout
 			sys.stderr = stderr
 
-	def write( self, string ):
+	def write(self, string):
 
 		if self.__newline:
 			self.__stdout.write( '  %04X   ' % self.__id )
@@ -181,7 +181,7 @@ def fork(output, pid_file):
 		sys.exit( 1 )
 
 	if pid:
-		open(pid_file, 'wb').write(str(pid))
+		open( pid_file, 'wb' ).write(str(pid))
 		sys.exit( 0 )
 		# Daemon running at PID %s ', pid
 	else:

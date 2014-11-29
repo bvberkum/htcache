@@ -1,11 +1,14 @@
-import Runtime, os
+import os
+
+import Params
 
 
-def makedirs( path):
+
+def makedirs(path):
 
 	dir = os.path.dirname( path )
-	if dir and not os.path.isdir( dir):
-		if os.path.isfile( dir):
+	if dir and not os.path.isdir( dir ):
+		if os.path.isfile( dir ):
 			print 'directory %s mistaken for file' % dir
 			os.remove( dir )
 		else:
@@ -32,8 +35,7 @@ class File:
 			print 'Cache position:', path
 
 		self.__path = Runtime.ROOT + path
-		print self.__path	
-		self.fp = None
+		self.__file = None
 
 	def partial(self):
 
@@ -48,55 +50,60 @@ class File:
 		if Runtime.VERBOSE:
 			print 'Preparing new file in cache'
 		try:
-			makedirs(self.__path )
-			self.fp = open(self.__path + Runtime.PARTIAL, 'w+' )
+			makedirs( self.__path )
+			self.__file = open( self.__path + Runtime.PARTIAL, 'w+' )
 		except Exception, e:
 			print 'Failed to open file:', e
-			self.fp = os.tmpfile()
+			self.__file = os.tmpfile()
 
 	def open_partial(self, offset=-1):
 
-		self.mtime = os.stat(self.__path + Runtime.PARTIAL ).st_mtime
-		self.fp = open(self.__path + Runtime.PARTIAL, 'a+' )
+		self.mtime = os.stat( self.__path + Runtime.PARTIAL ).st_mtime
+		self.__file = open( self.__path + Runtime.PARTIAL, 'a+' )
 		if offset >= 0:
 			assert offset <= self.tell(), 'range does not match file in cache'
-			self.fp.seek( offset )
-			self.fp.truncate()
+			self.__file.seek( offset )
+			self.__file.truncate()
 		if Runtime.VERBOSE:
 			print 'Resuming partial file in cache at byte', self.tell()
 
 	def open_full(self):
 
-		self.mtime = os.stat(self.__path ).st_mtime
-		self.fp = open(self.__path, 'r' )
+		self.mtime = os.stat( self.__path ).st_mtime
+		self.__file = open( self.__path, 'r' )
 		self.size = self.tell()
 		if Runtime.VERBOSE:
 			print 'Reading complete file from cache'
 
 	def remove_full(self):
+
 		os.remove(self.__path)
 		mainlog.note('%s: Removed complete file from cache', self)
 
 	def remove_partial(self):
+
 		mainlog.note('%s: Removed partial file from cache', self)
 		os.remove(self.__path + Runtime.PARTIAL)
 
 	def read(self, pos, size):
-		self.fp.seek( pos )
-		return self.fp.read( size )
+
+		self.__file.seek( pos )
+		return self.__file.read( size )
 
 	def write(self, chunk):
-		self.fp.seek( 0, 2 )
-		return self.fp.write( chunk )
+
+		self.__file.seek( 0, 2 )
+		return self.__file.write( chunk )
 
 	def tell(self):
-		self.fp.seek( 0, 2 )
-		return self.fp.tell()
+
+		self.__file.seek( 0, 2 )
+		return self.__file.tell()
 
 	def close(self):
 
 		size = self.tell()
-		self.fp.close()
+		self.__file.close()
 		if self.mtime >= 0:
 			os.utime(self.__path + Runtime.PARTIAL, (self.mtime, self.mtime ) )
 		if self.size == size:

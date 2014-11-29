@@ -9,9 +9,6 @@ mainlog =  log.get_log('main')
 
 class BlindResponse:
 
-	"""
-	"""
-
 	Done = False
 
 	def __init__(self, protocol, request):
@@ -128,7 +125,7 @@ class DataResponse:
 				or self.__pos >= self.__end >= 0 )
 
 	def needwait(self):
-	
+
 		return Runtime.LIMIT and max(self.__nextrecv - time.time(), 0 )
 
 	def recv(self, sock):
@@ -203,9 +200,10 @@ class DirectResponse:
 
 	def hasdata(self):
 
-		return bool(self.__sendbuf )
+		return bool( self.__sendbuf )
 
 	def send(self, sock):
+
 		assert not self.Done
 		assert self.__sendbuf, self
 		bytecnt = sock.send( self.__sendbuf )
@@ -214,6 +212,7 @@ class DirectResponse:
 			self.Done = True
 
 	def needwait(self):
+
 		return False
 
 	def recv(self):
@@ -221,14 +220,14 @@ class DirectResponse:
 		raise AssertionError
 
 
-class NotFoundResponse( DirectResponse):
+class NotFoundResponse( DirectResponse ):
 
 	def __init__(self, protocol, request):
 
-		DirectResponse.__init__(self, '404 Not Found', request )
+		DirectResponse.__init__( self, '404 Not Found', request )
 
 
-class ExceptionResponse(DirectResponse):
+class ExceptionResponse( DirectResponse ):
 
 	def __init__(self, request):
 

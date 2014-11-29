@@ -22,13 +22,10 @@ ONLINE = True
 LIMIT = 0.0
 LOG = False
 DEBUG = False
-
-PARTIAL = '.incomplete'
-DEFAULT = 'default'
-
 MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
-SUFFIX = '.incomplete'
+PARTIAL = '.incomplete'
+DEFAULT = 'default'
 SCRAP = '/etc/http-replicator/scrap.patterns'
 
 

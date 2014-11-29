@@ -185,6 +185,7 @@ class HttpRequest:
 		return self.__headers.copy()
 
 	def range(self):
+
 		byterange = self.__headers.get( 'Range' )
 		if not byterange:
 			return 0, -1

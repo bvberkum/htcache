@@ -13,7 +13,7 @@ mainlog = log.get_log('main')
 
 DNSCache = {}
 
-def connect( addr):
+def connect(addr):
 
 	assert Runtime.ONLINE, \
 			'operating in off-line mode'
@@ -69,7 +69,7 @@ def init_scrap():
 	if os.path.isfile(Runtime.SCRAP):
 		[re.compile(p.strip()) for p in open(Runtime.SCRAP).readlines()]
 
-class HttpProtocol(Cache.File):
+class HttpProtocol( Cache.File ):
 
 	Response = None
 
@@ -140,6 +140,7 @@ class HttpProtocol(Cache.File):
 		self.__args = {}
 		mainlog.info("%s: finished parse_head (%s, %s)", self, self.__status, self.__message)
 		self.__parse = HttpProtocol.__parse_args
+
 		return eol
 
 	def __parse_args(self, chunk):
@@ -158,7 +159,7 @@ class HttpProtocol(Cache.File):
 				self.__args[ key ] += '\r\n' + key + ': ' + value.strip()
 			else:
 				self.__args[ key ] = value.strip()
-		elif line in ( '\r\n', '\n'):
+		elif line in ( '\r\n', '\n' ):
 			self.__parse = None
 		else:
 			mainlog.err('Error: ignored server response header line: '+ line)
@@ -186,7 +187,7 @@ class HttpProtocol(Cache.File):
 
 			self.open_new()
 			if 'Last-Modified' in self.__args:
-				try:	
+				try:
 					self.mtime = calendar.timegm( time.strptime( self.__args[
 						'Last-Modified' ], Params.TIMEFMT ) )
 				except:
@@ -245,7 +246,7 @@ class HttpProtocol(Cache.File):
 		return self.__socket
 
 
-class FtpProtocol( Cache.File):
+class FtpProtocol( Cache.File ):
 
 	Response = None
 
@@ -267,18 +268,22 @@ class FtpProtocol( Cache.File):
 		self.__handle = FtpProtocol.__handle_serviceready
 
 	def socket(self):
+
 		return self.__socket
 
 	def hasdata(self):
+
 		return self.__sendbuf != ''
 
 	def send(self, sock):
+
 		assert self.hasdata()
 
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
 	def recv(self, sock):
+
 		assert not self.hasdata()
 
 		chunk = sock.recv( Runtime.MAXCHUNK )
@@ -325,6 +330,7 @@ class FtpProtocol( Cache.File):
 		self.__handle = FtpProtocol.__handle_size
 
 	def __handle_size(self, code, line):
+
 		if code == 550:
 			self.Response = Response.NotFoundResponse
 			return
@@ -336,6 +342,7 @@ class FtpProtocol( Cache.File):
 		self.__handle = FtpProtocol.__handle_mtime
 
 	def __handle_mtime(self, code, line):
+
 		if code == 550:
 			self.Response = Response.NotFoundResponse
 			return
@@ -368,6 +375,7 @@ class FtpProtocol( Cache.File):
 		self.__handle = FtpProtocol.__handle_data
 
 	def __handle_data(self, code, line):
+
 		if code == 550:
 			self.Response = Response.NotFoundResponse
 			return
