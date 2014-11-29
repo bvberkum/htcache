@@ -5,16 +5,16 @@
 # 
 
 if test -z "$1"; then
-  while $0 $((++i))
-  do true
-  done
-  exit 0
+	while $0 $((++i))
+	do true
+	done
+	exit 0
 else
-  while test -n "$2"
-  do
+	while test -n "$2"
+	do
 	$0 $1
 	shift
-  done
+	done
 fi
 
 HOSTNAME=$(hostname)
@@ -46,16 +46,21 @@ function clean
 	rm -rf $PREFIX*
 }
 
+function prepdir
+{
+	for n in data cache
+	do
+	[ -d $PREFIX.$n ] || {
+		mkdir $PREFIX.$n
+	}
+	done
+}
+
 function startserver
 {
-  echo "[ TEST ] Starting server at port $PORT"
-  for n in data cache
-  do
-	[ -d $PREFIX.$n ] || {
-	  mkdir $PREFIX.$n
-	}
-  done
-  if ! ./htcache \
+	echo "[ TEST ] Starting server at port $PORT"
+	prepdir
+	if ! ./htcache \
 		--daemon $PREFIX.log \
 		-p $PORT -r $PREFIX.cache \
 		--data-dir $PREFIX.data \
@@ -63,64 +68,63 @@ function startserver
 		--log-level $LOG_LEVEL
 #		--error-level $ERR_LEVEL \
 #		  $LOG_FACILITIES \
-  then
-	test -e $PID && rm $PID
-	exit 1
-  else
-	echo "[ TEST ] Started server, running at PID $(cat $PID)"
-  fi
+	then
+		test -e $PID && rm $PID
+		exit 1
+	else
+		echo "[ TEST ] Started server, running at PID $(cat $PID)"
+	fi
 }
 
 function stopserver
 {
-  if test -e $PID
-  then
-	if kill -int `cat $PID`
+	if test -e $PID
 	then
-		echo "[ TEST ] Interrupted server at PID $(cat $PID)"
-	else
-		echo "[ TEST ] Error stopping server"
+		if kill -int `cat $PID`
+		then
+			echo "[ TEST ] Interrupted server at PID $(cat $PID)"
+		else
+			echo "[ TEST ] Error stopping server"
+		fi
+		rm $PID
 	fi
-	rm $PID
-  fi
 }
 
 function htcache_command
 {
-  htcache \
+	htcache \
 	-r $PREFIX.cache \
 	--data-dir $PREFIX.data \
 	--daemon $PREFIX.log \
 	$*
-} 
+}
 
 function abort
 {
-  sleep $1
-  if kill %%
-  then
-	echo
-	sleep 1
-  else
-	echo "[ TEST ] ERROR: download finished unexpectedly soon"
-	exit 1
-  fi
+	sleep $1
+	if kill %%; then
+		echo
+		sleep 1
+	else
+		echo "[ TEST ] ERROR: download finished unexpectedly soon"
+		exit 1
+	fi
 }
 
 function sortheaders
 {
-  mv $1 $1.tmp
-  sort $1.tmp > $1
-  rm $1.tmp
+	mv $1 $1.tmp
+	sort $1.tmp > $1
+	rm $1.tmp
 }
 
 function splitheaders
 {
-  [ -e $PREFIX.$1.headers ] || {
-	return
-  }
-  for f in $PREFIX.$1.entity.headers; # $PREFIX.$1.headers;
-  do [ -e "$f" ] && rm $f; done
+	[ -e $PREFIX.$1.headers ] || {
+		return
+	}
+	for f in $PREFIX.$1.entity.headers; # $PREFIX.$1.headers;
+	do [ -e "$f" ] && rm $f; done
 #  mv $PREFIX.$1 $PREFIX.tmp
 #  ENVELOPE=$(head -n 1 $PREFIX.tmp)
 #  HEADERS_RECEIVED=$([ "${ENVELOPE:0:8}" = "HTTP/1.1" ] && echo 0 || echo 1)
@@ -153,20 +157,20 @@ function splitheaders
 #  # rest of lines is message contents
 #  tail -n +$LINE $PREFIX.tmp > $PREFIX.$1
 
-  while read L
-  do
+	while read L
+	do
 	STRIP=$(echo $L | grep -v '^\(Connection\|Accept-\|P3P\|Via\|X-\|Cache-\|Date\|Expires\)')
 	if [ -n "$STRIP" ]
 	then
 		# Keep entity headers for comparison
 		echo $L >> $PREFIX.$1.entity.headers
 	fi
-  done < $PREFIX.$1.headers
+	done < $PREFIX.$1.headers
 
-  sortheaders $PREFIX.$1.headers
-  sortheaders $PREFIX.$1.entity.headers
+	sortheaders $PREFIX.$1.headers
+	sortheaders $PREFIX.$1.entity.headers
 
-  [ -e $PREFIX.tmp ] && rm $PREFIX.tmp
+	[ -e $PREFIX.tmp ] && rm $PREFIX.tmp
 }
 
 # XXX: could not figure out a way to make wget save (headers) for non 200
@@ -183,158 +187,158 @@ function splitheaders
 #  }
 #el
 if which curl > /dev/null; then
-  function download
-  {
-	if test -e $PREFIX.$2;
-	then
-	  echo "[ TEST ] Resuming unfinished download at $(stat -c "%s" $PREFIX.$2) bytes"
-	  CURLARGS="-C - "
-	fi
-	curl $CURLARGS -s -S -o $PREFIX.$2 --dump-header $PREFIX.$2.headers $1 \
-		-H "X-HTCache-SystemTest: $1 $2" $3 1>&2
-	echo "[ TEST ] Finished download $2 at $(stat -c "%s" $PREFIX.$2) bytes"
-	splitheaders $2
-  }
+	function download
+	{
+		if test -e $PREFIX.$2;
+		then
+			echo "[ TEST ] Resuming unfinished download at $(stat -c "%s" $PREFIX.$2) bytes"
+			CURLARGS="-C - "
+		fi
+		curl $CURLARGS -s -S -o $PREFIX.$2 --dump-header $PREFIX.$2.headers $1 \
+			-H "X-HTCache-SystemTest: $1 $2" $3 1>&2
+		echo "[ TEST ] Finished download $2 at $(stat -c "%s" $PREFIX.$2) bytes"
+		splitheaders $2
+	}
 else
-  echo "[ TEST ] ERROR: no download tool available, install curl"
-  exit 1
+	echo "[ TEST ] ERROR: no download tool available, install curl"
+	exit 1
 fi
 
 function touchfile
 {
-  FILENAME=$PREFIX.$1
-  shift
-  mkdir -p `dirname $FILENAME`
-  touch $@ $FILENAME
+	FILENAME=$PREFIX.$1
+	shift
+	mkdir -p `dirname $FILENAME`
+	touch $@ $FILENAME
 }
 
 function summary
 {
-  #sleep .5
-  echo
-  echo "============================================================================="
-  echo " SYSTEM-TEST $NUM: $1"
-  echo " ---------------------------------------------------------------------------"
+	#sleep .5
+	echo
+	echo "============================================================================="
+	echo " SYSTEM-TEST $NUM: $1"
+	echo " ---------------------------------------------------------------------------"
 }
 
 function check
 {
-  printf " * %-67s %5s %s\n" "$1" "$2" "$3"
+	printf " * %-67s %5s %s\n" "$1" "$2" "$3"
 }
 
 function check_exists
 {
-  if test -e $PREFIX.$2; then
-	check "$1" PASSED
-  else
-	check "$1" ERROR
-  fi
+	if test -e $PREFIX.$2; then
+		check "$1" PASSED
+	else
+		check "$1" ERROR
+	fi
 }
 
 function check_url_cached
 {
-  if htcache_command --print-location $2 > /dev/null; then
-	check "$1" PASSED
-  else
-	check "$1" ERROR
-  fi
+	if htcache_command --print-location $2 > /dev/null; then
+		check "$1" PASSED
+	else
+		check "$1" ERROR
+	fi
 }
 
 if which md5 > /dev/null; then
-  function checksum
-  {
-	md5 -q $1
-  }
+	function checksum
+	{
+		md5 -q $1
+	}
 elif which md5sum cut > /dev/null; then
-  function checksum
-  {
-	md5sum $1 | cut -d ' ' -f 1
-  }
+	function checksum
+	{
+		md5sum $1 | cut -d ' ' -f 1
+	}
 else
-  echo "ERROR: no checksum tool available"
-  exit 1
+	echo "ERROR: no checksum tool available"
+	exit 1
 fi
 
 function check_equal
 {
-  [ "${2:0:1}" = "/" ] && F1=$2 || F1=$PREFIX.$2
-  [ "${3:0:1}" = "/" ] && F2=$3 || F2=$PREFIX.$3
-if test ! -e $F1; then
-	if test "${F1:$(( ${#F1} - 4 )):1}" = "."; then
-		F1=${F1:0:$(( ${#F1} - 4 ))}.incomplete.${F1:$((${#F1} - 3))}
-		echo "Trying partial for first file $F1"
+	[ "${2:0:1}" = "/" ] && F1=$2 || F1=$PREFIX.$2
+	[ "${3:0:1}" = "/" ] && F2=$3 || F2=$PREFIX.$3
+	if test ! -e $F1; then
+		if test "${F1:$(( ${#F1} - 4 )):1}" = "."; then
+			F1=${F1:0:$(( ${#F1} - 4 ))}.incomplete.${F1:$((${#F1} - 3))}
+			echo "Trying partial for first file $F1"
+		fi
 	fi
-fi
-if test ! -e $F2; then
-	if test "${F2:$(( ${#F2} - 4 )):1}" = "."; then
-		F2=${F2:0:$(( ${#F2} - 4 ))}.incomplete.${F2:$((${#F2} - 3))}
-		echo "Trying partial for first file $F2"
+	if test ! -e $F2; then
+		if test "${F2:$(( ${#F2} - 4 )):1}" = "."; then
+			F2=${F2:0:$(( ${#F2} - 4 ))}.incomplete.${F2:$((${#F2} - 3))}
+			echo "Trying partial for first file $F2"
+		fi
 	fi
-fi
 
-  if test ! -e $F1; then
-	check "$1" ERROR "1st missing:" 
-	echo "-> $2"
-  elif test ! -e $F2; then
-	check "$1" ERROR "2nd missing:"
-	echo "-> $3"
-  elif test `checksum $F1` != `checksum $F2`; then
-	if test -n "$4";
-	then
-	  check "$1" ERROR "not equal:"
-	  comm -3 $F1 $F2
+	if test ! -e $F1; then
+		check "$1" ERROR "1st missing:" 
+		echo "-> $2"
+	elif test ! -e $F2; then
+		check "$1" ERROR "2nd missing:"
+		echo "-> $3"
+	elif test `checksum $F1` != `checksum $F2`; then
+		if test -n "$4";
+		then
+			check "$1" ERROR "not equal:"
+			comm -3 $F1 $F2
+		else
+			check "$1" ERROR "not equal"
+		fi
 	else
-	  check "$1" ERROR "not equal"
+		check "$1" PASSED
 	fi
-  else
-	check "$1" PASSED
-  fi
 }
 
 function check_log
 {
-  if grep $3 -iq "$2" $PREFIX.log; then
-	check "$1" PASSED
-  else
-	check "$1" ERROR
-  fi
+	if grep $3 -iq "$2" $PREFIX.log; then
+		check "$1" PASSED
+	else
+		check "$1" ERROR
+	fi
 }
 
 function check_notlog
 {
-  if grep $3 -q "$2" $PREFIX.log; then
-	check "$1" ERROR
-  else
-	check "$1" PASSED
-  fi
+	if grep $3 -q "$2" $PREFIX.log; then
+		check "$1" ERROR
+	else
+		check "$1" PASSED
+	fi
 }
 
 function check_log_errors
 {
-  check_notlog "log is clean" "error\|uncaught.exception\|failure\|\<warn\>\|\<crit\>" -i
+	check_notlog "log is clean" "error\|uncaught.exception\|failure\|\<warn\>\|\<crit\>" -i
 }
 
 function check_headers
 {
-  if grep -q "$3" $PREFIX.$1.headers > /dev/null; then
-	check "$2" PASSED
-  else
-	check "$2" "ERROR"
-  fi
+	if grep -q "$3" $PREFIX.$1.headers > /dev/null; then
+		check "$2" PASSED
+	else
+		check "$2" "ERROR"
+	fi
 }
 
 function backup_coverage
 {
-  cp .coverage .coverage-$1
+	cp .coverage .coverage-$1
 }
 
 function coveragereport
 {
-  [ -z "$COVERAGE_PROCESS_START" ] && return
-  echo Generating coverage report
-  coverage combine
-  coverage html
-  coverage report
+	[ -z "$COVERAGE_PROCESS_START" ] && return
+	echo Generating coverage report
+	coverage combine
+	coverage html
+	coverage report
 }
 
 ########## SYSTEM TESTS #########################################################
@@ -342,141 +346,141 @@ function coveragereport
 set -m
 case $1 in
 
-  1)
-	summary "DOWNLOADING NEW FILE"
+	1)
+		summary "DOWNLOADING NEW FILE"
 
-	clean
-	startserver
-	download http://$URL_HTTP out1
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
-	stopserver
-	backup_coverage $1
+		clean
+		startserver
+		download http://$URL_HTTP out1
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
+		stopserver
+		backup_coverage $1
 
-	check_exists "file cached and finalized" cache/$URL_HTTP
-	check_url_cached "record exists" http://$URL_HTTP
-	check_equal "separate download and served file are equal" out1 out2
-	check_equal "cached and served file are equal" cache/$URL_HTTP out2
-	check_equal "normal and served entity headers are equal" out1.entity.headers out2.entity.headers
-	check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 "
-	check_headers out2 "served via proxy" "Via:\ [a-z\.-]\+:$PORT"
-	check_log_errors
-	;;
+		check_exists "file cached and finalized" cache/$URL_HTTP
+		check_url_cached "record exists" http://$URL_HTTP
+		check_equal "separate download and served file are equal" out1 out2
+		check_equal "cached and served file are equal" cache/$URL_HTTP out2
+		check_equal "normal and served entity headers are equal" out1.entity.headers out2.entity.headers
+		check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 "
+		check_headers out2 "served via proxy" "Via:\ [a-z\.-]\+:$PORT"
+		check_log_errors
+		;;
 
-  2)
-	summary "LEAVING PARTIAL FILE IN CACHE"
+	2)
+		summary "LEAVING PARTIAL FILE IN CACHE"
 
-	clean
-	startserver
-	download http://$URL_HTTP normal
-	( ( http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP cached & abort $ABORT; splitheaders cached ) & )
-	sleep $WAIT
-	stopserver
-	backup_coverage $1
+		clean
+		startserver
+		download http://$URL_HTTP normal
+		( ( http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP cached & abort $ABORT; splitheaders cached ) & )
+		sleep $WAIT
+		stopserver
+		backup_coverage $1
 
-	check_log "aborted client read" "Client aborted"
-	check_url_cached "record exists" http://$URL_HTTP
+		check_log "aborted client read" "Client aborted"
+		check_url_cached "record exists" http://$URL_HTTP
 
-	#htcache_command --print-location http://$URL_HTTP
-	INCOMPLETE=$(htcache_command -q --print-location http://$URL_HTTP)
-	#P=$(( ${#PREFIX} + 7 ))
-	#echo INCOMPLETE=$INCOMPLETE
-	#echo INCOMPLETE:P=${INCOMPLETE:$P}
+		#htcache_command --print-location http://$URL_HTTP
+		INCOMPLETE=$(htcache_command -q --print-location http://$URL_HTTP)
+		#P=$(( ${#PREFIX} + 7 ))
+		#echo INCOMPLETE=$INCOMPLETE
+		#echo INCOMPLETE:P=${INCOMPLETE:$P}
+		
+		check_exists "file cached, not finalized" cache/${INCOMPLETE}
+		# XXX: No headers are ever present, need to check if older versions did
+		#	splitheaders cached
+		#	check_equal "headers are equal" normal.entity.headers cached.entity.headers
+		#	check_headers cached "served HTTP v1.1 OK" "HTTP/1.1 200 "
+		check_log_errors
+		;;
 	
-	check_exists "file cached, not finalized" cache/${INCOMPLETE}
-	# XXX: No headers are ever present, need to check if older versions did
-	#	splitheaders cached
-	#	check_equal "headers are equal" normal.entity.headers cached.entity.headers
-	#	check_headers cached "served HTTP v1.1 OK" "HTTP/1.1 200 "
-	check_log_errors
-	;;
-	
-  3)
-	summary "SERVING FILE FROM CACHE"
+	3)
+		summary "SERVING FILE FROM CACHE"
 
-	clean
-	startserver
-	download http://$URL_HTTP out
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1
-	sleep 4
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
-	stopserver
-	backup_coverage $1
-	
-	check_exists "first file cached and finalized" cache/$URL_HTTP
-	check_url_cached "record exists" http://$URL_HTTP
-	check_equal "cached and normal file are equal" cache/$URL_HTTP out
-	check_headers out1 "first file served via proxy" "Via:\ [a-z\.-]\+:$PORT"
-	check_headers out2 "second file served via proxy" "Via:\ [a-z\.-]\+:$PORT"
-	check_headers out1 "first file served HTTP v1.1 OK" "HTTP/1.1 200 "
-	check_headers out2 "second file served HTTP v1.1 OK" "HTTP/1.1 200 "
-	check_log "first file stored in cache" "Preparing new file in cache"
-	check_log "second file served from cache" "Reading complete file from cache"
-	check_equal "cached and first served file are equal" cache/$URL_HTTP out1
-	check_equal "cached and second served file are equal" cache/$URL_HTTP out2
-	check_equal "normal and first served headers are equal" out.entity.headers out1.entity.headers true
-	check_equal "normal and second served headers are equal" out.entity.headers out2.entity.headers true
-	check_log_errors
-	;;
+		clean
+		startserver
+		download http://$URL_HTTP out
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1
+		sleep 4
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
+		stopserver
+		backup_coverage $1
+		
+		check_exists "first file cached and finalized" cache/$URL_HTTP
+		check_url_cached "record exists" http://$URL_HTTP
+		check_equal "cached and normal file are equal" cache/$URL_HTTP out
+		check_headers out1 "first file served via proxy" "Via:\ [a-z\.-]\+:$PORT"
+		check_headers out2 "second file served via proxy" "Via:\ [a-z\.-]\+:$PORT"
+		check_headers out1 "first file served HTTP v1.1 OK" "HTTP/1.1 200 "
+		check_headers out2 "second file served HTTP v1.1 OK" "HTTP/1.1 200 "
+		check_log "first file stored in cache" "Preparing new file in cache"
+		check_log "second file served from cache" "Reading complete file from cache"
+		check_equal "cached and first served file are equal" cache/$URL_HTTP out1
+		check_equal "cached and second served file are equal" cache/$URL_HTTP out2
+		check_equal "normal and first served headers are equal" out.entity.headers out1.entity.headers true
+		check_equal "normal and second served headers are equal" out.entity.headers out2.entity.headers true
+		check_log_errors
+		;;
 
-  4)
-	summary "RESUMING PARTIAL FILE BY CLIENT"
+	4)
+		summary "RESUMING PARTIAL FILE BY CLIENT"
 
-	clean
-	download http://$URL_HTTP out
-	( ( download http://$URL_HTTP out1 & abort $ABORT; splitheaders out1 ) & )
-	startserver
-	cp $PREFIX.out1 $PREFIX.out2
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
-	sleep $WAIT
-	stopserver
-	backup_coverage $1
+		clean
+		download http://$URL_HTTP out
+		( ( download http://$URL_HTTP out1 & abort $ABORT; splitheaders out1 ) & )
+		startserver
+		cp $PREFIX.out1 $PREFIX.out2
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
+		sleep $WAIT
+		stopserver
+		backup_coverage $1
 
-	check_log "received complete file" "Server responds 'HTTP/1.1 200 OK'"
-	check_log "served partial file" "HTCache responds 'HTTP/1.1 206 Partial Content'"
-#	check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 OK"
-	check_equal "cached and served file are equal" out out2
-	check_log_errors
-	;;
+		check_log "received complete file" "Server responds 'HTTP/1.1 200 OK'"
+		check_log "served partial file" "HTCache responds 'HTTP/1.1 206 Partial Content'"
+	#	check_headers out2 "served HTTP v1.1 OK" "HTTP/1.1 200 OK"
+		check_equal "cached and served file are equal" out out2
+		check_log_errors
+		;;
 
-  5)
-	summary "REDOWNLOADING CHANGED FILE"
-# XXX: cannot test without descriptor of aux. command to load descriptor into DB
-#
-#   clean
-#	startserver
-#	touchfile cache/$URL_HTTP -m -t 190112140000 
-#	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
-#	stopserver
-#
-#	check_log "detected complete file in cache" "Checking complete file in cache"
-#	check_log "downloading new file" "Preparing new file in cache"
-#	check_equal "cached and served file are equal" cache/$URL_HTTP out
-#	check_headers out "served HTTP v1.1 OK" "HTTP/1.1 200 "
-#	check_log_errors
-	;;
+	5)
+		summary "REDOWNLOADING CHANGED FILE"
+	# XXX: cannot test without descriptor of aux. command to load descriptor into DB
+	#
+	#   clean
+	#	startserver
+	#	touchfile cache/$URL_HTTP -m -t 190112140000 
+	#	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
+	#	stopserver
+	#
+	#	check_log "detected complete file in cache" "Checking complete file in cache"
+	#	check_log "downloading new file" "Preparing new file in cache"
+	#	check_equal "cached and served file are equal" cache/$URL_HTTP out
+	#	check_headers out "served HTTP v1.1 OK" "HTTP/1.1 200 "
+	#	check_log_errors
+		;;
 
-  6)
-	summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE"
-	
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 & abort $ABORT
-#	echo $(stat -c "%s" $PREFIX.out1) bytes
-#	splitheaders out1
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
-	sleep 0.5
-	stopserver
-	backup_coverage $1
+	6)
+		summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE"
+		
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 & abort $ABORT
+	#	echo $(stat -c "%s" $PREFIX.out1) bytes
+	#	splitheaders out1
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2
+		sleep 0.5
+		stopserver
+		backup_coverage $1
 
-	check_equal "cached and served file are equal" cache/$URL_HTTP out2
-	check_log "htcache asks for missing part" "Requesting resume of partial file in cache"
-	check_log "server sends part" "Server responds 'HTTP/1.1 206 Partial Content'"
-	check_log "htcache resumes content" "Resuming partial file in cache"
-	check_log "finalized file" "Finalized"
-	check_log_errors
-	;;
+		check_equal "cached and served file are equal" cache/$URL_HTTP out2
+		check_log "htcache asks for missing part" "Requesting resume of partial file in cache"
+		check_log "server sends part" "Server responds 'HTTP/1.1 206 Partial Content'"
+		check_log "htcache resumes content" "Resuming partial file in cache"
+		check_log "finalized file" "Finalized"
+		check_log_errors
+		;;
 
-  7)
+	7)
 	summary "RESUMING PARTIAL CHANGED FILE IN CACHE"
 # XXX: cannot test without descriptor of aux. command to load descriptor into DB
 #
@@ -492,34 +496,34 @@ case $1 in
 #	check_log_errors
 	;;
 
-  8)
-	summary "JOINING THREE+TWO DOWNLOADS"
-	
-	clean
-	startserver
-	download http://$URL_HTTP out
-	# this test fails when background downloads have not finished when stopserver is called
-	# it should wait until the proxy finishes
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 0.2
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2 > /dev/null & sleep 0.16
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out3 > /dev/null & sleep 0.2
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out4 && sleep 0.5
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out5
-	sleep 15.5
-	stopserver
-	backup_coverage $1
+	8)
+		summary "JOINING THREE+TWO DOWNLOADS"
+		
+		clean
+		startserver
+		download http://$URL_HTTP out
+		# this test fails when background downloads have not finished when stopserver is called
+		# it should wait until the proxy finishes
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out1 > /dev/null & sleep 0.2
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out2 > /dev/null & sleep 0.16
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out3 > /dev/null & sleep 0.2
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out4 && sleep 0.5
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out5
+		sleep 15.5
+		stopserver
+		backup_coverage $1
 
-	check_equal "cache and normal download are equal" cache/$URL_HTTP out
-	check_log "downloads are joined" "Joining running download"
-	check_equal "cache and first download are equal" cache/$URL_HTTP out1
-	check_equal "cache and second concurrent download are equal" cache/$URL_HTTP out2
-	check_equal "cache and third concurrent download are equal" cache/$URL_HTTP out3
-	check_equal "cache and subsequent download are equal" cache/$URL_HTTP out4
-	check_equal "cache and second subsequent download are equal" cache/$URL_HTTP out5
-	check_log_errors
-	;;
+		check_equal "cache and normal download are equal" cache/$URL_HTTP out
+		check_log "downloads are joined" "Joining running download"
+		check_equal "cache and first download are equal" cache/$URL_HTTP out1
+		check_equal "cache and second concurrent download are equal" cache/$URL_HTTP out2
+		check_equal "cache and third concurrent download are equal" cache/$URL_HTTP out3
+		check_equal "cache and subsequent download are equal" cache/$URL_HTTP out4
+		check_equal "cache and second subsequent download are equal" cache/$URL_HTTP out5
+		check_log_errors
+		;;
 
-  9)
+	9)
 	summary "DOWNLOADING NEW FILE, CHUNKED TRANSFER"
 	
 	clean
@@ -547,7 +551,7 @@ case $1 in
 	check_log_errors
 	;;
 
-  10)
+	10)
 	summary "FILTERED PROXY RESPONSE"
 	
 	clean
@@ -564,7 +568,7 @@ case $1 in
 	check_log_errors
 	;;
 
-  11)
+	11)
 	summary "BLIND PROXY RESPONSE"
 	
 	clean
@@ -578,7 +582,7 @@ case $1 in
 	check_log_errors
 	;;
 
-  12)
+	12)
 	summary "DOWNLOADING NEW FILE, FTP TRANSFER"
 
 	clean
@@ -593,7 +597,7 @@ case $1 in
 	check_log_errors
 	;;
 
-  13)
+	13)
 	summary "SERVING FILE FROM CACHE, FTP TRANSFER"
 
 	clean
@@ -610,22 +614,22 @@ case $1 in
 	check_log_errors
 	;;
 
-  14)
-	summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
+	14)
+		summary "RESUMING PARTIAL UNCHANGED FILE IN CACHE, FTP TRANSFER"
 
-	clean
-	startserver
-	( ( ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out1 & abort $ABORT ) & )
-	ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out2
-	stopserver
-	backup_coverage $1
+		clean
+		startserver
+		( ( ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out1 & abort $ABORT ) & )
+		ftp_proxy=$HOSTNAME:$PORT download ftp://$URL_FTP out2
+		stopserver
+		backup_coverage $1
 
-	check_log "htcache resumes file" "Resuming partial file in cache"
-	check_equal "cached and served file are equal" cache/$URL_FTP out2
-	check_log_errors
-	;;
+		check_log "htcache resumes file" "Resuming partial file in cache"
+		check_equal "cached and served file are equal" cache/$URL_FTP out2
+		check_log_errors
+		;;
 
-  15)
+	15)
 #	summary "RATE CONTROL"
 #	clean
 #	startserver --limit 10
@@ -636,167 +640,167 @@ case $1 in
 #	check_log_errors
 	;;
 
-  16)
-	summary "STATIC MODE"
+	16)
+		summary "STATIC MODE"
 
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP normal
-	stopserver
-	startserver --static
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP static
-	stopserver
-	backup_coverage $1
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP normal
+		stopserver
+		startserver --static
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP static
+		stopserver
+		backup_coverage $1
 
-	check_log "serving directly from cache without consulting server" "Static mode; serving file directly from cache"
-	check_equal "cached and served file are equal" cache/$URL_HTTP static
-	check_log_errors
-	;;
+		check_log "serving directly from cache without consulting server" "Static mode; serving file directly from cache"
+		check_equal "cached and served file are equal" cache/$URL_HTTP static
+		check_log_errors
+		;;
 
-  17)
-	summary "OFF-LINE MODE"
+	17)
+		summary "OFF-LINE MODE"
 
-	clean
-	startserver --offline
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
-	stopserver
-	backup_coverage $1
+		clean
+		startserver --offline
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
+		stopserver
+		backup_coverage $1
 
-	check_log "refusing to connect to server" "AssertionError..operating in off-line mode"
-	;;
+		check_log "refusing to connect to server" "AssertionError..operating in off-line mode"
+		;;
 
-  18)
-	summary "MISC"
+	18)
+		summary "MISC"
 
-	clean
-	startserver
-	download http://dotmpe.com/ out
-	http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/ out1
-	stopserver
-	backup_coverage $1
-	
-	check_equal "cached and normal file are equal" cache/dotmpe.com/default out
-	check_log_errors
-	;;
+		clean
+		startserver
+		download http://dotmpe.com/ out
+		http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/ out1
+		stopserver
+		backup_coverage $1
+		
+		check_equal "cached and normal file are equal" cache/dotmpe.com/default out
+		check_log_errors
+		;;
 
-  19)
-	summary "HTTP POST"
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/ out2 "-X POST -F debug=1"
-	sleep 2
-	stopserver
-	backup_coverage $1
-	check_log_errors
-	;;
+	19)
+		summary "HTTP POST"
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/ out2 "-X POST -F debug=1"
+		sleep 2
+		stopserver
+		backup_coverage $1
+		check_log_errors
+		;;
 
-  20)
-	summary "DIRECT REQUEST"
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/info info
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/downloads downloads
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/list list
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/echo echo
-	#http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/page-info page-info "-F url=http://$URL_HTTP" 
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/dhtml.css dhtml.css
-	http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/dhtml.js dhtml.js
-	stopserver
-	backup_coverage $1
-	check_equal "dhtml.css" dhtml.css $PROJECTDIR/dhtml.css
-	check_equal "dhtml.js" dhtml.js $PROJECTDIR/dhtml.js
-	check_log_errors
-	;;
+	20)
+		summary "DIRECT REQUEST"
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/info info
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/downloads downloads
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/list list
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/echo echo
+		#http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/page-info page-info "-F url=http://$URL_HTTP" 
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/dhtml.css dhtml.css
+		http_proxy=$HOSTNAME:$PORT download http://$HOSTNAME:$PORT/dhtml.js dhtml.js
+		stopserver
+		backup_coverage $1
+		check_equal "dhtml.css" dhtml.css $PROJECTDIR/dhtml.css
+		check_equal "dhtml.js" dhtml.js $PROJECTDIR/dhtml.js
+		check_log_errors
+		;;
 
-  21)
-	summary "SERVICE"
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
-	stopserver
-	backup_coverage $1.1
-	mkdir $PREFIX.htcache_command
-	htcache_command --info > $PREFIX.htcache_command/info
-	backup_coverage $1.2 
-	htcache_command --list-locations > $PREFIX.htcache_command/list-locations
-	backup_coverage $1.3
-	htcache_command --list-resources > $PREFIX.htcache_command/list-resources
-	backup_coverage $1.4
-	htcache_command --find-records 'w3' > $PREFIX.htcache_command/find-records
-	backup_coverage $1.5
-	htcache_command --print-location http://$URL_HTTP > $PREFIX.htcache_command/print-location
-	backup_coverage $1.6
-	htcache_command --print-records > $PREFIX.htcache_command/print-records
-	backup_coverage $1.7
-	htcache_command --print-record http://$URL_HTTP > $PREFIX.htcache_command/print-record
-	backup_coverage $1.8
-	htcache_command --check-join-rules > $PREFIX.htcache_command/check-join-rules
-	backup_coverage $1.9
-	check_log_errors
-	;;
+	21)
+		summary "SERVICE"
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://$URL_HTTP out
+		stopserver
+		backup_coverage $1.1
+		mkdir $PREFIX.htcache_command
+		htcache_command --info > $PREFIX.htcache_command/info
+		backup_coverage $1.2 
+		htcache_command --list-locations > $PREFIX.htcache_command/list-locations
+		backup_coverage $1.3
+		htcache_command --list-resources > $PREFIX.htcache_command/list-resources
+		backup_coverage $1.4
+		htcache_command --find-records 'w3' > $PREFIX.htcache_command/find-records
+		backup_coverage $1.5
+		htcache_command --print-location http://$URL_HTTP > $PREFIX.htcache_command/print-location
+		backup_coverage $1.6
+		htcache_command --print-records > $PREFIX.htcache_command/print-records
+		backup_coverage $1.7
+		htcache_command --print-record http://$URL_HTTP > $PREFIX.htcache_command/print-record
+		backup_coverage $1.8
+		htcache_command --check-join-rules > $PREFIX.htcache_command/check-join-rules
+		backup_coverage $1.9
+		check_log_errors
+		;;
 
-  22)
-	summary "DNS exception"
+	22)
+		summary "DNS exception"
 
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://sdfsdfegsdv.jill/ out2
-	stopserver
-	backup_coverage $1
-	check_log "Exception response" "ExceptionResponse"
-	check_log "DNS exception" "DNSLookupException"
-	check_log_errors
-	;;
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://sdfsdfegsdv.jill/ out2
+		stopserver
+		backup_coverage $1
+		check_log "Exception response" "ExceptionResponse"
+		check_log "DNS exception" "DNSLookupException"
+		check_log_errors
+		;;
 
-  23)
-	summary "HTTP Moved Permanently"
+	23)
+		summary "HTTP Moved Permanently"
 
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://nu.nl/ out3
-	stopserver
-	backup_coverage $1
-	check_log "Moved Permanently" "Server responds 'HTTP/1.1 301 Moved Permanently'"
-	check_log_errors
-	;;
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://nu.nl/ out3
+		stopserver
+		backup_coverage $1
+		check_log "Moved Permanently" "Server responds 'HTTP/1.1 301 Moved Permanently'"
+		check_log_errors
+		;;
 
-  24)
-	summary "HTTP Forbidden"
+	24)
+		summary "HTTP Forbidden"
 
-	clean
-	startserver
-	http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/.htaccess out4
-	stopserver
-	backup_coverage $1
-	check_log "Forbidden" "Server responds 'HTTP/1.1 403 Forbidden'"
-	check_log_errors
-	;;
+		clean
+		startserver
+		http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/.htaccess out4
+		stopserver
+		backup_coverage $1
+		check_log "Forbidden" "Server responds 'HTTP/1.1 403 Forbidden'"
+		check_log_errors
+		;;
 
-  25)
-	summary "HTTP Not Found"
+	25)
+		summary "HTTP Not Found"
 
-	clean
-	startserver
-	# Not found
-	http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/test/404 out5
-	# TODO: Gone
-	#http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/test/old out7
-	# TODO: TCN
-	stopserver
-	backup_coverage $1
-	check_log "Not Found" "Server responds 'HTTP/1.1 404 Not Found'"
-	check_log_errors
-	;;
+		clean
+		startserver
+		# Not found
+		http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/test/404 out5
+		# TODO: Gone
+		#http_proxy=$HOSTNAME:$PORT download http://dotmpe.com/test/old out7
+		# TODO: TCN
+		stopserver
+		backup_coverage $1
+		check_log "Not Found" "Server responds 'HTTP/1.1 404 Not Found'"
+		check_log_errors
+		;;
 
-  26)
-	summary "COVERAGE REPORT"
-	coveragereport
-	;;
+	26)
+		summary "COVERAGE REPORT"
+		coveragereport
+		;;
 
-  *)
-	exit 1
-	;;
+	*)
+		exit 1
+		;;
 
 esac
 
