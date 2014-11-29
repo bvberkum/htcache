@@ -50,7 +50,7 @@ class File(object):
 		host/path?query. The cache implementation will determine the final
 		local path name. 
 		"""
-		super( File, self ).__init__()
+		super( File,self).__init__()
 		self.partial = None
 		self.full = None
 		self.fp = None
@@ -86,7 +86,7 @@ class File(object):
 
 		self.path = path
 
-		mainlog.debug('%s: init %s', self, path)
+		mainlog.debug('%s: init %s',self, path)
 		self.fp = None
 
 		assert len(self.abspath()) < 255, \
@@ -104,7 +104,7 @@ class File(object):
 		assert not self.path.endswith(Runtime.PARTIAL)
 		return suffix_ext( self.full_path(), Runtime.PARTIAL )
 
-	def stat( self ):
+	def stat(self):
 		assert Runtime.PARTIAL not in self.path
 		abspath = self.full_path()
 		partial = self.partial_path()
@@ -116,7 +116,7 @@ class File(object):
 			self.partial = False
 		return self.partial or self.full
 
-	def abspath( self ):
+	def abspath(self):
 		assert Runtime.PARTIAL not in self.path, self.path
 		if not (self.partial or self.full):
 			self.stat()
@@ -126,7 +126,7 @@ class File(object):
 			return self.partial_path()
 
 	@property
-	def size( self ):
+	def size(self):
 		stat = ( self.partial or self.full )
 		if stat:
 			return stat.st_size
@@ -141,7 +141,7 @@ class File(object):
 		os.utime( self.abspath(), ( mtime, mtime ) )
 		self.stat()
 
-	def open_new( self ):
+	def open_new(self):
 		assert not self.fp
 
 		mainlog.note('%s: Preparing new file in cache', self)
@@ -155,24 +155,24 @@ class File(object):
 		try:
 			self.fp = open( new_file, 'w+' )
 		except Exception, e:
-			mainlog.note('%s: Failed to open file: %s', self, e)
+			mainlog.note('%s: Failed to open file: %s',self, e)
 			self.fp = os.tmpfile()
 
-	def open_partial( self, offset=-1 ):
+	def open_partial(self, offset=-1):
 		assert not self.fp
 		self.fp = open( self.abspath(), 'a+' )
 		if offset >= 0:
 			assert offset <= self.tell(), 'range does not match file in cache'
 			self.fp.seek( offset )
 			self.fp.truncate()
-		mainlog.info('%s: Resuming partial file in cache at byte %s', self, self.tell())
+		mainlog.info('%s: Resuming partial file in cache at byte %s',self, self.tell())
 
-	def open_full( self ):
+	def open_full(self):
 		assert not self.fp
 		self.fp = open( self.abspath(), 'r' )
 #		self.size = self.tell()
 
-	def open( self ):
+	def open(self):
 		if self.full:
 			self.open_full()
 		elif self.partial:
@@ -180,41 +180,41 @@ class File(object):
 		else:
 			self.open_new()
 
-	def remove_full( self ):
+	def remove_full(self):
 		os.remove( self.abspath() )
 		mainlog.note('%s: Removed complete file from cache', self)
 
-	def remove_partial( self ):
+	def remove_partial(self):
 		mainlog.note('%s: Removed partial file from cache', self)
 		os.remove( self.abspath() + Runtime.PARTIAL )
 
-	def read( self, pos, size ):
+	def read(self, pos, size):
 		self.fp.seek( pos )
 		return self.fp.read( size )
 
-	def write( self, chunk ):
+	def write(self, chunk):
 		self.fp.seek( 0, 2 )
 		return self.fp.write( chunk )
 
-	def tell( self ):
+	def tell(self):
 		self.fp.seek( 0, 2 )
 		return self.fp.tell()
 
-	def close( self ):
+	def close(self):
 		assert self.fp
 		self.fp.close()
 		self.fp = None
 		self.partial, self.full = None, None
-		mainlog.debug("%s: Closed %s", self, self.path)
+		mainlog.debug("%s: Closed %s",self, self.path)
 
 #	def __nonzero__(self):
 #	  return ( self.complete() or self.partial ) != None
 
-	def __del__( self ):
+	def __del__(self):
 		if self.fp:
 			try:
 				self.close()
 				mainlog.warn("%s: Forced close", self)
 			except Exception, e:
-				mainlog.warn("%s: Error on closing cache file: %s", self, e)
+				mainlog.warn("%s: Error on closing cache file: %s",self, e)
 

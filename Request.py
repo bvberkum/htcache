@@ -35,14 +35,14 @@ class HttpRequest:
 
 	Protocol = None
 
-	def __init__( self ):
+	def __init__(self):
 
 		self.__parse = self.__parse_head
 		self.__recvbuflen = 0
 		self.__recvbuf = ''
 		self.__scheme = self.__host = self.__port = self.__reqpath = None
 
-	def __parse_head( self, chunk ):
+	def __parse_head(self, chunk):
 
 		"""
 		Start parsing request by splitting the envelope or request line,
@@ -66,7 +66,7 @@ class HttpRequest:
 
 		return eol
 
-	def __parse_args( self, chunk ):
+	def __parse_args(self, chunk):
 
 		"""
 		Parse request header. Defer to __parse_body if request entity body
@@ -104,7 +104,7 @@ class HttpRequest:
 
 		return eol
 
-	def __parse_body( self, chunk ):
+	def __parse_body(self, chunk):
 		"""
 		Parse request body.
 		"""
@@ -117,7 +117,7 @@ class HttpRequest:
 
 		return len( chunk )
 
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		"""
 		Receive request from client, parsing header and optional body. 
@@ -240,7 +240,7 @@ class HttpRequest:
 		if self.__headers.setdefault('Via', via) != via:
 			self.__headers['Via'] += ', '+ via
 
-	def recvbuf( self ):
+	def recvbuf(self):
 
 		assert self.Protocol, "No protocol yet"
 		assert self.__reqpath[0] == '/', self.__reqpath
@@ -284,7 +284,7 @@ class HttpRequest:
 #		return self.__scheme, self.__host, self.__port, self.__reqpath
 
 	@property
-	def url( self ):
+	def url(self):
 		host, port = self.hostinfo
 
 		# Prepare requri to identify request
@@ -321,14 +321,14 @@ class HttpRequest:
 			raise AssertionError, \
 				'invalid byterange specification: %s' % byterange
 
-	def __hash__( self ):
+	def __hash__(self):
 
 		assert self.Protocol
 		assert self.__reqpath[0] == '/', self.__reqpath
 		return hash(( self.__host, self.__port, self.__reqpath ))
 
 # XXX:
-#	def __eq__( self, other ):
+#	def __eq__(self, other ):
 #		assert self.Protocol, "no protocol"
 #		request1 = self.__verb,  self.__host,  self.__port,  self.__reqpath
 #		request2 = other.__verb, other.__host, other.__port, other.__reqpath

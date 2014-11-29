@@ -17,28 +17,28 @@ class BlindResponse:
 
 	Done = False
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
 		if hasattr(protocol, 'responsebuf'):
 			self.__sendbuf = protocol.responsebuf()
 		else:
 			self.__sendbuf = protocol.recvbuf()
 
-	def hasdata( self ):
+	def hasdata( self):
 
 		return bool( self.__sendbuf )
 
-	def send( self, sock ):
+	def send(self, sock):
 
 		assert not self.Done
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
-	def needwait( self ):
+	def needwait( self):
 
 		return False
 
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		assert not self.Done
 		chunk = sock.recv( Params.MAXCHUNK )
@@ -61,12 +61,12 @@ class DataResponse:
 	Done = False
 	content_rewrite = []
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
 		self.__protocol = protocol
 		self.__pos, self.__end = request.range()
 
-		mainlog.debug("New %s for %s", self, request)
+		mainlog.debug("New %s for %s",self, request)
 
 		#assert protocol._HttpProtocol__status in (200, 206),\
 		#	protocol._HttpProtocol__status
@@ -127,22 +127,22 @@ class DataResponse:
 		if Runtime.LIMIT:
 			self.__nextrecv = 0
 
-	def hasdata( self ):
+	def hasdata(self):
 
 		if self.__sendbuf:
 			return True
 		elif self.__pos >= self.__protocol.tell():
-#			mainlog.debug("[%s hasdata (%s >= %s) ]", self, self.__pos, self.__protocol.tell())
+#			mainlog.debug("[%s hasdata (%s >= %s) ]",self, self.__pos, self.__protocol.tell())
 			return False
 		elif self.__pos < self.__end or self.__end == -1:
 #			mainlog.debug
-#					("[%s hasdata (%s < %s or %s == -1) ]", self, self.__pos, self.__end, self.__end)
+#					("[%s hasdata (%s < %s or %s == -1) ]",self, self.__pos, self.__end, self.__end)
 			return True
 		else:
 			assert self.__end != None
 			return False
 
-	def send( self, sock ):
+	def send(self, sock):
 
 		assert not self.Done
 		if self.__sendbuf:
@@ -173,11 +173,11 @@ class DataResponse:
 		#if self.__protocol.capture and self.Done:
 		#	print 'hash', self.__hash.hexdigest()
 
-	def needwait( self ):
+	def needwait(self):
 
 		return Runtime.LIMIT and max( self.__nextrecv - time.time(), 0 )
 
-	def recv( self, sock ):
+	def recv(self, sock):
 		"""
 		Read chuck from server response. Hash or rewrite if needed.
 		"""
@@ -228,13 +228,13 @@ class DataResponse:
 
 class ChunkedDataResponse( DataResponse ):
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 
-		DataResponse.__init__( self, protocol, request )
+		DataResponse.__init__(self, protocol, request )
 		self.__protocol = protocol
 		self.__recvbuf = ''
 
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		assert not self.Done
 		chunk = sock.recv( Params.MAXCHUNK )
@@ -277,20 +277,20 @@ class BlockedContentResponse:
 						'location': '%s:%i/%s' % url,
 						'software': 'htcache/%s' % Params.VERSION }
 
-	def hasdata( self ):
+	def hasdata(self):
 		return bool( self.__sendbuf )
 
-	def send( self, sock ):
+	def send(self, sock):
 		assert not self.Done
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 		if not self.__sendbuf:
 			self.Done = True
 
-	def needwait( self ):
+	def needwait(self):
 		return False
 
-	def recv( self ):
+	def recv(self):
 		raise AssertionError
 
 	def finalize(self, client):
@@ -311,20 +311,20 @@ class BlockedImageContentResponse:
 				'Content-Type: image/png\r\n\r\n%s' % (
 				len(data), data)
 
-	def hasdata( self ):
+	def hasdata(self):
 		return bool( self.__sendbuf )
 
-	def send( self, sock ):
+	def send(self, sock):
 		assert not self.Done
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 		if not self.__sendbuf:
 			self.Done = True
 
-	def needwait( self ):
+	def needwait(self):
 		return False
 
-	def recv( self ):
+	def recv(self):
 		raise AssertionError
 
 	def finalize(self, client):
@@ -357,11 +357,11 @@ class DirectResponse:
 		self.__sendbuf = 'HTTP/1.1 %s\r\n%s'\
 				'\r\n%s' % ( status, headers, content ) 
 
-	def hasdata( self ):
+	def hasdata(self):
 		assert self.__sendbuf, self
 		return bool( self.__sendbuf )
 
-	def send( self, sock ):
+	def send(self, sock):
 		assert not self.Done
 		assert self.__sendbuf, self
 		bytecnt = sock.send( self.__sendbuf )
@@ -369,10 +369,10 @@ class DirectResponse:
 		if not self.__sendbuf:
 			self.Done = True
 
-	def needwait( self ):
+	def needwait(self):
 		return False
 
-	def recv( self ):
+	def recv(self):
 		raise AssertionError
 
 	def __str__(self):
@@ -401,7 +401,7 @@ class ProxyResponse(DirectResponse):
 		'list': 'serve_list',
 	}
 
-	def __init__( self, protocol, request, status='200 Okeydokey, here it comes', path=None):
+	def __init__(self, protocol, request, status='200 Okeydokey, here it comes', path=None):
 		DirectResponse.__init__(self)
 		if status[0] == '2':
 			path = protocol.reqname
@@ -559,19 +559,19 @@ class ProxyResponse(DirectResponse):
 
 class NotFoundResponse( DirectResponse ):
 
-	def __init__( self, protocol, request ):
+	def __init__(self, protocol, request):
 		if request.url.startswith('ftp'):
-			DirectResponse.__init__( self )
+			DirectResponse.__init__(self)
 			self.prepare_buffer(
 					'550 Not Found', 'Not Found'
 				)
 		elif request.url.startswith('http'):
-			DirectResponse.__init__( self )
+			DirectResponse.__init__(self)
 			self.prepare_buffer(
 					'404 Not Found', 'Not Found'
 				)
 		else:
-			DirectResponse.__init__( self )
+			DirectResponse.__init__(self)
 			self.prepare_buffer(
 					'400 Unknown', 'Unknown failure'
 				)
@@ -582,8 +582,8 @@ class NotFoundResponse( DirectResponse ):
 
 class ExceptionResponse( DirectResponse ):
 
-	def __init__( self, protocol, request, e=None ):
-		DirectResponse.__init__( self )
+	def __init__(self, protocol, request, e=None):
+		DirectResponse.__init__(self)
 		self.e = e
 		lines = [
 				"Exception: %r" % e,

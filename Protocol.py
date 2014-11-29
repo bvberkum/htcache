@@ -16,17 +16,17 @@ mainlog = log.get_log('main')
 
 class DNSLookupException(Exception):
 
-	def __init__( self, addr, exc ):
+	def __init__(self, addr, exc):
 		self.addr = addr
 		self.exc = exc
 
-	def __str__( self ):
+	def __str__(self):
 		return "DNS lookup error for %s: %s" % ( self.addr, self.exc )
 
 
 DNSCache = {}
 
-def connect( addr ):
+def connect(addr):
 	# FIXME: return HTTP 5xx
 	assert Runtime.ONLINE, \
 			'operating in off-line mode'
@@ -57,31 +57,31 @@ class BlindProtocol:
 	Response = None
 	data = None
 
-	def __init__( self, request ):
+	def __init__(self, request):
 
 		self.__socket = connect( request.hostinfo )
 		self.__sendbuf = request.recvbuf()
 
-	def socket( self ):
+	def socket(self):
 
 		return self.__socket
 
-	def recvbuf( self ):
+	def recvbuf(self):
 
 		return ''
 
-	def hasdata( self ):
+	def hasdata(self):
 
 		return True
 
-	def send( self, sock ):
+	def send(self, sock):
 
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 		if not self.__sendbuf:
 			self.Response = Response.BlindResponse
 
-	def done( self ):
+	def done(self):
 
 		pass
 
@@ -101,11 +101,11 @@ class CachingProtocol(object):
 	data = None
 
 	@property
-	def url( self ):
+	def url(self):
 		# XXX: update this with data from content-location
 		return self.request.url
 
-	def __init__( self, request):
+	def __init__(self, request):
 		"Determine and open cache location, get descriptor backend. "
 		super(CachingProtocol, self).__init__()
 
@@ -115,10 +115,10 @@ class CachingProtocol(object):
 		# Track server response
 		self.__status, self.__message = None, None
 
-	def has_response( self ):
+	def has_response(self):
 		return self.__status and self.__message
 
-	def prepare_direct_response( self, request ):
+	def prepare_direct_response(self,request):
 		"""
 		Serve either a proxy page, a replacement for blocked content, of static
 		content. All directly from local storage.
@@ -146,7 +146,7 @@ class CachingProtocol(object):
 			mainlog.note('Dropping connection, '
 						'request matches pattern: %r.', m)
 
-	def prepare_nocache_response( self ):
+	def prepare_nocache_response(self):
 		"Blindly respond for NoCache rule matches. "
 		pattern = Rules.NoCache.match( self.url )
 		if pattern:
@@ -154,7 +154,7 @@ class CachingProtocol(object):
 			self.Response = Response.BlindResponse
 			return True
 
-	def set_blocked_response( self, path ):
+	def set_blocked_response(self, path):
 		"Respond to client by writing filter warning about blocked content. "
 		if '?' in path or '#' in path:
 			pf = path.find( '#' )
@@ -170,28 +170,28 @@ class CachingProtocol(object):
 		else:
 			self.Response = Response.BlockedContentResponse
 
-	def get_size( self ):
+	def get_size(self):
 		return self.data.descriptor.size;
-	def set_size( self, size ):
+	def set_size(self, size):
 		self.data.descriptor.size = size
 	size = property( get_size, set_size )
 
-	def get_mtime( self ):
+	def get_mtime(self):
 		return self.cache.mtime;
-	def set_mtime( self, mtime ):
+	def set_mtime(self, mtime):
 		self.cache.mtime = mtime
 	mtime = property( get_mtime, set_mtime )
 
-	def read( self, pos, size ):
+	def read(self, pos, size):
 		return self.cache.read( pos, size )
 
-	def write( self, chunk ):
+	def write(self, chunk):
 		return self.cache.write( chunk )
 
-	def tell( self ):
+	def tell(self):
 		return self.cache.tell()
 
-	def finish( self ):
+	def finish(self):
 		self.data.finish_response()
 
 	def __str__(self):
@@ -202,7 +202,7 @@ class HttpProtocol(CachingProtocol):
 
 	rewrite = None
 
-	def __init__( self, request ):
+	def __init__(self,request):
 		super(HttpProtocol, self).__init__(request)
 
 		host, port = request.hostinfo
@@ -215,7 +215,7 @@ class HttpProtocol(CachingProtocol):
 			return
 
 		# Prepare to forward request
-		self.data = Resource.ProxyData( self )
+		self.data = Resource.ProxyData(self)
 
 		# Skip server-round trip in static mode
 		if Runtime.STATIC: # and self.cache.full: # FIXME
@@ -240,7 +240,7 @@ class HttpProtocol(CachingProtocol):
 		try:
 			self.__socket = connect(request.hostinfo)
 		except Exception, e:
-			self.Response = Response.ExceptionResponse( self, request, e )
+			self.Response = Response.ExceptionResponse(self, request, e )
 			return
 		self.__sendbuf = '\r\n'.join(
 			[ head ] + map( ': '.join, proxy_req_headers.items() ) + [ '', '' ] )
@@ -250,27 +250,27 @@ class HttpProtocol(CachingProtocol):
 		self.__parse = HttpProtocol.__parse_head
 
 	@property
-	def cache( self ):
+	def cache(self):
 # XXX: the other way around?
 		return self.data.cache
 
-	def hasdata( self ):
+	def hasdata(self):
 		"Indicator wether Protocol object has more request data available. "
 		return bool( self.__sendbuf )
 
-	def send( self, sock ):
+	def send(self, sock):
 		"fiber hook to send request data. "
 		assert self.hasdata(), "no data"
 
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
-	def __parse_head( self, chunk ):
+	def __parse_head(self, chunk):
 
 		eol = chunk.find( '\n' ) + 1
 		assert eol
 		line = chunk[ :eol ]
-		mainlog.note("%s: Server responds %r", self, line.strip())
+		mainlog.note("%s: Server responds %r",self, line.strip())
 		fields = line.split()
 		assert (2 <= len( fields )) \
 			and fields[ 0 ].startswith( 'HTTP/' ) \
@@ -278,11 +278,11 @@ class HttpProtocol(CachingProtocol):
 		self.__status = int( fields[ 1 ] )
 		self.__message = ' '.join( fields[ 2: ] )
 		self.__args = {}
-		mainlog.info("%s: finished parse_head (%s, %s)", self, self.__status, self.__message)
+		mainlog.info("%s: finished parse_head (%s, %s)",self, self.__status, self.__message)
 		self.__parse = HttpProtocol.__parse_args
 		return eol
 
-	def __parse_args( self, chunk ):
+	def __parse_args(self, chunk):
 		eol = chunk.find( '\n' ) + 1
 		assert eol
 		line = chunk[ :eol ]
@@ -306,7 +306,7 @@ class HttpProtocol(CachingProtocol):
 			mainlog.err('Error: ignored server response header line: '+ line)
 		return eol
 
-	def recv( self, sock ):
+	def recv(self, sock):
 
 		""""
 		Process server response until headers are fully parsed, then
@@ -316,13 +316,13 @@ class HttpProtocol(CachingProtocol):
 		assert not self.hasdata(), "has data"
 
 		chunk = sock.recv( Params.MAXCHUNK, socket.MSG_PEEK )
-		mainlog.info("%s: recv'd chunk (%i)", self, len(chunk))
+		mainlog.info("%s: recv'd chunk (%i)",self, len(chunk))
 		assert chunk, 'server closed connection before sending '\
 				'a complete message header, '\
 				'parser: %r, data: %r' % (self.__parse, self.__recvbuf)
 		self.__recvbuf += chunk
 		while self.__parse:
-			bytecnt = self.__parse( self, self.__recvbuf )
+			bytecnt = self.__parse(self, self.__recvbuf )
 			assert bytecnt
 			#	sock.recv( len( chunk ) )
 			#	return
@@ -456,10 +456,10 @@ class HttpProtocol(CachingProtocol):
 		else:
 			self.Response = Response.DataResponse
 
-	def recvbuf( self ):
+	def recvbuf(self):
 		return self.print_message()
 
-	def print_message( self, args=None ):
+	def print_message(self, args=None):
 		if not args:
 			args = self.__args
 		return '\r\n'.join(
@@ -469,17 +469,17 @@ class HttpProtocol(CachingProtocol):
 				self.__message ) ] +
 			map( ': '.join, args.items() ) + [ '', '' ] )
 
-	def responsebuf( self ):
+	def responsebuf(self):
 		return self.print_message(self.__args)
 
-	def args( self ):
+	def args(self):
 		try:
 			return self.__args.copy()
 		except AttributeError, e:
 			return {}
 		#return hasattr(self, '__args') and self.__args.copy() or {}
 
-	def socket( self ):
+	def socket(self):
 		return self.__socket
 
 	def __str__(self):
@@ -491,7 +491,7 @@ class FtpProtocol( CachingProtocol ):
 
 	Response = None
 
-	def __init__( self, request ):
+	def __init__(self,request):
 		super(FtpProtocol, self).__init__( request )
 
 		if Runtime.STATIC and self.cache.full:
@@ -507,19 +507,19 @@ class FtpProtocol( CachingProtocol ):
 		self.__recvbuf = ''
 		self.__handle = FtpProtocol.__handle_serviceready
 
-	def socket( self ):
+	def socket(self):
 		return self.__socket
 
-	def hasdata( self ):
+	def hasdata(self):
 		return self.__sendbuf != ''
 
-	def send( self, sock ):
+	def send(self, sock):
 		assert self.hasdata()
 
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 
-	def recv( self, sock ):
+	def recv(self, sock):
 		assert not self.hasdata()
 
 		chunk = sock.recv( Params.MAXCHUNK )
@@ -529,34 +529,34 @@ class FtpProtocol( CachingProtocol ):
 			reply, self.__recvbuf = self.__recvbuf.split( '\n', 1 )
 			log('S: %s' % reply.rstrip(), 2)
 			if reply[ :3 ].isdigit() and reply[ 3 ] != '-':
-				self.__handle( self, int( reply[ :3 ] ), reply[ 4: ] )
+				self.__handle(self, int( reply[ :3 ] ), reply[ 4: ] )
 				log('C: %s' % self.__sendbuf.rstrip(), 2)
 
-	def __handle_serviceready( self, code, line ):
+	def __handle_serviceready(self, code, line):
 		assert code == 220, \
 			'server sends %i; expected 220 (service ready)' % code
 		self.__sendbuf = 'USER anonymous\r\n'
 		self.__handle = FtpProtocol.__handle_password
 
-	def __handle_password( self, code, line ):
+	def __handle_password(self, code, line):
 		assert code == 331, \
 			'server sends %i; expected 331 (need password)' % code
 		self.__sendbuf = 'PASS anonymous@\r\n'
 		self.__handle = FtpProtocol.__handle_loggedin
 
-	def __handle_loggedin( self, code, line ):
+	def __handle_loggedin(self, code, line):
 		assert code == 230, \
 			'server sends %i; expected 230 (user logged in)' % code
 		self.__sendbuf = 'TYPE I\r\n'
 		self.__handle = FtpProtocol.__handle_binarymode
 
-	def __handle_binarymode( self, code, line ):
+	def __handle_binarymode(self, code, line):
 		assert code == 200,\
 			'server sends %i; expected 200 (binary mode ok)' % code
 		self.__sendbuf = 'PASV\r\n'
 		self.__handle = FtpProtocol.__handle_passivemode
 
-	def __handle_passivemode( self, code, line ):
+	def __handle_passivemode(self, code, line):
 		assert code == 227, \
 			'server sends %i; expected 227 (passive mode)' % code
 		channel = eval( line.strip('.').split()[ -1 ] )
@@ -565,7 +565,7 @@ class FtpProtocol( CachingProtocol ):
 		self.__sendbuf = 'SIZE %s\r\n' % self.__path
 		self.__handle = FtpProtocol.__handle_size
 
-	def __handle_size( self, code, line ):
+	def __handle_size(self, code, line):
 		if code == 550:
 			self.Response = Response.NotFoundResponse
 			return
@@ -576,7 +576,7 @@ class FtpProtocol( CachingProtocol ):
 		self.__sendbuf = 'MDTM %s\r\n' % self.__path
 		self.__handle = FtpProtocol.__handle_mtime
 
-	def __handle_mtime( self, code, line ):
+	def __handle_mtime(self, code, line):
 		if code == 550:
 			self.Response = Response.NotFoundResponse
 			return
@@ -601,14 +601,14 @@ class FtpProtocol( CachingProtocol ):
 				self.__sendbuf = 'RETR %s\r\n' % self.__path
 				self.__handle = FtpProtocol.__handle_data
 
-	def __handle_resume( self, code, line ):
+	def __handle_resume(self, code, line):
 		assert code == 350, 'server sends %i; ' \
 			'expected 350 (pending further information)' % code
 		self.cache.open_partial()
 		self.__sendbuf = 'RETR %s\r\n' % self.__path
 		self.__handle = FtpProtocol.__handle_data
 
-	def __handle_data( self, code, line ):
+	def __handle_data(self, code, line):
 		if code == 550:
 			self.Response = Response.NotFoundResponse
 			return
@@ -627,7 +627,7 @@ class ProxyProtocol:
 	Response = Response.ProxyResponse
 	data = None
 
-	def __init__( self, request ):
+	def __init__(self,request):
 		method, reqname, proto = request.envelope
 		assert reqname.startswith('/'), reqname
 		self.reqname = reqname[1:]
@@ -638,22 +638,22 @@ class ProxyProtocol:
 			self.status = HTTP.NOT_FOUND
 		assert proto in ('', 'HTTP/1.0', 'HTTP/1.1'), proto
 
-	def socket( self ):
+	def socket(self):
 		return None
 
-	def recvbuf( self ):
+	def recvbuf(self):
 		return ''
 
-	def hasdata( self ):
+	def hasdata(self):
 		return True
 
-	def send( self, sock ):
+	def send(self, sock):
 		bytecnt = sock.send( self.__sendbuf )
 		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 		if not self.__sendbuf:
 			self.Response = Response.BlindResponse
 
-	def done( self ):
+	def done(self):
 		pass
 
 	def has_response(self):

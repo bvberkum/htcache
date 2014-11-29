@@ -45,7 +45,7 @@ XXX: This also allows local lookup of resources, ie. to rewrite the cache locati
 to locally stored data.
 """
 
-def HTCache_fiber_handler( client, address ):
+def HTCache_fiber_handler(client, address):
 
 	mainlog.debug("[ HTCACHE ] Log level is at %s", log.name(Runtime.LOG_LEVEL))
 
