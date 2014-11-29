@@ -16,7 +16,7 @@ LOG = False
 DEBUG = False
 MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
-SUFFIX = '.incomplete'
+PARTIAL = '.incomplete'
 USAGE = '''usage: %(PROG)s [options]
 
 options:

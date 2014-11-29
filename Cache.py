@@ -35,7 +35,7 @@ class File:
 
 	def partial(self):
 
-		return os.path.isfile( self.__path + Params.SUFFIX ) and os.stat( self.__path + Params.SUFFIX )
+		return os.path.isfile( self.__path + Params.PARTIAL ) and os.stat( self.__path + Params.PARTIAL )
 
 	def full(self):
 
@@ -46,15 +46,15 @@ class File:
 		print 'Preparing new file in cache'
 		try:
 			makedirs( self.__path )
-			self.__file = open( self.__path + Params.SUFFIX, 'w+' )
+			self.__file = open( self.__path + Params.PARTIAL, 'w+' )
 		except Exception, e:
 			print 'Failed to open file:', e
 			self.__file = os.tmpfile()
 
 	def open_partial(self, offset=-1):
 
-		self.mtime = os.stat( self.__path + Params.SUFFIX ).st_mtime
-		self.__file = open( self.__path + Params.SUFFIX, 'a+' )
+		self.mtime = os.stat( self.__path + Params.PARTIAL ).st_mtime
+		self.__file = open( self.__path + Params.PARTIAL, 'a+' )
 		if offset >= 0:
 			assert offset <= self.tell(), 'range does not match file in cache'
 			self.__file.seek( offset )
@@ -76,7 +76,7 @@ class File:
 	def remove_partial(self):
 
 		print 'Removed partial file from cache'
-		os.remove( self.__path + Params.SUFFIX )
+		os.remove( self.__path + Params.PARTIAL )
 
 	def read(self, pos, size):
 
@@ -98,9 +98,9 @@ class File:
 		size = self.tell()
 		self.__file.close()
 		if self.mtime >= 0:
-			os.utime( self.__path + Params.SUFFIX, ( self.mtime, self.mtime ) )
+			os.utime( self.__path + Params.PARTIAL, ( self.mtime, self.mtime ) )
 		if self.size == size:
-			os.rename( self.__path + Params.SUFFIX, self.__path )
+			os.rename( self.__path + Params.PARTIAL, self.__path )
 			print 'Finalized', self.__path
 
 	def __del__(self):
