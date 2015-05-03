@@ -115,6 +115,10 @@ test-protocol::
 		echo "$$DATE, $$HOST, $$BRANCH, $$REV, protocol, $$PASSED, $$ERRORS" >> test-results.tab;\
 		echo $$PASSED passed checks, $$ERRORS errors
 
+
+#sqlite:///:memory: (or, sqlite://)
+#	sqlite:///relative/path/to/file.db
+#	sqlite:////absolute/path/to/file.db
 debug::
 	mkdir -p debug-root
 	[ -e "debug-root/resources.db" ] || { sqlite3 debug-root/resources.db; }
