@@ -3,8 +3,14 @@ import sys, os, socket
 _args = iter( sys.argv )
 
 PROG = _args.next()
+
+
+VERSION = 0.4
 PORT = 8080
+HOSTNAME = socket.gethostname()
+
 ROOT = os.getcwd() + os.sep
+DATA_DIR = ROOT
 VERBOSE = 0
 TIMEOUT = 15
 FAMILY = socket.AF_INET
@@ -14,9 +20,19 @@ ONLINE = True
 LIMIT = False
 LOG = False
 DEBUG = False
+
+DROP_FILE = '/etc/htcache/rules.drop'
+JOIN_FILE = '/etc/htcache/rules.join'
+NOCACHE_FILE = '/etc/htcache/rules.nocache'
+REWRITE_FILE = '/etc/htcache/rules.rewrite'
 MAXCHUNK = 1448 # maximum lan packet?
 TIMEFMT = '%a, %d %b %Y %H:%M:%S GMT'
 SUFFIX = '.incomplete'
+IMG_TYPE_EXT = 'png','jpg','gif','jpeg','jpe'
+HTML_PLACEHOLDER = DATA_DIR+'filtered-placeholder.html'
+IMG_PLACEHOLDER = DATA_DIR+'forbidden-sign.png'
+PROXY_INJECT_JS = DATA_DIR+'dhtml.js'
+PROXY_INJECT_CSS = DATA_DIR+'dhtml.css'
 USAGE = '''usage: %(PROG)s [options]
 
 options:

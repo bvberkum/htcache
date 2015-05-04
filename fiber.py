@@ -1,5 +1,7 @@
 import sys, os, select, time, socket, traceback
 
+import Rules
+
 
 class SEND:
 
@@ -157,12 +159,12 @@ def fork( output ):
 		cpid, status = os.wait()
 		sys.exit( status >> 8 )
 
-	try: 
+	try:
 		os.chdir( os.sep )
-		os.setsid() 
+		os.setsid()
 		os.umask( 0 )
 		pid = os.fork()
-	except Exception, e: 
+	except Exception, e:
 		print 'error:', e
 		sys.exit( 1 )
 
@@ -196,6 +198,8 @@ def spawn( generator, port, debug, log ):
 		myFiber = GatherFiber
 
 	print '[ INIT ]', generator.__name__, 'started at %s:%i' % ( socket.gethostname(), port )
+
+	Rules.load()
 	try:
 
 		fibers = []

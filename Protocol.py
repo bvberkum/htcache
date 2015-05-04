@@ -1,19 +1,37 @@
-import Params, Response, Cache, time, socket, os, sys, calendar
+import calendar, os, time, socket, re
+
+import Params, Response, Cache, Rules
+
+
+
+class DNSLookupException(Exception):
+
+	def __init__( self, addr, exc ):
+		self.addr = addr
+		self.exc = exc
+
+	def __str__( self ):
+		return "DNS lookup error for %s: %s" % ( self.addr, self.exc )
 
 
 DNSCache = {}
 
 def connect( addr ):
 
-	assert Params.ONLINE, 'operating in off-line mode'
+	assert Params.ONLINE, \
+			'operating in off-line mode'
 	if addr not in DNSCache:
 		if Params.VERBOSE:
 			print 'Requesting address info for %s:%i' % addr
-		DNSCache[ addr ] = socket.getaddrinfo( addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
-
+		try:
+			DNSCache[ addr ] = socket.getaddrinfo(
+				addr[ 0 ], addr[ 1 ], Params.FAMILY, socket.SOCK_STREAM )
+		except Exception, e:
+			raise DNSLookupException(addr, e)
 	family, socktype, proto, canonname, sockaddr = DNSCache[ addr ][ 0 ]
 
-	print 'Connecting to %s:%i' % sockaddr
+	if Params.VERBOSE:
+		print 'Connecting to %s:%i' % sockaddr
 	sock = socket.socket( family, socktype, proto )
 	sock.setblocking( 0 )
 	sock.connect_ex( sockaddr )
@@ -22,6 +40,10 @@ def connect( addr ):
 
 
 class BlindProtocol:
+
+	"""
+	Blind protocol is used for gracefull recovery upon unexpected requests.
+	"""
 
 	Response = None
 
@@ -44,8 +66,8 @@ class BlindProtocol:
 
 	def send( self, sock ):
 
-		bytes = sock.send( self.__sendbuf )
-		self.__sendbuf = self.__sendbuf[ bytes: ]
+		bytecnt = sock.send( self.__sendbuf )
+		self.__sendbuf = self.__sendbuf[ bytecnt: ]
 		if not self.__sendbuf:
 			self.Response = Response.BlindResponse
 
@@ -54,13 +76,63 @@ class BlindProtocol:
 		pass
 
 
-class HttpProtocol( Cache.File ):
+class CachingProtocol( Cache.File ):
+
+	def prepare_direct_response( self, request ):
+		"""
+		Serve either a proxy page, a replacement for blocked content, of static
+		content. All directly from local storage.
+
+		Returns true on direct-response ready.
+		"""
+		host, port, path = request.url()
+
+		# XXX: move this to request phase
+		if port == Params.PORT:
+			print "Direct request: %s", path
+			localhosts = ( 'localhost', Params.HOSTNAME, '127.0.0.1', '127.0.1.1' )
+			assert host in localhosts, "Cannot service for %s, use from %s" % (host, localhosts)
+			self.Response = Response.ProxyResponse
+
+		# Filter request by regex from rules.drop
+		filtered_path = "%s/%s" % ( host, path )
+		m = Rules.Drop.match( filtered_path )
+		if m:
+			self.set_blocked_response( path )
+			print 'Dropping connection, '\
+						'request matches pattern: %r.'% m
+
+	def set_blocked_response( self, path ):
+		"Respond to client by writing filter warning about blocked content. "
+		if '?' in path or '#' in path:
+			pf = path.find( '#' )
+			pq = path.find( '?' )
+			p = len( path )
+			if pf > 0: p = pf
+			if pq > 0: p = pq
+			nameext = os.path.splitext( path[:p] )
+		else:
+			nameext = os.path.splitext( path )
+		if len( nameext ) == 2 and nameext[1][1:] in Params.IMG_TYPE_EXT:
+			self.Response = Response.BlockedImageContentResponse
+		else:
+			self.Response = Response.BlockedContentResponse
+
+
+
+class HttpProtocol( CachingProtocol ):
 
 	Response = None
 
 	def __init__( self, request ):
 
 		Cache.File.__init__( self, '%s:%i/%s' % request.url() )
+
+		# Serve direct response
+		self.prepare_direct_response(request)
+		if self.Response:
+			self.__socket = None
+			return
 
 		if Params.STATIC and self.full():
 			print 'Static mode; serving file directly from cache'
@@ -149,13 +221,15 @@ class HttpProtocol( Cache.File ):
 		assert chunk, 'server closed connection before sending a complete message header'
 		self.__recvbuf += chunk
 		while self.__parse:
-			bytes = self.__parse( self, self.__recvbuf )
-			if not bytes:
+			bytecnt = self.__parse( self, self.__recvbuf )
+			if not bytecnt:
 				sock.recv( len( chunk ) )
 				return
-			self.__recvbuf = self.__recvbuf[ bytes: ]
+			self.__recvbuf = self.__recvbuf[ bytecnt: ]
 		sock.recv( len( chunk ) - len( self.__recvbuf ) )
 
+		# Process and update headers before deferring to response class
+		# 2xx
 		if self.__status == 200:
 
 			self.open_new()
@@ -197,19 +271,33 @@ class HttpProtocol( Cache.File ):
 			self.Response = Response.BlindResponse
 
 	def recvbuf( self ):
+		return self.print_message()
 
-		return '\r\n'.join( [ 'HTTP/1.1 %i %s' % ( self.__status, self.__message ) ] + map( ': '.join, self.__args.items() ) + [ '', '' ] )
+	def print_message( self, args=None ):
+		if not args:
+			args = self.__args
+		return '\r\n'.join(
+			[ 'HTTP/1.1 %i %s' % (
+				self.__status,
+				self.__message ) ] +
+			map( ': '.join, self.__args.items() ) + [ '', '' ] )
 
 	def args( self ):
 
-		return self.__args.copy()
+		try:
+			return self.__args.copy()
+		except AttributeError, e:
+			return {}
 
 	def socket( self ):
 
 		return self.__socket
 
+	def __str__(self):
+		return "[HttpProtocol %s]" % hex(id(self))
 
-class FtpProtocol( Cache.File ):
+
+class FtpProtocol( CachingProtocol ):
 
 	Response = None
 

@@ -124,6 +124,7 @@ class HttpRequest:
 
 		return '\r\n'.join( lines )
 
+
 	def url( self ):
 
 		assert self.Protocol
