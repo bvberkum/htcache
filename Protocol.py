@@ -1,3 +1,22 @@
+"""
+Protocol takes over an client socket connection after an
+incoming request has been parsed by Request.
+
+Normally a protocol prepares the request to be forwarded,
+and it opens a socket to the server so that fiber can continue.
+Fiber then switches to uploading the request using data from the
+protocol instances, and once done writes any response
+back to the protocol instance.
+
+Protocol adds each response bit to its receive buffer and
+then parses as much as possible of the headers. Once the headers
+are in, it will have set the Response type to use to download
+everything back to the client.
+
+TODO describe caching: how it writes contents to the file while writing the response to
+client too.
+"""
+
 import calendar, os, time, socket, re
 
 import Params, Response, Cache, Rules
@@ -42,7 +61,7 @@ def connect( addr ):
 class BlindProtocol:
 
 	"""
-	Blind protocol is used for gracefull recovery upon unexpected requests.
+	Blind protocol is used to attempt gracefull recovery upon unexpected requests.
 	"""
 
 	Response = None
@@ -81,7 +100,7 @@ class CachingProtocol( Cache.File ):
 	def prepare_direct_response( self, request ):
 		"""
 		Serve either a proxy page, a replacement for blocked content, of static
-		content. All directly from local storage.
+		self.content. All directly from local storage.
 
 		Returns true on direct-response ready.
 		"""
@@ -123,8 +142,22 @@ class CachingProtocol( Cache.File ):
 class HttpProtocol( CachingProtocol ):
 
 	Response = None
+	"The type of response for fiber to use next"
 
 	def __init__( self, request ):
+
+		"""
+		Initializes to forward client request.
+		Updates request and sets send-buffer, and opens socket to the server
+		so the fiber can upload the request, and then write any response back here.
+		See HttpProtocol.{send,recv}.
+
+		The receive routine parses the data, and once self.Response is set, the
+		other functions will return details about the server-response.
+
+		However, this init routine may intercept and skip all that, setting
+		self.Repsonse immediatly in response to a filtered, static or direct request.
+		"""
 
 		Cache.File.__init__( self, '%s:%i/%s' % request.url() )
 

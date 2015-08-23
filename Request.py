@@ -1,3 +1,8 @@
+"""
+Request has a small one-size-fits-all HttpRequest type that can read the
+request message from the client, and decide wether a HttpProtocol,
+FtpProtocol or BlindProtocol is needed.
+"""
 import Params, Protocol, socket, os
 
 
