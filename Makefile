@@ -3,7 +3,7 @@ unit-test.log::
 
 test: unit-test.log
 	pass=$$(echo $$(grep '\<OK\>\ $$' $< | wc -l)); \
-	grep 'ERROR' $< > /dev/null && { \
+	grep -i '\<error\|exception\>' $< > /dev/null && { \
 		errs=$$(echo $$(grep 'ERROR' $< | wc -l)); \
 		echo "There were $$errs errors, $$pass pass. See $(wildcard unit-test.*)"; \
 		exit 1; \
