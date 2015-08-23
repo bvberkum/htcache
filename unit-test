@@ -1,6 +1,6 @@
 #! /bin/bash
 
-PORT=128080
+PORT=65535
 NUM="$1"
 PREFIX="/tmp/unittest$NUM"
 URL_HTTP="www.w3.org:80/Protocols/HTTP/1.1/rfc2616bis/draft-lafon-rfc2616bis-03.txt"
