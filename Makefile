@@ -4,8 +4,9 @@ unit-test.log::
 test: unit-test.log
 	pass=$$(echo $$(grep '\<OK\>\ $$' $< | wc -l)); \
 	grep -i '\<error\|exception\>' $< > /dev/null && { \
-		errs=$$(echo $$(grep 'ERROR' $< | wc -l)); \
-		echo "There were $$errs errors, $$pass pass. See $(wildcard unit-test.*)"; \
+		fails=$$(echo $$(grep '\<ERROR\>\ $$' $< | wc -l)); \
+		errs=$$(echo $$(grep -e 'error' $< | wc -l)); \
+		echo "There were $$errs errors, test result: $$fails falures, $$pass pass. See $(wildcard unit-test.*)"; \
 		exit 1; \
 	} || { \
 		echo OK, $$pass pass. No errors; \
