@@ -45,11 +45,11 @@ class ProxyData(object):
 		   host, path, meta, cache
 
 		)> }
-	
+
 	Map of broken loations that could not be retrieved::
 
 		{ <res-uri> : <status>, <keep-boolean> }
-	
+
 	Cache descriptors::
 
 		{ <cache-location> : <Descriptor(
@@ -65,7 +65,7 @@ class ProxyData(object):
 	Qualified relations 'rel' from 'res' to 'ref'::
 
 		relations_to = { <res-uri> => *( <rel-uri>, <ref-uri> ) }
-	
+
 	Reverse mapping, the qualification will be in relations_to::
 
 		relations_from = { <ref-uri> => *<res-uri> }
@@ -73,9 +73,9 @@ class ProxyData(object):
 
 	def __init__( self, protocol ):
 		self.protocol = protocol
-		self.descriptor = None 
+		self.descriptor = None
 		self.cache = None
-	
+
 		self.mtime = None
 
 		mainlog.debug("%s: empty instance", self)
@@ -96,11 +96,11 @@ class ProxyData(object):
 			# XXX: Try again, should make a list of alternate (but invalid) date formats
 			try:
 				tmhdr = re.sub(
-						'\ [GMT0\+-]+$', 
+						'\ [GMT0\+-]+$',
 						'',
 						value)
 				mtime = calendar.timegm( time.strptime(
-					tmhdr, 
+					tmhdr,
 					Params.TIMEFMT[:-4] ) )
 			except:
 				try:
@@ -109,10 +109,10 @@ class ProxyData(object):
 						Params.ALTTIMEFMT ) )
 				except:
 					mainlog.err( 'Fatal: unable to parse Last-Modified: %s.', value )
-		
+
 		if mtime:
 			self.descriptor.mtime = mtime
-# XXX:			
+# XXX:
 		if self.cache.stat():
 			self.cache.utime( mtime )
 		else:
@@ -258,7 +258,7 @@ class ProxyData(object):
 			headers = self.protocol.args()
 
 		headerdict = HeaderDict(headers)
-		
+
 		for hn, hv in headerdict.items():
 			h = "set_%s" % hn.lower().replace('-','_')
 			if hasattr( self, h ):
@@ -283,7 +283,7 @@ class ProxyData(object):
 #			headerdict.update({
 #				'Content-Location': self.descriptor.resource.url
 #			})
-		if self.descriptor.id: 
+		if self.descriptor.id:
 			assert self.cache.mtime > -1, "XXX"
 		headerdict.update({
 			'Last-Modified': self.get_last_modified(),
@@ -334,7 +334,7 @@ class ProxyData(object):
 		htrange = req_headers.pop( 'Range', None )
 		# TODO: RFC 2616 14.9.4: Cache revalidation and reload controls
 		cache_control = req_headers.pop( 'Cache-Control', None )
-		# TODO: Store relationship with 
+		# TODO: Store relationship with
 		relationtype = req_headers.pop('X-Relationship', None)
 		# XXX: anonymize, check with [RFC 2616 14.36]
 		referer = req_headers.get('Referer', None)
@@ -365,13 +365,13 @@ class ProxyData(object):
 				req_headers[ 'If-Modified-Since' ] = mdtime
 				if self.descriptor.etag:
 					req_headers[ 'If-None-Match' ] = '"%s"' % self.descriptor.etag
-		
+
 
 		return req_headers
 
 	def finish_request( self ):
 		"""
-		Protocol has parsed then response headers and determined the appropiate 
+		Protocol has parsed then response headers and determined the appropiate
 		Response type.
 		"""
 
@@ -409,7 +409,7 @@ class ProxyData(object):
 		args.update(self.map_to_headers())
 		mainlog.info ("%s: prepare_response %s", self, args)
 		#assert 'Content-Length' in args and args['Content-Length'] > 0, dict(
-		#		to_headers=self.map_to_headers(), 
+		#		to_headers=self.map_to_headers(),
 		#		to_data=self.map_to_data(),
 		#		size=self.protocol.size,
 		#		protohdr=args,
@@ -475,8 +475,8 @@ class ProxyData(object):
 #		print path, Descriptor().find( Descriptor.path == path )
 	def prepare_static(self):
 		"""
-		Set cache location and open any partial or complete file, 
-		then fetch descriptor if it exists. 
+		Set cache location and open any partial or complete file,
+		then fetch descriptor if it exists.
 
 		XXX: Even when the current download is still running, this needs to have the
 		descriptor already.
@@ -522,7 +522,13 @@ class SessionMixin(object):
 		# XXX: read_only
 		if name not in SessionMixin.sessions:
 			assert dbref, "session does not exists: %s" % name
-			session = get_session(dbref, init)
+			try:
+				session = get_session(dbref, init)
+			except Exception, error:
+				print  "Unable to get session", dbref, init
+				print  error
+				session = None
+				#raise
 			#assert session.engine, "new session has no engine"
 			SessionMixin.sessions[name] = session
 		else:
@@ -568,7 +574,7 @@ class SessionMixin(object):
 
 	def exists(self):
 		return self.id != None
-		return self.fetch() != None 
+		return self.fetch() != None
 
 	def __repr__(self):
 		return self.__str__()
@@ -583,7 +589,7 @@ class Resource(SqlBase, SessionMixin):
 #	host = Column(String(255), nullable=False)
 #	path = Column(String(255), nullable=False)
 #	key_names = [id]
-	
+
 	def __str__(self):
 		return "Resource(%s)" % pformat(dict(
 			id=self.id,
@@ -598,8 +604,8 @@ class Descriptor(SqlBase, SessionMixin):
 
 	id = Column(Integer, primary_key=True)
 	resource_id = Column(Integer, ForeignKey(Resource.id), nullable=False)
-	resource = relationship( Resource, 
-#			primaryjoin=resource_id==Resource.id, 
+	resource = relationship( Resource,
+#			primaryjoin=resource_id==Resource.id,
 			backref='descriptors')
 	path = Column(String(255), nullable=True)
 	mediatype = Column(String(255), nullable=False)
@@ -636,7 +642,7 @@ class Descriptor(SqlBase, SessionMixin):
 			.join("resource").filter(
 				Resource.url == url
 			).order_by(
-				Descriptor.mtime 
+				Descriptor.mtime
 			).first()
 		return descriptor
 
@@ -670,8 +676,8 @@ def get_backend(name='default', read_only=False):
 		backend = _backends[name]
 	else:
 		backend = SessionMixin.get_instance(
-				name='default', 
-				dbref=Runtime.DATA, 
+				name='default',
+				dbref=Runtime.DATA,
 				init=True,
 				read_only=read_only)
 		_backends[name] = backend
@@ -682,7 +688,7 @@ def get_session(dbref, initialize=False):
 	#engine.raw_connection().connection.text_factory = unicode
 	if initialize:
 		mainlog.debug("Applying SQL DDL to DB %s ", dbref)
-		SqlBase.metadata.create_all(engine) # issue DDL create 
+		SqlBase.metadata.create_all(engine) # issue DDL create
 		mainlog.info("Updated data schema")
 	session = sessionmaker(bind=engine)()
 	return session
@@ -691,7 +697,7 @@ def get_session(dbref, initialize=False):
 ###
 
 
-# Query commands 
+# Query commands
 
 def print_records():
 	rs = get_backend().query(Resource).all()
